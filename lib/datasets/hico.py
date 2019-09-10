@@ -37,6 +37,37 @@ except NameError:
 # <<<< obsolete
 
 
+def iou(box1, box2):
+    x11, y11, x12, y12 = box1
+    x21, y21, x22, y22 = box2
+
+    xi1 = max(x11, x21)
+    yi1 = max(y11, y21)
+    xi2 = min(x12, x22)
+    yi2 = min(y12, y22)
+
+    wi = xi2 - xi1 + 1
+    hi = yi2 - yi1 + 1
+
+    if wi > 0 and hi > 0:
+        areai = wi * hi
+
+        w1 = x12 - x11 + 1
+        h1 = y12 - y11 + 1
+        area1 = w1 * h1
+
+        w2 = x22 - x21 + 1
+        h2 = y22 - y21 + 1
+        area2 = w2 * h2
+
+        iou = areai * 1.0 / (area1 + area2 - areai)
+    else:
+        iou = 0
+
+    return iou
+
+
+
 class hoi_class:
     def __init__(self, object_name, verb_name, hoi_id):
         self._object_name = object_name
@@ -80,11 +111,11 @@ class hico(imdb):
         self._image_set = image_set
         self._data_path = self._get_default_path()
 
-        self._hoi_classes, self._object_classes, self._verb_classes = self._load_hoi_classes()
-        self._classes = [hoi_class.hoi_name() for hoi_class in self._hoi_classes]
+        self.hoi_classes, self.object_classes, self.verb_classes = self._load_hoi_classes()
+        self._classes = [hoi_class.hoi_name() for hoi_class in self.hoi_classes]
         self.hoi_class2ind = dict(zip(self._classes, xrange(self.num_classes)))
-        self.object_class2ind = dict(zip(self._object_classes, xrange(len(self._object_classes))))
-        self.verb_class2ind = dict(zip(self._verb_classes, xrange(len(self._verb_classes))))
+        self.object_class2ind = dict(zip(self.object_classes, xrange(len(self.object_classes))))
+        self.verb_class2ind = dict(zip(self.verb_classes, xrange(len(self.verb_classes))))
 
         self._class_to_ind = dict(zip(self._classes, xrange(len(self._classes))))
         self._image_ext = '.jpg'
@@ -141,12 +172,12 @@ class hico(imdb):
         with open(cache_file, 'wb') as fid:
             pickle.dump(gt_roidb, fid, pickle.HIGHEST_PROTOCOL)
         print('wrote gt roidb to {}'.format(cache_file))
-
         return gt_roidb
 
     def _to_multilabel_instances(self, gt_roidb):
 
         for image_anno in gt_roidb:
+
             hboxes = image_anno['hboxes']
             oboxes = image_anno['oboxes']
             hoi_classes = image_anno['hoi_classes']
@@ -162,11 +193,13 @@ class hico(imdb):
                 hbox = hboxes[0]
                 obox = oboxes[0]
                 hoi_class_id = hoi_classes[0]
-                hoi_class = self._hoi_classes[hoi_class_id]
+                hoi_class = self.hoi_classes[hoi_class_id]
 
                 hit = False
                 for i in range(len(new_hboxes)):
-                    if hbox == new_hboxes[i] and obox == new_oboxes[i]:
+                    if iou(hbox, new_hboxes[i]) > 0.7 \
+                            and iou(obox, new_oboxes[i]) > 0.7 \
+                            and self.object_class2ind[hoi_class.object_name()] == new_object_classes[i]:
                         new_hoi_classes[i].append(hoi_class_id)
                         new_verb_classes[i].append(self.verb_class2ind[hoi_class.verb_name()])
                         hit = True

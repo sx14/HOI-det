@@ -48,11 +48,6 @@ class vgg16(_fasterRCNN):
     # not using the last maxpool layer
     self.RCNN_cls_score = nn.Linear(4096, self.n_classes)
 
-    if self.class_agnostic:
-      self.RCNN_bbox_pred = nn.Linear(4096, 4)
-    else:
-      self.RCNN_bbox_pred = nn.Linear(4096, 4 * self.n_classes)      
-
   def _head_to_tail(self, pool5):
     
     pool5_flat = pool5.view(pool5.size(0), -1)

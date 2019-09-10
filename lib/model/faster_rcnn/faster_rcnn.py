@@ -68,12 +68,16 @@ class _fasterRCNN(nn.Module):
         #     rpn_loss_cls = 0
         #     rpn_loss_bbox = 0
         hrois = Variable(torch.zeros(hboxes.shape[0], hboxes.shape[1], hboxes.shape[2] + 1))
-        hrois[:, :, 1:] = hboxes
-
         orois = Variable(torch.zeros(oboxes.shape[0], oboxes.shape[1], oboxes.shape[2] + 1))
-        orois[:, :, 1:] = oboxes
-
         irois = Variable(torch.zeros(iboxes.shape[0], iboxes.shape[1], iboxes.shape[2] + 1))
+
+        if im_data.is_cuda:
+            hrois = hrois.cuda()
+            orois = orois.cuda()
+            irois = irois.cuda()
+
+        hrois[:, :, 1:] = hboxes
+        orois[:, :, 1:] = oboxes
         irois[:, :, 1:] = iboxes
         
         # rois = Variable(rois)
@@ -90,7 +94,7 @@ class _fasterRCNN(nn.Module):
         elif cfg.POOLING_MODE == 'align':
             pooled_feat = self.RCNN_roi_align(base_feat, irois.view(-1, 5))
         elif cfg.POOLING_MODE == 'pool':
-            pooled_feat = self.RCNN_roi_pool(base_feat, irois.view(-1,5))
+            pooled_feat = self.RCNN_roi_pool(base_feat, irois.view(-1, 5))
 
         # feed pooled features to top model
         pooled_feat = self._head_to_tail(pooled_feat)
@@ -113,7 +117,7 @@ class _fasterRCNN(nn.Module):
         if self.training:
             # classification loss
             # RCNN_loss_cls = F.cross_entropy(cls_score, hoi_labels)
-            RCNN_loss_cls = F.binary_cross_entropy(cls_score, hoi_classes)
+            RCNN_loss_cls = F.binary_cross_entropy(cls_prob, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
         #
         #     # bounding box regression L1 loss
         #     RCNN_loss_bbox = _smooth_l1_loss(bbox_pred, rois_target, rois_inside_ws, rois_outside_ws)
@@ -139,8 +143,8 @@ class _fasterRCNN(nn.Module):
         # normal_init(self.RCNN_rpn.RPN_Conv, 0, 0.01, cfg.TRAIN.TRUNCATED)
         # normal_init(self.RCNN_rpn.RPN_cls_score, 0, 0.01, cfg.TRAIN.TRUNCATED)
         # normal_init(self.RCNN_rpn.RPN_bbox_pred, 0, 0.01, cfg.TRAIN.TRUNCATED)
+        # normal_init(self.RCNN_bbox_pred, 0, 0.001, cfg.TRAIN.TRUNCATED)
         normal_init(self.RCNN_cls_score, 0, 0.01, cfg.TRAIN.TRUNCATED)
-        normal_init(self.RCNN_bbox_pred, 0, 0.001, cfg.TRAIN.TRUNCATED)
 
     def create_architecture(self):
         self._init_modules()

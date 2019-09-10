@@ -33,6 +33,8 @@ from model.utils.net_utils import weights_normal_init, save_net, load_net, \
 from model.faster_rcnn.vgg16 import vgg16
 from model.faster_rcnn.resnet import resnet
 
+from test import test
+
 def parse_args():
   """
   Parse input arguments
@@ -42,8 +44,8 @@ def parse_args():
                       help='training dataset',
                       default='hico', type=str)
   parser.add_argument('--net', dest='net',
-                    help='vgg16, res101',
-                    default='vgg16', type=str)
+                      help='vgg16, res101',
+                      default='vgg16', type=str)
   parser.add_argument('--start_epoch', dest='start_epoch',
                       help='starting epoch',
                       default=1, type=int)
@@ -115,6 +117,7 @@ def parse_args():
 # log and display
   parser.add_argument('--use_tfb', dest='use_tfboard',
                       help='whether use tensorboard',
+                      default=True,
                       action='store_true')
 
   args = parser.parse_args()
@@ -346,7 +349,10 @@ if __name__ == '__main__':
 
         loss_temp = 0
         start = time.time()
-    
+        test(fasterRCNN)
+
+    test(fasterRCNN)
+
     save_name = os.path.join(output_dir, 'faster_rcnn_{}_{}_{}.pth'.format(args.session, epoch, step))
     save_checkpoint({
       'session': args.session,

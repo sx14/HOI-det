@@ -35,17 +35,29 @@ class RoIAlignFunction(Function):
         return output
 
     def backward(self, grad_output):
-        assert(self.feature_size is not None and grad_output.is_cuda)
+        # assert(self.feature_size is not None and grad_output.is_cuda)
+        assert self.feature_size is not None
 
         batch_size, num_channels, data_height, data_width = self.feature_size
 
         grad_input = self.rois.new(batch_size, num_channels, data_height,
                                   data_width).zero_()
-        roi_align.roi_align_backward_cuda(self.aligned_height,
-                                          self.aligned_width,
-                                          self.spatial_scale, grad_output,
-                                          self.rois, grad_input)
 
+        # roi_align.roi_align_backward_cuda(self.aligned_height,
+        #                                   self.aligned_width,
+        #                                   self.spatial_scale, grad_output,
+        #                                   self.rois, grad_input)
+
+        if grad_output.is_cuda:
+            roi_align.roi_align_backward_cuda(self.aligned_height,
+                                              self.aligned_width,
+                                              self.spatial_scale, grad_output,
+                                              self.rois, grad_input)
+        else:
+            roi_align.roi_align_backward(self.aligned_height,
+                                         self.aligned_width,
+                                         self.spatial_scale, grad_output,
+                                         self.rois, grad_input)
         # print grad_input
 
         return grad_input, None
