@@ -59,12 +59,10 @@ def test_image(model, im_obj_dets, image_size, det_obj2hoi_obj, obj2vec):
                     temp.append(hum_det[2])             # Human box
                     temp.append(obj_det[2])             # Object box
                     temp.append(obj_det[4])             # Object class
-                    temp.append(hoi_prob[0])            # Score (600)
+                    temp.append(hoi_prob.cpu().data.numpy()[0].tolist())            # Score (600)
                     temp.append(hscore)                 # Human score
                     temp.append(oscore)                 # Object score
-                    temp.append(bin_prob[0])            # binary score
-                    # print("the HO score is",prediction_HO[0][0])
-                    # print("the binary score is",prediction_binary[0][0])
+                    temp.append(bin_prob.cpu().data.numpy()[0].tolist())            # binary score
                     results.append(temp)
 
     return results

@@ -94,12 +94,13 @@ def load_object_word2vec(object_classes, w2v_path, save_dir):
             obj_class_clean = 'glass'
 
         vec = model[obj_class_clean]
-        if vec is None or len(vec) == 0 or np.sum(vec) == 0 or obj_class in obj2vec:
+        if vec is None or len(vec) == 0 or np.sum(vec) == 0:
             print('[WARNING] %s' % obj_class)
         obj2vec[i] = vec
 
     with open(obj2vec_path, 'wb') as f:
         pickle.dump(obj2vec, f)
+    return obj2vec
 
 
 def load_hoi_classes(hoi_class_path):
