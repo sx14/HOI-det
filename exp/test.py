@@ -125,5 +125,5 @@ if __name__ == '__main__':
 
     generate_HICO_detection(output_path, 'output/results', 0.9, 0.1)
 
-    os.chdir('benchmark_tin')
+    os.chdir('benchmark')
     os.system('matlab -nodesktop -nosplash -r "Generate_detection '+ '../output/results/' + '/;quit;"')

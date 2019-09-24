@@ -102,6 +102,7 @@ def generate_HICO_detection(output_file, HICO_dir, thres_no_inter, thres_inter):
     if not os.path.exists(HICO_dir):
         os.makedirs(HICO_dir)
 
+    print('Loading detection results ...')
     HICO = pickle.load( open( output_file, "rb" ) )
 
     # del_i and del_ni 
