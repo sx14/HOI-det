@@ -7,21 +7,17 @@ min_overlap = 0.5;
 assert(ismember(score_blob,{'n/a','h','o','p'}) == 1);
 
 % set detection root
-det_root = './output/%s/hico_det_%s/%s_iter_%d/';
-det_root = sprintf(det_root, exp_dir, image_set, prefix, iter);
+det_root = strcat(sourceDir, '80MAT_TRANSFORMED/');
 if ismember(score_blob, {'h','o','p'})
     det_root = [det_root(1:end-1) '_' score_blob '/'];
 end
 
 % set res file
-res_root = './evaluation/result/%s/';
-res_root = sprintf(res_root, exp_name);
-res_file = '%s%s_%s_%06d.mat';
-res_file = sprintf(res_file, res_root, eval_mode, image_set, iter);
+res_file = '%seval_result_%s.mat';
+res_file = sprintf(res_file, sourceDir, eval_mode);
 if ismember(score_blob, {'h','o','p'})
     res_file = [res_file(1:end-4) '_' score_blob '.mat'];
 end
-makedir(res_root);
 
 % load annotations
 anno = load(anno_file);
@@ -48,14 +44,7 @@ num_action = numel(list_action);
 num_image = numel(gt_bbox);
 
 % get object list
-det_file = './cache/det_base_caffenet/train2015/HICO_train2015_00000001.mat';
-if exist(det_file,'file') ~= 0
-    ld = load(det_file);
-    list_coco_obj = cellfun(@(x)strrep(x,' ','_'),ld.cls,'UniformOutput',false);
-    list_coco_obj = list_coco_obj(2:end)';
-else
-    list_coco_obj = get_list_coco_obj();
-end
+list_coco_obj = get_list_coco_obj();
 
 % get HOI index intervals for object classes
 obj_hoi_int = zeros(numel(list_coco_obj), 2);
@@ -235,3 +224,24 @@ fprintf('\n');
 fprintf('  mAP / mRec (rare):      %.4f / %.4f\n', mean(AP(s_ind)), mean(REC(s_ind)));
 fprintf('  mAP / mRec (non-rare):  %.4f / %.4f\n', mean(AP(p_ind)), mean(REC(p_ind)));
 fprintf('\n');
+
+% output result to .csv file
+switch eval_mode
+    case 'def'
+        fid = fopen(strcat(sourceDir, 'eval_result.txt'),'w');
+    case 'ko'
+        fid = fopen(strcat(sourceDir, 'eval_result.txt'),'a');
+end
+
+fprintf(fid,'\n');
+fprintf(fid,'setting:     %s\n', eval_mode);
+fprintf(fid,'exp_name:    %s\n', exp_name);
+fprintf(fid,'score_blob:  %s\n', score_blob)
+fprintf(fid,'\n');
+fprintf(fid,'  mAP / mRec (full):      %.4f / %.4f\n', mean(AP), mean(REC));
+fprintf(fid,'\n');
+fprintf(fid,'  mAP / mRec (rare):      %.4f / %.4f\n', mean(AP(s_ind)), mean(REC(s_ind)));
+fprintf(fid,'  mAP / mRec (non-rare):  %.4f / %.4f\n', mean(AP(p_ind)), mean(REC(p_ind)));
+fprintf(fid,'\n');
+fclose(fid);
+
