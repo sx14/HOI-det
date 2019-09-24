@@ -1,5 +1,4 @@
 data_cache/
 output/
-results/
-save/
+weights/
 *.bin

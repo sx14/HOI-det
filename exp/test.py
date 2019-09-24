@@ -123,7 +123,7 @@ if __name__ == '__main__':
             pickle.dump(all_results, f)
         print('Done.')
 
-    generate_HICO_detection(output_path, 'results/SpaLan', 0.9, 0.1)
+    generate_HICO_detection(output_path, 'output/results', 0.9, 0.1)
 
     os.chdir('../benchmark_tin')
     os.system('matlab -nodesktop -nosplash -r "Generate_detection '+ 'results/SpaLan/' + '/;quit;"')

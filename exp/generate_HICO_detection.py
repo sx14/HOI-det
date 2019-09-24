@@ -73,7 +73,6 @@ def save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, classid, begin, finis
                     if (d_score_noi > thres_no_inter) and (d_score < thres_inter) and not(int(key) in all_remaining):
 
                         if not((hoi_num + 1) in hoi_no_inter_all): # skiping all the 520 score
-
                             continue
 
                     temp.append(score_new)

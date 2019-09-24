@@ -24,5 +24,5 @@ save_freq: 50    # frequency of saving weights
 print_freq: 1  # frequency of printing training error rate
 
 data_save_dir: data_cache
-model_save_dir: save
+model_save_dir: weights
 output_dir: output
