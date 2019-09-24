@@ -23,9 +23,6 @@ class _fasterRCNN(nn.Module):
         self.classes = classes
         self.n_classes = len(classes)
         self.class_agnostic = class_agnostic
-        # loss
-        self.RCNN_loss_cls = 0
-        self.RCNN_loss_bbox = 0
 
         # define rpn
         # self.RCNN_rpn = _RPN(self.dout_base_model)
@@ -36,7 +33,7 @@ class _fasterRCNN(nn.Module):
         self.grid_size = cfg.POOLING_SIZE * 2 if cfg.CROP_RESIZE_WITH_MAX_POOL else cfg.POOLING_SIZE
         self.RCNN_roi_crop = _RoICrop()
 
-    def forward(self, im_data, im_info, hboxes, oboxes, iboxes, hoi_classes, num_hois):
+    def forward(self, im_data, im_info, hboxes, oboxes, iboxes, hoi_classes, bin_classes, num_hois):
         batch_size = im_data.size(0)
 
         im_info = im_info.data
@@ -48,25 +45,6 @@ class _fasterRCNN(nn.Module):
         # feed image data to base model to obtain base feature map
         base_feat = self.RCNN_base(im_data)
 
-        # feed base feature map to RPN to obtain rois
-        # rois, rpn_loss_cls, rpn_loss_bbox = self.RCNN_rpn(base_feat, im_info, gt_boxes, num_boxes)
-
-        # if it is training phase, then use ground truth bboxes for refining
-        # if self.training:
-        #     roi_data = self.RCNN_proposal_target(rois, gt_boxes, num_boxes)
-        #     rois, rois_label, rois_target, rois_inside_ws, rois_outside_ws = roi_data
-        #
-        #     rois_label = Variable(rois_label.view(-1).long())
-        #     rois_target = Variable(rois_target.view(-1, rois_target.size(2)))
-        #     rois_inside_ws = Variable(rois_inside_ws.view(-1, rois_inside_ws.size(2)))
-        #     rois_outside_ws = Variable(rois_outside_ws.view(-1, rois_outside_ws.size(2)))
-        # else:
-        #     rois_label = None
-        #     rois_target = None
-        #     rois_inside_ws = None
-        #     rois_outside_ws = None
-        #     rpn_loss_cls = 0
-        #     rpn_loss_bbox = 0
         hrois = Variable(torch.zeros(hboxes.shape[0], hboxes.shape[1], hboxes.shape[2] + 1))
         orois = Variable(torch.zeros(oboxes.shape[0], oboxes.shape[1], oboxes.shape[2] + 1))
         irois = Variable(torch.zeros(iboxes.shape[0], iboxes.shape[1], iboxes.shape[2] + 1))
@@ -109,24 +87,23 @@ class _fasterRCNN(nn.Module):
 
         # compute object classification probability
         cls_score = self.RCNN_cls_score(pooled_feat)
-        cls_prob = F.softmax(cls_score, 1)
+        bin_score = self.RCNN_bin_score(pooled_feat)
 
-        RCNN_loss_cls = 0
-        # RCNN_loss_bbox = 0
+        bin_prob = F.softmax(bin_score, 1)
+        cls_prob = F.sigmoid(cls_score)
+
+        RCNN_loss_cls = -1
+        RCNN_loss_bin = -1
 
         if self.training:
             # classification loss
-            # RCNN_loss_cls = F.cross_entropy(cls_score, hoi_labels)
-            RCNN_loss_cls = F.binary_cross_entropy(cls_prob, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
-        #
-        #     # bounding box regression L1 loss
-        #     RCNN_loss_bbox = _smooth_l1_loss(bbox_pred, rois_target, rois_inside_ws, rois_outside_ws)
+            RCNN_loss_cls = F.binary_cross_entropy(cls_prob, hoi_classes.view(-1, hoi_classes.shape[2]))
+            RCNN_loss_bin = F.cross_entropy(bin_score, bin_classes.view(bin_classes.shape[1]))
 
         cls_prob = cls_prob.view(batch_size, irois.size(1), -1)
-        # bbox_pred = bbox_pred.view(batch_size, rois.size(1), -1)
+        bin_prob = bin_prob.view(batch_size, irois.size(1), -1)
 
-        # return rois, cls_prob, bbox_pred, rpn_loss_cls, rpn_loss_bbox, RCNN_loss_cls, RCNN_loss_bbox, rois_label
-        return cls_prob, RCNN_loss_cls
+        return cls_prob, bin_prob, RCNN_loss_cls, RCNN_loss_bin
 
     def _init_weights(self):
         def normal_init(m, mean, stddev, truncated=False):
@@ -140,11 +117,8 @@ class _fasterRCNN(nn.Module):
                 m.weight.data.normal_(mean, stddev)
                 m.bias.data.zero_()
 
-        # normal_init(self.RCNN_rpn.RPN_Conv, 0, 0.01, cfg.TRAIN.TRUNCATED)
-        # normal_init(self.RCNN_rpn.RPN_cls_score, 0, 0.01, cfg.TRAIN.TRUNCATED)
-        # normal_init(self.RCNN_rpn.RPN_bbox_pred, 0, 0.01, cfg.TRAIN.TRUNCATED)
-        # normal_init(self.RCNN_bbox_pred, 0, 0.001, cfg.TRAIN.TRUNCATED)
         normal_init(self.RCNN_cls_score, 0, 0.01, cfg.TRAIN.TRUNCATED)
+        normal_init(self.RCNN_bin_score, 0, 0.01, cfg.TRAIN.TRUNCATED)
 
     def create_architecture(self):
         self._init_modules()

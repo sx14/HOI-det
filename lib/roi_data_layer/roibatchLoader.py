@@ -53,7 +53,6 @@ class roibatchLoader(data.Dataset):
 
         self.ratio_list_batch[left_idx:(right_idx+1)] = torch.tensor(target_ratio.astype(np.float64)) # trainset ratio list ,each batch is same number
 
-
   def __getitem__(self, index):
     if self.training:
         index_ratio = int(self.ratio_index[index])
@@ -78,11 +77,16 @@ class roibatchLoader(data.Dataset):
     blobs['oboxes'] = blobs['oboxes'][hoi_inds]
     blobs['iboxes'] = blobs['iboxes'][hoi_inds]
     blobs['hoi_classes'] = blobs['hoi_classes'][hoi_inds]
+    blobs['bin_classes'] = blobs['bin_classes'][hoi_inds]
 
     gt_boxes = np.concatenate((blobs['hboxes'], blobs['oboxes'], blobs['iboxes']))
     gt_boxes = torch.from_numpy(gt_boxes)
+
     gt_classes = np.tile(blobs['hoi_classes'], (3, 1))
     gt_classes = torch.from_numpy(gt_classes)
+
+    gt_binaries = np.tile(blobs['bin_classes'], (3,))
+    gt_binaries = torch.from_numpy(gt_binaries)
 
 
     ########################################################
@@ -197,9 +201,8 @@ class roibatchLoader(data.Dataset):
         im_info[0, 0] = trim_size
         im_info[0, 1] = trim_size
 
-
     # check the bounding box:
-    not_keep = (gt_boxes[:,0] == gt_boxes[:,2]) | (gt_boxes[:,1] == gt_boxes[:,3])
+    not_keep = (gt_boxes[:, 0] == gt_boxes[:, 2]) | (gt_boxes[:, 1] == gt_boxes[:, 3])
     for i in range(not_keep.shape[0]):
         if not_keep[i] == 1:
             ii = i % num_hoi
@@ -209,26 +212,37 @@ class roibatchLoader(data.Dataset):
 
     keep = torch.nonzero(not_keep == 0).view(-1)
 
-    hboxes_padding = torch.FloatTensor(self.max_num_box, gt_boxes.size(1)).zero_()
-    oboxes_padding = torch.FloatTensor(self.max_num_box, gt_boxes.size(1)).zero_()
-    iboxes_padding = torch.FloatTensor(self.max_num_box, gt_boxes.size(1)).zero_()
-    hoi_classes_padding = torch.FloatTensor(self.max_num_box, gt_classes.size(1)).zero_()
+
 
     if keep.numel() != 0:
         gt_boxes = gt_boxes[keep]
-        num_boxes = int(min(gt_boxes.size(0) / 3, self.max_num_box))
-        hboxes_padding[:num_boxes,:] = gt_boxes[:num_boxes]
-        oboxes_padding[:num_boxes,:] = gt_boxes[num_boxes:num_boxes*2]
-        iboxes_padding[:num_boxes,:] = gt_boxes[num_boxes*2:num_boxes*3]
-        hoi_classes_padding[:num_boxes,:] = gt_classes[:num_boxes]
+        gt_classes = gt_classes[keep]
+        gt_binaries = gt_binaries[keep]
+
+        gt_num_boxes = int(gt_boxes.size(0) / 3)
+
+        assert gt_num_boxes * 3 == gt_boxes.size(0)
+
+        num_boxes = int(min(gt_num_boxes, self.max_num_box))
+        hboxes_padding = gt_boxes[gt_num_boxes * 0: gt_num_boxes * 0 + num_boxes]
+        oboxes_padding = gt_boxes[gt_num_boxes * 1: gt_num_boxes * 1 + num_boxes]
+        iboxes_padding = gt_boxes[gt_num_boxes * 2: gt_num_boxes * 2 + num_boxes]
+
+        hoi_classes_padding = gt_classes[:num_boxes]
+        bin_classes_padding = gt_binaries[:num_boxes].long()
     else:
+        hboxes_padding = torch.FloatTensor(1, gt_boxes.size(1)).zero_()
+        oboxes_padding = torch.FloatTensor(1, gt_boxes.size(1)).zero_()
+        iboxes_padding = torch.FloatTensor(1, gt_boxes.size(1)).zero_()
+        hoi_classes_padding = torch.FloatTensor(1, gt_classes.size(1)).zero_()
+        bin_classes_padding = torch.LongTensor(1).zero_()
         num_boxes = 0
 
         # permute trim_data to adapt to downstream processing
     padding_data = padding_data.permute(2, 0, 1).contiguous()
     im_info = im_info.view(3)
 
-    return padding_data, im_info, hboxes_padding, oboxes_padding, iboxes_padding, hoi_classes_padding, num_boxes
+    return padding_data, im_info, hboxes_padding, oboxes_padding, iboxes_padding, hoi_classes_padding, bin_classes_padding, num_boxes
 
   def __len__(self):
     return len(self._roidb)

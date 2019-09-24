@@ -1,0 +1,28 @@
+# If want to input None, use !!null
+
+# Resume Training, start from scratch or resume training
+resume_train: False
+load_epoch: 6
+
+# Learning Parameters
+n_epochs: 100
+learning_rate: 0.001  # def:0.01
+weight_decay: 0.0005 # def: 0.0005
+momentum: 0.9
+lr_policy: step  # def: step or auto
+lr_adapt_threshold: 0.01
+lr_adjust_freq: 20  # def: 20, learning rate will be reduced by 10 times at these steps
+test_freq: 10000
+
+
+batch_size: 32
+lan_feature_dim: 300
+spa_feature_dim: 14
+num_classes: 600
+
+save_freq: 50    # frequency of saving weights
+print_freq: 1  # frequency of printing training error rate
+
+data_save_dir: data_cache
+model_save_dir: save
+output_dir: output

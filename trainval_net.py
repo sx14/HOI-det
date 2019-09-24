@@ -42,7 +42,7 @@ def parse_args():
   parser = argparse.ArgumentParser(description='Train a Fast R-CNN network')
   parser.add_argument('--dataset', dest='dataset',
                       help='training dataset',
-                      default='hico', type=str)
+                      default='hico_full', type=str)
   parser.add_argument('--net', dest='net',
                       help='vgg16, res101',
                       default='vgg16', type=str)
@@ -157,10 +157,14 @@ if __name__ == '__main__':
   print('Called with args:')
   print(args)
 
-  if args.dataset == "hico":
-      args.imdb_name = "hico_2016_train"
-      args.imdbval_name = "hico_2016_test"
-      args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '20']
+  if args.dataset == "hico_mini":
+      args.imdb_name = "hico2_mini_train"
+      args.imdbval_name = "hico2_mini_test"
+      args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '40']
+  elif args.dataset == "hico_full":
+      args.imdb_name = "hico2_full_train"
+      args.imdbval_name = "hico_full_test"
+      args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '40']
   else:
       print('Only support HICO-DET dataset now.')
 
@@ -208,6 +212,7 @@ if __name__ == '__main__':
   oboxes = torch.FloatTensor(1)
   iboxes = torch.FloatTensor(1)
   hoi_classes = torch.FloatTensor(1)
+  bin_classes = torch.LongTensor(1)
 
   # ship to cuda
   if args.cuda:
@@ -218,6 +223,7 @@ if __name__ == '__main__':
     oboxes = oboxes.cuda()
     iboxes = iboxes.cuda()
     hoi_classes = hoi_classes.cuda()
+    bin_classes = bin_classes.cuda()
 
   # make variable
   im_data = Variable(im_data)
@@ -227,6 +233,7 @@ if __name__ == '__main__':
   oboxes = Variable(oboxes)
   iboxes = Variable(iboxes)
   hoi_classes = Variable(hoi_classes)
+  bin_classes = Variable(bin_classes)
 
   if args.cuda:
     cfg.CUDA = True
@@ -272,7 +279,7 @@ if __name__ == '__main__':
 
   if args.resume:
     load_name = os.path.join(output_dir,
-      'faster_rcnn_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
+      'ho_rcnn_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
     print("loading checkpoint %s" % (load_name))
     checkpoint = torch.load(load_name)
     args.session = checkpoint['session']
@@ -312,12 +319,17 @@ if __name__ == '__main__':
       oboxes.data.resize_(data[3].size()).copy_(data[3])
       iboxes.data.resize_(data[4].size()).copy_(data[4])
       hoi_classes.resize_(data[5].size()).copy_(data[5])
-      num_hois.data.resize_(data[6].size()).copy_(data[6])
+      bin_classes.resize_(data[6].size()).copy_(data[6])
+      num_hois.data.resize_(data[7].size()).copy_(data[7])
+
+      if num_hois.data.item() == 0:
+          continue
 
       fasterRCNN.zero_grad()
-      cls_prob, RCNN_loss_cls = fasterRCNN(im_data, im_info, hboxes, oboxes, iboxes, hoi_classes, num_hois)
+      cls_prob, bin_prob, RCNN_loss_cls, RCNN_loss_bin = \
+          fasterRCNN(im_data, im_info, hboxes, oboxes, iboxes, hoi_classes, bin_classes, num_hois)
 
-      loss = RCNN_loss_cls.mean()
+      loss = RCNN_loss_cls.mean() + RCNN_loss_bin.mean()
       loss_temp += loss.item()
 
       # backward
@@ -333,13 +345,20 @@ if __name__ == '__main__':
           loss_temp /= (args.disp_interval + 1)
 
         if args.mGPUs:
-          loss_rcnn_cls = RCNN_loss_cls.mean().item()
+            cls_loss = RCNN_loss_cls.mean().item()
+            bin_loss = RCNN_loss_bin.mean().item()
         else:
-          loss_rcnn_cls = RCNN_loss_cls.item()
+            cls_loss = RCNN_loss_cls.item()
+            bin_loss = RCNN_loss_bin.item()
+
+        nNeg = torch.sum(bin_classes).item()
+        nPos = bin_classes.shape[1] - nNeg
+
 
         print("[session %d][epoch %2d][iter %4d/%4d] loss: %.4f, lr: %.2e" \
                                 % (args.session, epoch, step, iters_per_epoch, loss_temp, lr))
-        print("\t\t\tfg/bg=(%d/%d), time cost: %f" % (0, 0, end-start))
+        print("cls_loss: %.4f, bin_loss: %.4f" % (cls_loss, bin_loss))
+        print("\t\t\tfg/bg=(%d/%d), time cost: %f" % (nPos, nNeg, end-start))
 
         if args.use_tfboard:
           info = {
@@ -349,11 +368,11 @@ if __name__ == '__main__':
 
         loss_temp = 0
         start = time.time()
-        test(fasterRCNN)
+        # test(fasterRCNN)
 
-    test(fasterRCNN)
+    # test(fasterRCNN)
 
-    save_name = os.path.join(output_dir, 'faster_rcnn_{}_{}_{}.pth'.format(args.session, epoch, step))
+    save_name = os.path.join(output_dir, 'ho_rcnn_{}_{}_{}.pth'.format(args.session, epoch, step))
     save_checkpoint({
       'session': args.session,
       'epoch': epoch + 1,

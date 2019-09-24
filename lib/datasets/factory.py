@@ -12,14 +12,14 @@ from __future__ import print_function
 
 __sets = {}
 from datasets.hico import hico
-
+from datasets.hico2 import hico2
 import numpy as np
 
 # Set up hico_<year>_<split>
-for year in ['2016']:
+for version in ['full', 'mini']:
   for split in ['train', 'test']:
-    name = 'hico_{}_{}'.format(year, split)
-    __sets[name] = (lambda split=split, year=year: hico(split, year))
+    name = 'hico2_{}_{}'.format(version, split)
+    __sets[name] = (lambda split=split, version=version: hico2(split, version))
 
 
 def get_imdb(name):

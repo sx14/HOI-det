@@ -47,6 +47,7 @@ class vgg16(_fasterRCNN):
 
     # not using the last maxpool layer
     self.RCNN_cls_score = nn.Linear(4096, self.n_classes)
+    self.RCNN_bin_score = nn.Linear(4096, 2)
 
   def _head_to_tail(self, pool5):
     
