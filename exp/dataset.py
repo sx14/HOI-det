@@ -82,11 +82,11 @@ def bbox_trans(human_box_roi, object_box_roi, size=64):
     return np.round(human_box), np.round(object_box)
 
 
-def spatial_map(human_box, object_box):
+def spatial_map(human_box, object_box, obj_cls, num_obj_cls):
     hbox, obox = bbox_trans(human_box, object_box)
-    spa_map = np.zeros((2, 64, 64), dtype='float32')
+    spa_map = np.zeros((num_obj_cls + 1, 64, 64), dtype='float32')
     spa_map[0, int(hbox[1]):int(hbox[3]) + 1, int(hbox[0]):int(hbox[2]) + 1] = 1
-    spa_map[1, int(obox[1]):int(obox[3]) + 1, int(obox[0]):int(obox[2]) + 1] = 1
+    spa_map[obj_cls, int(obox[1]):int(obox[3]) + 1, int(obox[0]):int(obox[2]) + 1] = 1
     return spa_map
 
 
@@ -106,5 +106,5 @@ class HICODatasetSpa(Dataset):
         return len(self.hboxes)
 
     def __getitem__(self, item):
-        spa_map = torch.from_numpy(spatial_map(self.hboxes[item], self.oboxes[item]))
+        spa_map = torch.from_numpy(spatial_map(self.hboxes[item], self.oboxes[item], self.obj_classes[item], 80))
         return spa_map, self.obj2vec[self.obj_classes[item].item()], self.hoi_classes[item], self.bin_classes[item], self.obj_classes[item]

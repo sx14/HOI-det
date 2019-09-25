@@ -9,7 +9,7 @@ class SpaConv(nn.Module):
     def __init__(self):
         super(SpaConv, self).__init__()
         # (batch,64,64,2)->(batch,60,60,64)
-        self.conv1 = nn.Conv2d(in_channels=2, out_channels=64, kernel_size=5)
+        self.conv1 = nn.Conv2d(in_channels=81, out_channels=64, kernel_size=5)
         # (batch,60,60,64)->(batch,30,30,64)
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
         # (batch,30,30,64)->(batch,26,26,32)
