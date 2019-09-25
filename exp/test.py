@@ -23,7 +23,7 @@ def test_image(model, im_obj_dets, image_size, det_obj2hoi_obj, obj2vec):
     spa_maps = Variable(spa_maps).cuda()
 
     obj_vecs = torch.FloatTensor(1)
-    spa_maps = Variable(obj_vecs).cuda()
+    obj_vecs = Variable(obj_vecs).cuda()
 
     hum_thr = 0.8
     obj_thr = 0.3
