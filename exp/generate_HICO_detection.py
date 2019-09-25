@@ -35,7 +35,10 @@ def getSigmoid(b,c,d,x,a=6):
     e = 2.718281828459
     return a/(1+e**(b-c*x))+d 
 
+
 def save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, classid, begin, finish):
+    # if class is "dog"
+    # only consider: "watch_dog", "walk_dog", ..., "no_interact_dog"
 
     all_boxes = []
     possible_hoi_range = hoi_range[classid - 1]
@@ -62,8 +65,6 @@ def save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, classid, begin, finis
                     d_score = element[6][0]
                     d_score_noi = element[6][1]
 
-                    # you could change the parameter of NIS (sigmoid function) here
-                    # use (10, 1.4, 0) as the default 
                     score_old = element[3][begin - 1 + i] * human_score * object_score
 
                     hoi_num = begin - 1 + i
@@ -71,8 +72,12 @@ def save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, classid, begin, finis
                     score_new = score_old
 
                     if (d_score_noi > thres_no_inter) and (d_score < thres_inter) and not(int(key) in all_remaining):
+                        # 1. Non-interactiveness is great enough
+                        # 2. Current image contains HOI instances
 
-                        if not((hoi_num + 1) in hoi_no_inter_all): # skiping all the 520 score
+                        if not((hoi_num + 1) in hoi_no_inter_all):
+                            # Current HOI class is not "no_interaction".
+                            # Skip the 520 interactive classes.
                             continue
 
                     temp.append(score_new)
