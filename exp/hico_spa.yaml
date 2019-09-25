@@ -6,18 +6,18 @@ load_epoch: 6
 
 # Learning Parameters
 n_epochs: 100
-learning_rate: 0.001  # def:0.01
+learning_rate: 0.00001  # def:0.01
 weight_decay: 0.0005 # def: 0.0005
 momentum: 0.9
 lr_policy: step  # def: step or auto
 lr_adapt_threshold: 0.01
-lr_adjust_freq: 20  # def: 20, learning rate will be reduced by 10 times at these steps
+lr_adjust_freq: 10  # def: 20, learning rate will be reduced by 10 times at these steps
 test_freq: 10000
 
 
 batch_size: 32
 lan_feature_dim: 300
-spa_feature_dim: 14
+spa_feature_dim: 5408
 num_classes: 600
 
 save_freq: 50    # frequency of saving weights

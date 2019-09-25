@@ -7,12 +7,20 @@ import numpy as np
 import torch
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
+from tensorboardX import SummaryWriter
+
 from dataset import HICODatasetSpa
 from load_data import prepare_hico
 from model import SpaLan
 
 
 def main(data_root, config):
+
+    log_dir = 'logs'
+    if os.path.exists(log_dir):
+        import shutil
+        shutil.rmtree(log_dir)
+    logger = SummaryWriter(log_dir)
 
     print_freq = config['print_freq']
     save_freq = config['save_freq']
@@ -49,9 +57,10 @@ def main(data_root, config):
         for data in dataloader:
             batch_count += 1
 
-            in_feats = Variable(data[0]).cuda()
-            hoi_cates = Variable(data[1]).cuda()
-            bin_cates = Variable(data[2]).cuda()
+            spa_maps = Variable(data[0]).cuda()
+            obj_vecs = Variable(data[1]).cuda()
+            hoi_cates = Variable(data[2]).cuda()
+            bin_cates = Variable(data[3]).cuda()
 
             pos_mask = torch.eq(bin_cates, 0)
             if pos_mask.sum().item() == 0:
@@ -60,11 +69,17 @@ def main(data_root, config):
             optimizer.zero_grad()
             bin_prob, hoi_prob, \
             loss_bin, loss_hoi, \
-            error_bin, error_hoi = model(in_feats, hoi_cates, bin_cates, pos_mask)
+            error_bin, error_hoi = model(spa_maps, obj_vecs, hoi_cates, bin_cates, pos_mask)
 
             loss = loss_bin + loss_hoi
             loss.backward()
             optimizer.step()
+
+            logger.add_scalars('loss', {'all': loss.data.item(),
+                                        'bin': loss_bin.data.item(),
+                                        'hoi': loss_hoi.data.item()}, batch_count)
+            logger.add_scalars('error', {'bin': error_bin.data.item(),
+                                         'hoi': error_hoi.data.item()}, batch_count)
 
             if batch_count % print_freq == 0:
                 curr_time = time.time()
@@ -81,8 +96,9 @@ def main(data_root, config):
             np.save(os.path.join(model_save_dir, '%s_%d_lr.pkl' % (model, epoch)), lr)
 
         if (epoch + 1) % lr_adjust_freq == 0:
-            lr = lr * 0.1
+            lr = lr * 0.6
 
+    logger.close()
 
 if __name__ == '__main__':
     config_path = 'hico_spa.yaml'
