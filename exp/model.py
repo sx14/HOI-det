@@ -42,7 +42,7 @@ class SpaLan(nn.Module):
                 m.bias.data.zero_()
 
     def __str__(self):
-        return 'SpaMapLan'
+        return 'SpaObjMap'
 
     def __init__(self, in_feat_dim, class_num):
         super(SpaLan, self).__init__()
