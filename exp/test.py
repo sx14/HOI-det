@@ -39,10 +39,11 @@ def test_image(model, im_obj_dets, image_size, det_obj2hoi_obj, obj2vec):
                     obox = obj_det[2]
                     oscore = obj_det[5]
                     oind = det_obj2hoi_obj[obj_det[4]]
-                    ovec = torch.from_numpy(obj2vec[oind])
+                    ovec = torch.from_numpy(obj2vec[oind]).view((1, -1))
                     spa_map_raw = spatial_map(hbox, obox)
                     spa_map_raw = torch.from_numpy(spa_map_raw[np.newaxis, :, :, :])
-                    obj_vecs.data.resize_(ovec.size()).copy_(ovec).view((1, -1))
+
+                    obj_vecs.data.resize_(ovec.size()).copy_(ovec)
                     spa_maps.data.resize_(spa_map_raw.size()).copy_(spa_map_raw)
 
                     with torch.no_grad():
@@ -116,7 +117,7 @@ if __name__ == '__main__':
             pickle.dump(all_results, f)
         print('Done.')
 
-    generate_HICO_detection(output_path, 'output/results', 0.9, 0.1)
+    generate_HICO_detection(output_path, 'output/results', 0.6, 0.4)
 
     os.chdir('benchmark')
     os.system('matlab -nodesktop -nosplash -r "Generate_detection '+ '../output/results/' + '/;quit;"')
