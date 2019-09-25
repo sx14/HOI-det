@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 from torch.autograd import Variable
 
 from load_data import prepare_hico, load_hoi_classes
-from dataset import HICODatasetSpa
+from dataset import HICODatasetSpa, spatial_map
 from model import SpaLan
 from load_data import load_image_info, extract_spatial_feature, object_class_mapping
 from generate_HICO_detection import generate_HICO_detection
@@ -19,8 +19,11 @@ from generate_HICO_detection import generate_HICO_detection
 def test_image(model, im_obj_dets, image_size, det_obj2hoi_obj, obj2vec):
     # save image information
     results = []
-    in_feat = torch.FloatTensor(1)
-    in_feat = Variable(in_feat).cuda()
+    spa_maps = torch.FloatTensor(1)
+    spa_maps = Variable(spa_maps).cuda()
+
+    obj_vecs = torch.FloatTensor(1)
+    spa_maps = Variable(obj_vecs).cuda()
 
     hum_thr = 0.8
     obj_thr = 0.3
@@ -28,32 +31,22 @@ def test_image(model, im_obj_dets, image_size, det_obj2hoi_obj, obj2vec):
     for hum_det in im_obj_dets:
         if (np.max(hum_det[5]) > hum_thr) and (hum_det[1] == 'Human'):
             # This is a valid human
-            hbox = {
-                'xmin': hum_det[2][0],
-                'ymin': hum_det[2][1],
-                'xmax': hum_det[2][2],
-                'ymax': hum_det[2][3],
-            }
+            hbox = hum_det[2]
             hscore = hum_det[5]
             for obj_det in im_obj_dets:
                 if (np.max(obj_det[5]) > obj_thr) and not (np.all(obj_det[2] == hum_det[2])):
                     # This is a valid object
-                    obox = {
-                        'xmin': obj_det[2][0],
-                        'ymin': obj_det[2][1],
-                        'xmax': obj_det[2][2],
-                        'ymax': obj_det[2][3],
-                    }
+                    obox = obj_det[2]
                     oscore = obj_det[5]
                     oind = det_obj2hoi_obj[obj_det[4]]
                     ovec = torch.from_numpy(obj2vec[oind])
+                    spa_map_raw = spatial_map(hbox, obox)
+                    spa_map_raw = spa_map_raw[np.newaxis, :, :, :]
+                    obj_vecs.data.resize_(ovec.size()).copy_(ovec).view((1, -1))
+                    spa_maps.data.resize_(spa_map_raw.size()).copy_(spa_map_raw)
 
-                    spa_feat = extract_spatial_feature(hbox, obox, image_size)
-                    spa_feat = torch.from_numpy(np.array(spa_feat))
-                    in_feat_np = torch.cat([spa_feat, ovec]).reshape((1, -1))
-                    in_feat.data.resize_(in_feat_np.size() ).copy_(in_feat_np)
                     with torch.no_grad():
-                        bin_prob, hoi_prob, _, _, _, _ = model(in_feat)
+                        bin_prob, hoi_prob, _, _, _, _ = model(spa_maps, obj_vecs)
 
                     temp = []
                     temp.append(hum_det[2])             # Human box
