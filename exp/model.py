@@ -80,11 +80,11 @@ class SpaLan(nn.Module):
         bin_pred = torch.argmax(bin_prob, dim=1)
         hoi_pred = (hoi_prob > 0.5).float()
 
-        bin_error = torch.FloatTensor(-1)
-        hoi_error = torch.FloatTensor(-1)
+        bin_error = torch.ones((1)) * -1
+        hoi_error = torch.zeros((1)) * -1
 
-        loss_cls = torch.FloatTensor(-1)
-        loss_bin = torch.FloatTensor(-1)
+        loss_cls = torch.zeros((1)) * -1
+        loss_bin = torch.zeros((1)) * -1
 
         if hoi_cates is not None and bin_cates is not None:
             bin_error = torch.abs(bin_pred - bin_cates).sum()
