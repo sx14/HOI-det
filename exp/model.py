@@ -67,8 +67,9 @@ class SpaLan(nn.Module):
         # self._initialize_weights()
 
     def forward(self, spa_map, obj_vec, hoi_cates=None, bin_cates=None, pos_mask=None):
-        spa_vec = self.spa_conv(spa_map)
+        num_ins = spa_map.shape[0]
 
+        spa_vec = self.spa_conv(spa_map)
         in_feat = torch.cat([spa_vec, obj_vec], dim=1)
         hidden = self.hidden_layer(in_feat)
         bin_scores = self.proposal(hidden)
@@ -80,15 +81,15 @@ class SpaLan(nn.Module):
         bin_pred = torch.argmax(bin_prob, dim=1)
         hoi_pred = (hoi_prob > 0.5).float()
 
-        bin_error = torch.ones((1)) * -1
-        hoi_error = torch.zeros((1)) * -1
+        bin_error = torch.ones(1) * -1
+        hoi_error = torch.ones(1) * -1
 
-        loss_cls = torch.zeros((1)) * -1
-        loss_bin = torch.zeros((1)) * -1
+        loss_cls = torch.ones(1) * -1
+        loss_bin = torch.ones(1) * -1
 
         if hoi_cates is not None and bin_cates is not None:
-            bin_error = torch.abs(bin_pred - bin_cates).sum()
-            hoi_error = torch.abs(hoi_pred[pos_mask] - hoi_cates[pos_mask]).sum()
+            bin_error = torch.abs(bin_pred - bin_cates).sum() * 1.0 / num_ins
+            hoi_error = torch.abs(hoi_pred[pos_mask] - hoi_cates[pos_mask]).sum() * 1.0 / pos_mask.sum().item()
             loss_bin = F.cross_entropy(bin_scores, bin_cates, size_average=False)
             loss_cls = F.binary_cross_entropy(hoi_prob[pos_mask], hoi_cates[pos_mask], size_average=False)    # multi-label classification
 

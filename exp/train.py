@@ -62,9 +62,6 @@ def main(data_root, config):
         for data in train_dataloader:
             batch_count += 1
 
-            if batch_count == 100:
-                break
-
             spa_maps = Variable(data[0]).cuda()
             obj_vecs = Variable(data[1]).cuda()
             hoi_cates = Variable(data[2]).cuda()
