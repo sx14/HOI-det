@@ -24,9 +24,14 @@ def show_scores(hoi_classes, hoi_probs, interval):
     plt.show()
 
 
-def val(model, dataset, hoi_classes, hoi2int):
+def val(model, dataset, hoi_classes, hoi2int, show=False):
+    error_bin_all = 0.0
+    error_hoi_all = 0.0
+    count = 0
+    print('Evaluating ...')
 
     for data in dataset:
+        count += 1
 
         spa_maps = Variable(data[0]).cuda()
         obj_vecs = Variable(data[1]).cuda()
@@ -40,39 +45,45 @@ def val(model, dataset, hoi_classes, hoi2int):
         bin_prob, hoi_prob, \
         loss_bin, loss_hoi, \
         error_bin, error_hoi = model(spa_maps, obj_vecs, hoi_cates, bin_cates, pos_mask)
-
         num_ins = spa_maps.shape[0]
+        error_bin_all += error_bin.data.item()
+        error_hoi_all += error_hoi.data.item()
 
         for i in range(num_ins):
             gt_hoi_cates = [hoi_classes[ind] for ind, v in enumerate(hoi_cates[i]) if v == 1]
             if bin_cates[i] == 0:
-                pos_neg = 'P'
-                obj_cate_name = gt_hoi_cates[0].object_name()
-                vrb_cate_names = [hoi_cate.verb_name() for hoi_cate in gt_hoi_cates]
-                hoi_cate_str = '%s - ' % obj_cate_name + ','.join(vrb_cate_names)
+                gt_pos_neg = 'P'
+                gt_obj_cate_name = gt_hoi_cates[0].object_name()
+                gt_vrb_cate_names = [hoi_cate.verb_name() for hoi_cate in gt_hoi_cates]
+                gt_hoi_cate_str = '%s - ' % gt_obj_cate_name + ','.join(gt_vrb_cate_names)
             else:
-                pos_neg = 'N'
-                hoi_cate_str = ''
-            print('GT: [%s] %s' % (pos_neg, hoi_cate_str))
+                gt_pos_neg = 'N'
+                gt_hoi_cate_str = ''
 
             if torch.argmax(bin_prob[i]).item() == 0:
-                pos_neg = 'P'
+                pr_pos_neg = 'P'
             else:
-                pos_neg = 'N'
+                pr_pos_neg = 'N'
 
             gt_hoi_inds = [ind for ind, v in enumerate(hoi_cates[i]) if v == 1]
-            hoi_int = hoi2int[gt_hoi_inds[0]]
-            hoi_prob[i][:hoi_int[0]] = 0
-            hoi_prob[i][hoi_int[1]+1:] = 0
+            gt_hoi_int = hoi2int[gt_hoi_inds[0]]
+            hoi_prob[i][:gt_hoi_int[0]] = 0
+            hoi_prob[i][gt_hoi_int[1]+1:] = 0
 
-            hoi_cate_preds = np.argsort(hoi_prob[i].cpu().data.numpy())[::-1][:1]
-            obj_cate_name = hoi_classes[gt_hoi_inds[0]].object_name()
-            vrb_cate_names = [hoi_classes[cate].verb_name() for cate in hoi_cate_preds]
+            pr_hoi_cates = np.argsort(hoi_prob[i].cpu().data.numpy())[::-1][:1]
+            pr_obj_cate_name = hoi_classes[gt_hoi_inds[0]].object_name()
+            pr_vrb_cate_names = [hoi_classes[cate].verb_name() for cate in pr_hoi_cates]
+            pr_hoi_cate_str = '%s - ' % pr_obj_cate_name + ','.join(pr_vrb_cate_names)
 
-            hoi_cate_str = '%s - ' % obj_cate_name + ','.join(vrb_cate_names)
-            print('PR: [%s] %s' % (pos_neg, hoi_cate_str))
+            if show:
+                print('GT: [%s] %s' % (gt_pos_neg, gt_hoi_cate_str))
+                print('PR: [%s] %s' % (pr_pos_neg, pr_hoi_cate_str))
+                show_scores(hoi_classes, hoi_prob[i].cpu().data.numpy(), gt_hoi_int)
 
-            show_scores(hoi_classes, hoi_prob[i].cpu().data.numpy(), hoi_int)
+    error_bin_avg = error_bin_all / count
+    error_hoi_avg = error_hoi_all / count
+    print('[eval] avg bin error: %.4f   avg hoi error: %.4f' % (error_bin_avg, error_hoi_avg))
+    return error_bin_avg, error_hoi_avg
 
 
 if __name__ == '__main__':

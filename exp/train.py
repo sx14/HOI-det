@@ -10,8 +10,9 @@ from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
 
 from dataset import HICODatasetSpa
-from load_data import prepare_hico
+from load_data import prepare_hico, load_hoi_classes
 from model import SpaLan
+from val import val
 
 
 def main(data_root, config):
@@ -34,12 +35,15 @@ def main(data_root, config):
     test_dataset = HICODatasetSpa(hoi_db['val'])
     train_dataset = HICODatasetSpa(hoi_db['train'])
     dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+    hoi_classes_path = os.path.join(data_root, 'hoi_categories.pkl')
+    hoi_classes, _, _, hoi2int = load_hoi_classes(hoi_classes_path)
+
     print('===== done =====')
 
     model = SpaLan(config['lan_feature_dim'] + config['spa_feature_dim'],
                    config['num_classes'])
     model = model.cuda()
-    model.train()
+
 
     # Optimizer
     lr = config['learning_rate']
@@ -50,12 +54,15 @@ def main(data_root, config):
     batch_count = 0
     last_print_time = time.time()
     for epoch in range(config['n_epochs']):
-
+        model.train()
         optimizer = torch.optim.SGD([{'params': model.parameters()}],
                                     lr=lr, momentum=mt, weight_decay=wd, nesterov=True)
 
         for data in dataloader:
             batch_count += 1
+
+            if batch_count == 100:
+                break
 
             spa_maps = Variable(data[0]).cuda()
             obj_vecs = Variable(data[1]).cuda()
@@ -90,6 +97,10 @@ def main(data_root, config):
                                                                         error_hoi.data.item(), hoi_cates[pos_mask].sum().data.item()))
                 last_print_time = curr_time
 
+        model.eval()
+        error_bin_avg, error_hoi_avg = val(model, test_dataset, hoi_classes, hoi2int, show=False)
+        logger.add_scalars('error_val', {'bin': error_bin_avg,
+                                         'hoi': error_hoi_avg}, epoch)
         if (epoch + 1) % save_freq == 0:
             model_file = os.path.join(model_save_dir, '%s_%d_weights.pkl' % (model, epoch))
             torch.save(model.state_dict(), model_file)
@@ -99,6 +110,7 @@ def main(data_root, config):
             lr = lr * 0.6
 
     logger.close()
+
 
 if __name__ == '__main__':
     config_path = 'hico_spa.yaml'
