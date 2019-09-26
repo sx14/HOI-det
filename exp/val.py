@@ -32,7 +32,7 @@ def val(model, dataset, hoi_classes, hoi2int, show=False):
 
     for data in dataset:
         count += 1
-        if count % 1000 == 0:
+        if count % 100 == 0:
             print(count)
 
         spa_maps = Variable(data[0]).cuda()
@@ -51,36 +51,36 @@ def val(model, dataset, hoi_classes, hoi2int, show=False):
         error_bin_all += error_bin.data.item()
         error_hoi_all += error_hoi.data.item()
 
-        for i in range(num_ins):
-            gt_hoi_cates = [hoi_classes[ind] for ind, v in enumerate(hoi_cates[i]) if v == 1]
-            if bin_cates[i] == 0:
-                gt_pos_neg = 'P'
-                gt_obj_cate_name = gt_hoi_cates[0].object_name()
-                gt_vrb_cate_names = [hoi_cate.verb_name() for hoi_cate in gt_hoi_cates]
-                gt_hoi_cate_str = '%s - ' % gt_obj_cate_name + ','.join(gt_vrb_cate_names)
-            else:
-                gt_pos_neg = 'N'
-                gt_hoi_cate_str = ''
+        if show:
+            for i in range(num_ins):
+                gt_hoi_cates = [hoi_classes[ind] for ind, v in enumerate(hoi_cates[i]) if v == 1]
+                if bin_cates[i] == 0:
+                    gt_pos_neg = 'P'
+                    gt_obj_cate_name = gt_hoi_cates[0].object_name()
+                    gt_vrb_cate_names = [hoi_cate.verb_name() for hoi_cate in gt_hoi_cates]
+                    gt_hoi_cate_str = '%s - ' % gt_obj_cate_name + ','.join(gt_vrb_cate_names)
+                else:
+                    gt_pos_neg = 'N'
+                    gt_hoi_cate_str = ''
 
-            if torch.argmax(bin_prob[i]).item() == 0:
-                pr_pos_neg = 'P'
-            else:
-                pr_pos_neg = 'N'
+                if torch.argmax(bin_prob[i]).item() == 0:
+                    pr_pos_neg = 'P'
+                else:
+                    pr_pos_neg = 'N'
 
-            gt_hoi_inds = [ind for ind, v in enumerate(hoi_cates[i]) if v == 1]
-            gt_hoi_int = hoi2int[gt_hoi_inds[0]]
-            hoi_prob[i][:gt_hoi_int[0]] = 0
-            hoi_prob[i][gt_hoi_int[1]+1:] = 0
+                gt_hoi_inds = [ind for ind, v in enumerate(hoi_cates[i]) if v == 1]
+                gt_hoi_int = hoi2int[gt_hoi_inds[0]]
+                hoi_prob[i][:gt_hoi_int[0]] = 0
+                hoi_prob[i][gt_hoi_int[1]+1:] = 0
 
-            pr_hoi_cates = np.argsort(hoi_prob[i].cpu().data.numpy())[::-1][:1]
-            pr_obj_cate_name = hoi_classes[gt_hoi_inds[0]].object_name()
-            pr_vrb_cate_names = [hoi_classes[cate].verb_name() for cate in pr_hoi_cates]
-            pr_hoi_cate_str = '%s - ' % pr_obj_cate_name + ','.join(pr_vrb_cate_names)
+                pr_hoi_cates = np.argsort(hoi_prob[i].cpu().data.numpy())[::-1][:1]
+                pr_obj_cate_name = hoi_classes[gt_hoi_inds[0]].object_name()
+                pr_vrb_cate_names = [hoi_classes[cate].verb_name() for cate in pr_hoi_cates]
+                pr_hoi_cate_str = '%s - ' % pr_obj_cate_name + ','.join(pr_vrb_cate_names)
 
-            if show:
                 print('GT: [%s] %s' % (gt_pos_neg, gt_hoi_cate_str))
                 print('PR: [%s] %s' % (pr_pos_neg, pr_hoi_cate_str))
-                show_scores(hoi_classes, hoi_prob[i].cpu().data.numpy(), gt_hoi_int)
+                # show_scores(hoi_classes, hoi_prob[i].cpu().data.numpy(), gt_hoi_int)
 
     error_bin_avg = error_bin_all / count
     error_hoi_avg = error_hoi_all / count
@@ -106,10 +106,11 @@ if __name__ == '__main__':
     model = model.cuda()
     resume_dict = torch.load(os.path.join(model_save_dir, '%s_99_weights.pkl' % model))
     model.load_state_dict(resume_dict)
+    model.eval()
 
     hoi_classes_path = os.path.join(data_root, 'hoi_categories.pkl')
     hoi_classes, obj_classes, vrb_classes, hoi2int = load_hoi_classes(hoi_classes_path)
 
-    val(model, dataloader, hoi_classes, hoi2int)
+    val(model, dataloader, hoi_classes, hoi2int, show=True)
 
 
