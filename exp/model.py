@@ -86,7 +86,7 @@ class SpaLan(nn.Module):
         loss_cls = torch.FloatTensor(-1)
         loss_bin = torch.FloatTensor(-1)
 
-        if self.training:
+        if hoi_cates is not None and bin_cates is not None:
             bin_error = torch.abs(bin_pred - bin_cates).sum()
             hoi_error = torch.abs(hoi_pred[pos_mask] - hoi_cates[pos_mask]).sum()
             loss_bin = F.cross_entropy(bin_scores, bin_cates, size_average=False)
