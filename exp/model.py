@@ -88,7 +88,7 @@ class SpaLan(nn.Module):
         loss_bin = torch.ones(1) * -1
 
         if hoi_cates is not None and bin_cates is not None:
-            bin_error = torch.abs(bin_pred - bin_cates).sum() * 1.0 / num_ins
+            bin_error = torch.abs(bin_pred - bin_cates).sum().float() / num_ins
             hoi_error = torch.abs(hoi_pred[pos_mask] - hoi_cates[pos_mask]).sum() * 1.0 / pos_mask.sum().item()
             loss_bin = F.cross_entropy(bin_scores, bin_cates, size_average=False)
             loss_cls = F.binary_cross_entropy(hoi_prob[pos_mask], hoi_cates[pos_mask], size_average=False)    # multi-label classification
