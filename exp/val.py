@@ -32,6 +32,8 @@ def val(model, dataset, hoi_classes, hoi2int, show=False):
 
     for data in dataset:
         count += 1
+        if count % 1000 == 0:
+            print(count)
 
         spa_maps = Variable(data[0]).cuda()
         obj_vecs = Variable(data[1]).cuda()
