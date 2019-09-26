@@ -33,8 +33,9 @@ def main(data_root, config):
     print('===== preparing =====')
     hoi_db = prepare_hico(data_root, data_save_dir)
     test_dataset = HICODatasetSpa(hoi_db['val'])
+    test_dataloader = DataLoader(test_dataset, batch_size=32, shuffle=True)
     train_dataset = HICODatasetSpa(hoi_db['train'])
-    dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+    train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True)
     hoi_classes_path = os.path.join(data_root, 'hoi_categories.pkl')
     hoi_classes, _, _, hoi2int = load_hoi_classes(hoi_classes_path)
 
@@ -58,7 +59,7 @@ def main(data_root, config):
         optimizer = torch.optim.SGD([{'params': model.parameters()}],
                                     lr=lr, momentum=mt, weight_decay=wd, nesterov=True)
 
-        for data in dataloader:
+        for data in train_dataloader:
             batch_count += 1
 
             if batch_count == 100:
@@ -98,7 +99,7 @@ def main(data_root, config):
                 last_print_time = curr_time
 
         model.eval()
-        error_bin_avg, error_hoi_avg = val(model, test_dataset, hoi_classes, hoi2int, show=False)
+        error_bin_avg, error_hoi_avg = val(model, test_dataloader, hoi_classes, hoi2int, show=False)
         logger.add_scalars('error_val', {'bin': error_bin_avg,
                                          'hoi': error_hoi_avg}, epoch)
         if (epoch + 1) % save_freq == 0:
