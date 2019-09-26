@@ -27,13 +27,14 @@ def show_scores(hoi_classes, hoi_probs, interval):
 def val(model, dataset, hoi_classes, hoi2int, show=False):
     error_bin_all = 0.0
     error_hoi_all = 0.0
-    count = 0
+    batch_count = 0
+    ins_count = 0
     print('Evaluating ...')
 
     for data in dataset:
-        count += 1
-        if count % 100 == 0:
-            print(count)
+        batch_count += 1
+        if batch_count % 100 == 0:
+            print(batch_count)
 
         spa_maps = Variable(data[0]).cuda()
         obj_vecs = Variable(data[1]).cuda()
@@ -50,6 +51,7 @@ def val(model, dataset, hoi_classes, hoi2int, show=False):
         num_ins = spa_maps.shape[0]
         error_bin_all += error_bin.data.item()
         error_hoi_all += error_hoi.data.item()
+        ins_count += num_ins
 
         if show:
             for i in range(num_ins):
@@ -82,8 +84,8 @@ def val(model, dataset, hoi_classes, hoi2int, show=False):
                 print('PR: [%s] %s' % (pr_pos_neg, pr_hoi_cate_str))
                 # show_scores(hoi_classes, hoi_prob[i].cpu().data.numpy(), gt_hoi_int)
 
-    error_bin_avg = error_bin_all / count
-    error_hoi_avg = error_hoi_all / count
+    error_bin_avg = error_bin_all / ins_count
+    error_hoi_avg = error_hoi_all / ins_count
     print('[eval] avg bin error: %.4f   avg hoi error: %.4f' % (error_bin_avg, error_hoi_avg))
     return error_bin_avg, error_hoi_avg
 

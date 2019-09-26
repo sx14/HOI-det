@@ -92,7 +92,7 @@ def main(data_root, config):
             if batch_count % print_freq == 0:
                 curr_time = time.time()
                 print('[Epoch %d][Batch %d] loss: %.4f time: %.2fs' % (epoch, batch_count, loss.data.item(),
-                                                                     curr_time - last_print_time))
+                                                                       curr_time - last_print_time))
                 print('     loss_bin: %.4f      loss_cls: %.4f' % (loss_bin.data.item(), loss_hoi.data.item()))
                 print('     error_bin: %d/%d       error_hoi: %d/%d' % (error_bin.data.item(), bin_cates.sum().data.item(),
                                                                         error_hoi.data.item(), hoi_cates[pos_mask].sum().data.item()))
