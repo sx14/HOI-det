@@ -66,7 +66,7 @@ class SpaLan(nn.Module):
 
         # self._initialize_weights()
 
-    def forward(self, spa_map, obj_vec, hoi_cates=None, bin_cates=None, pos_mask=None):
+    def forward(self, spa_map, obj_vec, hoi_cates=None, bin_cates=None, pos_mask=None, int_mask=None):
         num_ins = spa_map.shape[0]
 
         spa_vec = self.spa_conv(spa_map)
@@ -77,6 +77,8 @@ class SpaLan(nn.Module):
 
         bin_prob = F.softmax(bin_scores, dim=1)
         hoi_prob = F.sigmoid(hoi_scores)
+        int_mask_t = 1 - int_mask
+        hoi_prob[int_mask_t] = 0
 
         bin_pred = torch.argmax(bin_prob, dim=1)
         hoi_pred = (hoi_prob > 0.5).float()

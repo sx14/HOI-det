@@ -90,9 +90,20 @@ def spatial_map(human_box, object_box, obj_cls, num_obj_cls):
     return spa_map
 
 
+def gen_interval_mask(hoi_cls, hoi2int):
+    int_mask = np.zeros(hoi_cls.shape)
+    for i in range(hoi_cls.shape[0]):
+        if hoi_cls[i] == 1:
+            interval = hoi2int[i]
+            for j in range(interval[0], interval[1]+1):
+                int_mask[j] = 1
+            break
+    return int_mask
+
+
 class HICODatasetSpa(Dataset):
 
-    def __init__(self, hoi_db):
+    def __init__(self, hoi_db, hoi2int):
 
         self.hboxes = hoi_db['hboxes']
         self.oboxes = hoi_db['oboxes']
@@ -101,10 +112,17 @@ class HICODatasetSpa(Dataset):
         self.bin_classes = torch.from_numpy(hoi_db['bin_classes']).long()
         self.spa_feats = torch.from_numpy(hoi_db['spa_feats']).float()
         self.obj2vec = torch.from_numpy(hoi_db['obj2vec']).float()
+        self.hoi2int = hoi2int
 
     def __len__(self):
         return len(self.hboxes)
 
     def __getitem__(self, item):
         spa_map = torch.from_numpy(spatial_map(self.hboxes[item], self.oboxes[item], self.obj_classes[item], 80))
-        return spa_map, self.obj2vec[self.obj_classes[item].item()], self.hoi_classes[item], self.bin_classes[item], self.obj_classes[item]
+        int_mask = torch.from_numpy(gen_interval_mask(self.hoi_classes[item], self.hoi2int)).type(torch.uint8)
+        return spa_map, \
+               self.obj2vec[self.obj_classes[item].item()], \
+               self.hoi_classes[item], \
+               self.bin_classes[item], \
+               self.obj_classes[item], \
+               int_mask
