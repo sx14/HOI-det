@@ -119,7 +119,7 @@ class HICODatasetSpa(Dataset):
 
     def __getitem__(self, item):
         spa_map = torch.from_numpy(spatial_map(self.hboxes[item], self.oboxes[item], self.obj_classes[item], 80))
-        int_mask = torch.from_numpy(gen_interval_mask(self.hoi_classes[item], self.hoi2int)).type(torch.uint8)
+        int_mask = torch.from_numpy(gen_interval_mask(self.hoi_classes[item], self.hoi2int)).float()
         return spa_map, \
                self.obj2vec[self.obj_classes[item].item()], \
                self.hoi_classes[item], \

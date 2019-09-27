@@ -76,7 +76,7 @@ def main(data_root, config):
             optimizer.zero_grad()
             bin_prob, hoi_prob, \
             loss_bin, loss_hoi, \
-            error_bin, error_hoi = model(spa_maps, obj_vecs, hoi_cates, bin_cates, pos_mask)
+            error_bin, error_hoi = model(spa_maps, obj_vecs, hoi_cates, bin_cates, pos_mask, int_mask)
 
             loss = loss_bin + loss_hoi
             loss.backward()

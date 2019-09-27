@@ -77,8 +77,7 @@ class SpaLan(nn.Module):
 
         bin_prob = F.softmax(bin_scores, dim=1)
         hoi_prob = F.sigmoid(hoi_scores)
-        int_mask_t = 1 - int_mask
-        hoi_prob[int_mask_t] = 0
+        hoi_prob = hoi_prob * int_mask
 
         bin_pred = torch.argmax(bin_prob, dim=1)
         hoi_pred = (hoi_prob > 0.5).float()
