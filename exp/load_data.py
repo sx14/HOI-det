@@ -136,22 +136,22 @@ def load_hoi_classes(hoi_class_path):
     for j in range(curr_hoi_stt, curr_hoi_end + 1):
         hoi2int[j] = [curr_hoi_stt, curr_hoi_end]
 
-    # obj2int = [[] for _ in range(len(obj_cls_list))]
-    # curr_obj = hoi_cls_list[0].object_name()
-    # curr_int_stt = 0
-    # curr_obj_ind = 0
-    # for i in range(1, len(hoi_cls_list)):
-    #     obj = hoi_cls_list[i].object_name()
-    #     if obj != curr_obj:
-    #         curr_int_end = i - 1
-    #         assert curr_obj == obj_cls_list[curr_obj_ind]
-    #         obj2int[curr_obj_ind] = [curr_int_stt, curr_int_end]
-    #         curr_int_stt = i
-    #         curr_obj = obj
-    #         curr_obj_ind += 1
-    # obj2int[curr_obj_ind] = [curr_int_stt, len(hoi_cls_list) - 1]
+    obj2int = [[] for _ in range(len(obj_cls_list))]
+    curr_obj = hoi_cls_list[0].object_name()
+    curr_int_stt = 0
+    curr_obj_ind = 0
+    for i in range(1, len(hoi_cls_list)):
+        obj = hoi_cls_list[i].object_name()
+        if obj != curr_obj:
+            curr_int_end = i - 1
+            assert curr_obj == obj_cls_list[curr_obj_ind]
+            obj2int[curr_obj_ind] = [curr_int_stt, curr_int_end]
+            curr_int_stt = i
+            curr_obj = obj
+            curr_obj_ind += 1
+    obj2int[curr_obj_ind] = [curr_int_stt, len(hoi_cls_list) - 1]
 
-    return hoi_cls_list, obj_cls_list, vrb_cls_list, hoi2int
+    return hoi_cls_list, obj_cls_list, vrb_cls_list, hoi2int, obj2int
 
 
 def load_image_info(anno_path, save_dir, image_set='train'):

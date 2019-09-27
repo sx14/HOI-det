@@ -10,13 +10,13 @@ from torch.utils.data import DataLoader
 from torch.autograd import Variable
 
 from load_data import prepare_hico, load_hoi_classes
-from dataset import HICODatasetSpa, spatial_map
+from dataset import HICODatasetSpa, spatial_map, gen_interval_mask
 from model import SpaLan
-from load_data import load_image_info, extract_spatial_feature, object_class_mapping
+from load_data import load_image_info, object_class_mapping
 from generate_HICO_detection import generate_HICO_detection
 
 
-def test_image(model, im_obj_dets, image_size, det_obj2hoi_obj, obj2vec):
+def test_image(model, im_obj_dets, image_size, det_obj2hoi_obj, obj2vec, obj2int):
     # save image information
     results = []
     spa_maps = torch.FloatTensor(1)
@@ -24,6 +24,9 @@ def test_image(model, im_obj_dets, image_size, det_obj2hoi_obj, obj2vec):
 
     obj_vecs = torch.FloatTensor(1)
     obj_vecs = Variable(obj_vecs).cuda()
+
+    int_mask = torch.FloatTensor(1)
+    int_mask = Variable(int_mask).cuda()
 
     hum_thr = 0.8
     obj_thr = 0.3
@@ -40,14 +43,19 @@ def test_image(model, im_obj_dets, image_size, det_obj2hoi_obj, obj2vec):
                     oscore = obj_det[5]
                     oind = det_obj2hoi_obj[obj_det[4]]
                     ovec = torch.from_numpy(obj2vec[oind]).view((1, -1))
+
                     spa_map_raw = spatial_map(hbox, obox, obj_det[4], 80)
                     spa_map_raw = torch.from_numpy(spa_map_raw[np.newaxis, :, :, :])
 
+                    int_mask_raw = gen_interval_mask(oind, obj2int, 600)
+                    int_mask_raw = torch.from_numpy(int_mask_raw[np.newaxis, :, :, :])
+
                     obj_vecs.data.resize_(ovec.size()).copy_(ovec)
                     spa_maps.data.resize_(spa_map_raw.size()).copy_(spa_map_raw)
+                    int_mask.data.resize_(int_mask_raw.size()).copy_(int_mask_raw)
 
                     with torch.no_grad():
-                        bin_prob, hoi_prob, _, _, _, _ = model(spa_maps, obj_vecs)
+                        bin_prob, hoi_prob, _, _, _, _ = model(spa_maps, obj_vecs, int_mask=int_mask)
 
                     temp = []
                     temp.append(hum_det[2])             # Human box
@@ -62,14 +70,14 @@ def test_image(model, im_obj_dets, image_size, det_obj2hoi_obj, obj2vec):
     return results
 
 
-def test(model, obj_det_db, image_set_info, det_obj2hoi_obj, obj2vec):
+def test(model, obj_det_db, image_set_info, det_obj2hoi_obj, obj2vec, obj2int):
     all_results = {}
     num_im = len(obj_det_db)
     for i, im_id in enumerate(obj_det_db):
         print('test [%d/%d]' % (i+1, num_im))
         image_size = image_set_info[im_id]
         im_obj_dets = obj_det_db[im_id]
-        im_hoi_dets = test_image(model, im_obj_dets, image_size, det_obj2hoi_obj, obj2vec)
+        im_hoi_dets = test_image(model, im_obj_dets, image_size, det_obj2hoi_obj, obj2vec, obj2int)
         all_results[im_id] = im_hoi_dets
     return all_results
 
@@ -96,7 +104,7 @@ if __name__ == '__main__':
 
         data_root = '../data/hico'
         hoi_classes_path = os.path.join(data_root, 'hoi_categories.pkl')
-        hoi_classes, obj_classes, vrb_classes, hoi2int = load_hoi_classes(hoi_classes_path)
+        hoi_classes, obj_classes, vrb_classes, hoi2int, obj2int = load_hoi_classes(hoi_classes_path)
         det_obj2hoi_obj = object_class_mapping(hoi_classes, obj_classes)
         image_set_info = load_image_info(os.path.join(data_root, 'anno_bbox_full.mat'),
                                          config['data_save_dir'], image_set='test')
@@ -110,7 +118,7 @@ if __name__ == '__main__':
             obj_det_db = pickle.load(f)
 
         print('Testing ...')
-        all_results = test(model, obj_det_db, image_set_info, det_obj2hoi_obj, obj2vec)
+        all_results = test(model, obj_det_db, image_set_info, det_obj2hoi_obj, obj2vec, obj2int)
 
         print('Saving results ...')
         with open(output_path, 'wb') as f:

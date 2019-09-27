@@ -90,21 +90,18 @@ def spatial_map(human_box, object_box, obj_cls, num_obj_cls):
     return spa_map
 
 
-def gen_interval_mask(hoi_cls, hoi2int):
-    int_mask = np.zeros(hoi_cls.shape)
-    for i in range(hoi_cls.shape[0]):
-        if hoi_cls[i] == 1:
-            interval = hoi2int[i]
-            for j in range(interval[0], interval[1]+1):
-                int_mask[j] = 1
-            break
+def gen_interval_mask(obj_cls, obj2int, num_hoi_class):
+    int_mask = np.zeros(num_hoi_class)
+    interval = obj2int[obj_cls]
+    int_mask[interval[0]: interval[1]+1] = 1
     return int_mask
 
 
 class HICODatasetSpa(Dataset):
 
-    def __init__(self, hoi_db, hoi2int):
+    def __init__(self, hoi_db, obj2int):
 
+        self.num_hoi_class = 600
         self.hboxes = hoi_db['hboxes']
         self.oboxes = hoi_db['oboxes']
         self.obj_classes = hoi_db['obj_classes']
@@ -112,14 +109,18 @@ class HICODatasetSpa(Dataset):
         self.bin_classes = torch.from_numpy(hoi_db['bin_classes']).long()
         self.spa_feats = torch.from_numpy(hoi_db['spa_feats']).float()
         self.obj2vec = torch.from_numpy(hoi_db['obj2vec']).float()
-        self.hoi2int = hoi2int
+        self.obj2int = obj2int
 
     def __len__(self):
         return len(self.hboxes)
 
     def __getitem__(self, item):
-        spa_map = torch.from_numpy(spatial_map(self.hboxes[item], self.oboxes[item], self.obj_classes[item], 80))
-        int_mask = torch.from_numpy(gen_interval_mask(self.hoi_classes[item], self.hoi2int)).float()
+        spa_map = torch.from_numpy(spatial_map(self.hboxes[item],
+                                               self.oboxes[item],
+                                               self.obj_classes[item], 80))
+        int_mask = torch.from_numpy(gen_interval_mask(self.obj_classes[item].item(),
+                                                      self.obj2int,
+                                                      self.num_hoi_class)).float()
         return spa_map, \
                self.obj2vec[self.obj_classes[item].item()], \
                self.hoi_classes[item], \

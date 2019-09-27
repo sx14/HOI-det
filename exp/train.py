@@ -32,11 +32,11 @@ def main(data_root, config):
 
     print('===== preparing =====')
     hoi_classes_path = os.path.join(data_root, 'hoi_categories.pkl')
-    hoi_classes, _, _, hoi2int = load_hoi_classes(hoi_classes_path)
+    hoi_classes, _, _, hoi2int, obj2int = load_hoi_classes(hoi_classes_path)
     hoi_db = prepare_hico(data_root, data_save_dir)
-    test_dataset = HICODatasetSpa(hoi_db['val'], hoi2int)
+    test_dataset = HICODatasetSpa(hoi_db['val'], obj2int)
     test_dataloader = DataLoader(test_dataset, batch_size=32, shuffle=True)
-    train_dataset = HICODatasetSpa(hoi_db['train'], hoi2int)
+    train_dataset = HICODatasetSpa(hoi_db['train'], obj2int)
     train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True)
 
 
