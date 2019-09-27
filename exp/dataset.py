@@ -84,9 +84,9 @@ def bbox_trans(human_box_roi, object_box_roi, size=64):
 
 def spatial_map(human_box, object_box, obj_cls, num_obj_cls):
     hbox, obox = bbox_trans(human_box, object_box)
-    spa_map = np.zeros((num_obj_cls + 1, 64, 64), dtype='float32')
+    spa_map = np.zeros((2, 64, 64), dtype='float32')
     spa_map[0, int(hbox[1]):int(hbox[3]) + 1, int(hbox[0]):int(hbox[2]) + 1] = 1
-    spa_map[obj_cls, int(obox[1]):int(obox[3]) + 1, int(obox[0]):int(obox[2]) + 1] = 1
+    spa_map[1, int(obox[1]):int(obox[3]) + 1, int(obox[0]):int(obox[2]) + 1] = 1
     return spa_map
 
 
