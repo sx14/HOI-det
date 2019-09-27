@@ -95,9 +95,12 @@ if __name__ == '__main__':
         config = yaml.load(f)
 
     data_root = '../data/hico'
+    hoi_classes_path = os.path.join(data_root, 'hoi_categories.pkl')
+    hoi_classes, obj_classes, vrb_classes, hoi2int, obj2int = load_hoi_classes(hoi_classes_path)
+
     data_save_dir = config['data_save_dir']
     hoi_db = prepare_hico(data_root, data_save_dir)
-    test_dataset = HICODatasetSpa(hoi_db['val'])
+    test_dataset = HICODatasetSpa(hoi_db['val'], obj2int)
     dataloader = DataLoader(test_dataset, batch_size=32, shuffle=True)
 
     print('Loading models ...')
@@ -109,8 +112,7 @@ if __name__ == '__main__':
     model.load_state_dict(resume_dict)
     model.eval()
 
-    hoi_classes_path = os.path.join(data_root, 'hoi_categories.pkl')
-    hoi_classes, obj_classes, vrb_classes, hoi2int = load_hoi_classes(hoi_classes_path)
+
 
     val(model, dataloader, hoi_classes, hoi2int, show=True)
 
