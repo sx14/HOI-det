@@ -48,7 +48,7 @@ def test_image(model, im_obj_dets, image_size, det_obj2hoi_obj, obj2vec, obj2int
                     spa_map_raw = torch.from_numpy(spa_map_raw[np.newaxis, :, :, :])
 
                     int_mask_raw = gen_interval_mask(oind, obj2int, 600)
-                    int_mask_raw = torch.from_numpy(int_mask_raw[np.newaxis, :, :, :])
+                    int_mask_raw = torch.from_numpy(int_mask_raw[np.newaxis, :])
 
                     obj_vecs.data.resize_(ovec.size()).copy_(ovec)
                     spa_maps.data.resize_(spa_map_raw.size()).copy_(spa_map_raw)
