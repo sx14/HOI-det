@@ -60,7 +60,7 @@ def parse_args():
                       default=10000, type=int)
 
   parser.add_argument('--save_dir', dest='save_dir',
-                      help='directory to save models', default="output",
+                      help='directory to save models', default="weights",
                       type=str)
   parser.add_argument('--nw', dest='num_workers',
                       help='number of workers to load data',
@@ -129,7 +129,7 @@ class sampler(Sampler):
     self.num_data = train_size
     self.num_per_batch = int(train_size / batch_size)
     self.batch_size = batch_size
-    self.range = torch.arange(0,batch_size).view(1, batch_size).long()
+    self.range = torch.arange(0, batch_size).view(1, batch_size).long()
     self.leftover_flag = False
     if train_size % batch_size:
       self.leftover = torch.arange(self.num_per_batch*batch_size, train_size).long()

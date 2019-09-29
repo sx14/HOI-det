@@ -19,6 +19,7 @@ import random
 import time
 import pdb
 
+
 class roibatchLoader(data.Dataset):
   def __init__(self, roidb, ratio_list, ratio_index, batch_size, num_classes, training=True, normalize=None):
     self._roidb = roidb
@@ -211,8 +212,6 @@ class roibatchLoader(data.Dataset):
             not_keep[ii + num_hoi * 2] = 1
 
     keep = torch.nonzero(not_keep == 0).view(-1)
-
-
 
     if keep.numel() != 0:
         gt_boxes = gt_boxes[keep]
