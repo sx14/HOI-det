@@ -17,7 +17,6 @@ import sys
 import matplotlib
 import matplotlib.pyplot as plth
 import random
-import HICO_Benchmark_Binary as rank 
 
 # all the no-interaction HOI index in HICO dataset
 hoi_no_inter_all = [10,24,31,46,54,65,76,86,92,96,107,111,129,146,160,170,174,186,194,198,208,214,224,232,235,239,243,247,252,257,264,273,283,290,295,305,313,325,330,336,342,348,352,356,363,368,376,383,389,393,397,407,414,418,429,434,438,445,449,453,463,474,483,488,502,506,516,528,533,538,546,550,558,562,567,576,584,588,595,600]
@@ -28,9 +27,6 @@ all_remaining = set([20, 25, 54, 60, 66, 71, 74, 94, 154, 155, 184, 200, 229, 23
 
 pair_total_num = 999999
 
-
-binary_score_nointer, binary_score_inter, a_pair, b_pair, c_pair = rank.cal_rank_600()
-
 pair_is_del = np.zeros(pair_total_num, dtype = 'float32')
 pair_in_the_result = np.zeros(9999, dtype = 'float32')
 
@@ -39,7 +35,10 @@ def getSigmoid(b,c,d,x,a=6):
     e = 2.718281828459
     return a/(1+e**(b-c*x))+d 
 
+
 def save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, classid, begin, finish):
+    # if class is "dog"
+    # only consider: "watch_dog", "walk_dog", ..., "no_interact_dog"
 
     all_boxes = []
     possible_hoi_range = hoi_range[classid - 1]
@@ -50,8 +49,7 @@ def save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, classid, begin, finis
     for i in range(finish - begin + 1): # for every verb, iteration all the pkl file
         total = []
         score = []
-        pair_id = 0
-      
+
         for key, value in HICO.iteritems():
             for element in value:
                 if element[2] == classid:
@@ -64,79 +62,28 @@ def save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, classid, begin, finis
                     human_score = element[4]
                     object_score = element[5]
 
-                    d_score = binary_score_inter[pair_id]
-                    d_score_noi = binary_score_nointer[pair_id]
+                    d_score = element[6][0]
+                    d_score_noi = element[6][1]
 
-                    # you could change the parameter of NIS (sigmoid function) here
-                    # use (10, 1.4, 0) as the default 
-                    score_old = element[3][begin - 1 + i] * getSigmoid(10,1.4,0,element[4]) * getSigmoid(10,1.4,0,element[5])
+                    score_old = element[3][begin - 1 + i] * human_score * object_score
 
                     hoi_num = begin - 1 + i
 
                     score_new = score_old
 
-                    if classid == 63:
-                        thres_no_inter = 0.95 
-                        thres_inter = 0.15
-                    elif classid == 43:
-                        thres_no_inter = 0.85
-                        thres_inter = 0.1
-                    elif classid == 57:
-                        thres_no_inter = 0.85
-                        thres_inter = 0.2
-                    elif classid == 48:
-                        thres_no_inter = 0.85
-                        thres_inter = 0.2
-                    elif classid == 41:
-                        thres_no_inter = 0.85
-                        thres_inter = 0.15 
-                    elif classid == 2:
-                        thres_inter = 0.2
-                        thres_no_inter = 0.85
-                    elif classid == 4:
-                        thres_inter = 0.15
-                        thres_no_inter = 0.85
-                    elif classid == 31:
-                        thres_inter = 0.1
-                        thres_no_inter = 0.85
-                    elif classid == 19:
-                        thres_inter = 0.2
-                        thres_no_inter = 0.85
-                    elif classid == 1:
-                        thres_inter = 0.05
-                        thres_no_inter = 0.85
-                    elif classid == 11:
-                        thres_inter = 0.15
-                        thres_no_inter = 0.85
-
-
-
-                    # if Binary D score D[0] > no interaction threshold and D[1] <
                     if (d_score_noi > thres_no_inter) and (d_score < thres_inter) and not(int(key) in all_remaining):
+                        # 1. Non-interactiveness is great enough
+                        # 2. Current image contains HOI instances
 
-                        if not((hoi_num + 1) in hoi_no_inter_all): # skiping all the 520 score
-                            
-                            if (a_pair[pair_id] == 1) and (pair_is_del[pair_id] == 0):
-                                num_delete_pair_a += 1
-                                pair_is_del[pair_id] = 1
-
-                            elif (b_pair[pair_id] == 1) and (pair_is_del[pair_id] == 0):
-                                num_delete_pair_b += 1
-                                pair_is_del[pair_id] = 1
-
-                            elif (c_pair[pair_id] == 1) and (pair_is_del[pair_id] == 0):
-                                num_delete_pair_c += 1
-                                pair_is_del[pair_id] = 1
-
-                            pair_id += 1
-                            continue  
+                        if not((hoi_num + 1) in hoi_no_inter_all):
+                            # Current HOI class is not "no_interaction".
+                            # Skip the 520 interactive classes.
+                            continue
 
                     temp.append(score_new)
                     total.append(temp)
                     score.append(score_new)
-                    
-                if not(int(key) in all_remaining):
-                    pair_id += 1
+
                 
         idx = np.argsort(score, axis=0)[::-1]
         for i_idx in range(min(len(idx),19999)):
@@ -155,11 +102,12 @@ def save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, classid, begin, finis
     return num_delete_inter, num_delete_pair_c
    
 
-def Generate_HICO_detection(output_file, HICO_dir, thres_no_inter,thres_inter):
+def generate_HICO_detection(output_file, HICO_dir, thres_no_inter, thres_inter):
 
     if not os.path.exists(HICO_dir):
         os.makedirs(HICO_dir)
 
+    print('Loading detection results ...')
     HICO = pickle.load( open( output_file, "rb" ) )
 
     # del_i and del_ni 
@@ -491,19 +439,10 @@ def Generate_HICO_detection(output_file, HICO_dir, thres_no_inter,thres_inter):
     print('num_del_inter',del_i,'num_del_no_inter',del_ni)
 
 
-def main():
-    output_file = sys.argv[1]
-    HICO_dir = sys.argv[2]
-    thres_no_inter = float(sys.argv[3]) 
-    thres_inter = float(sys.argv[4])
+def main(output_file, HICO_dir, thres_no_inter, thres_inter):
 
     print("the output file is",output_file)
     print("the threshold of no interaction score is",thres_no_inter)
     print("the threshold of interaction score is",thres_inter)
 
-    Generate_HICO_detection(output_file, HICO_dir, thres_no_inter,thres_inter)
-
-
-if __name__ == '__main__':
-    main()
-    
+    generate_HICO_detection(output_file, HICO_dir, thres_no_inter, thres_inter)
