@@ -1,8 +1,8 @@
 import _init_paths
-from datasets.hico import hico
+from datasets.hico2 import hico2
 from utils.show_box import show_boxes
 
-hico_ds = hico('train', 'full')
+hico_ds = hico2('train', 'full')
 hico_roidb = hico_ds.gt_roidb()
 hico_verb_classes = hico_ds.verb_classes
 hico_object_classes = hico_ds.object_classes
