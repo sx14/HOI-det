@@ -297,6 +297,10 @@ if __name__ == '__main__':
   iters_per_epoch = int(train_size / args.batch_size)
 
   if args.use_tfboard:
+    if os.path.exists('logs'):
+        import shutil
+        shutil.rmtree('logs')
+      
     from tensorboardX import SummaryWriter
     logger = SummaryWriter("logs")
 
@@ -304,8 +308,8 @@ if __name__ == '__main__':
     # setting to train mode
     fasterRCNN.train()
     loss_temp = 0
-    cls_loss_temp = 0
-    bin_loss_temp = 0
+    loss_cls_temp = 0
+    loss_bin_temp = 0
     start = time.time()
 
     if epoch % (args.lr_decay_step + 1) == 0:
@@ -334,15 +338,15 @@ if __name__ == '__main__':
       loss = RCNN_loss_cls.mean() + RCNN_loss_bin.mean()
 
       if args.mGPUs:
-          cls_loss = RCNN_loss_cls.mean().item()
-          bin_loss = RCNN_loss_bin.mean().item()
+          loss_cls = RCNN_loss_cls.mean().item()
+          loss_bin = RCNN_loss_bin.mean().item()
       else:
-          cls_loss = RCNN_loss_cls.item()
-          bin_loss = RCNN_loss_bin.item()
+          loss_cls = RCNN_loss_cls.item()
+          loss_bin = RCNN_loss_bin.item()
 
       loss_temp += loss.item()
-      bin_loss_temp += bin_loss
-      cls_loss_temp += cls_loss
+      loss_bin_temp += loss_bin
+      loss_cls_temp += loss_cls
 
       # backward
       optimizer.zero_grad()
@@ -355,8 +359,8 @@ if __name__ == '__main__':
         end = time.time()
         if step > 0:
           loss_temp /= (args.disp_interval + 1)
-          bin_loss_temp /= (args.disp_interval + 1)
-          cls_loss_temp /= (args.disp_interval + 1)
+          loss_bin_temp /= (args.disp_interval + 1)
+          loss_cls_temp /= (args.disp_interval + 1)
 
         nNeg = torch.sum(bin_classes).item()
         nPos = bin_classes.shape[1] - nNeg
@@ -364,20 +368,20 @@ if __name__ == '__main__':
 
         print("[session %d][epoch %2d][iter %4d/%4d] loss: %.4f, lr: %.2e" \
                                 % (args.session, epoch, step, iters_per_epoch, loss_temp, lr))
-        print("cls_loss: %.4f, bin_loss: %.4f" % (cls_loss, bin_loss))
+        print("loss_cls: %.4f, loss_bin: %.4f" % (loss_cls, loss_bin))
         print("\t\t\tfg/bg=(%d/%d), time cost: %f" % (nPos, nNeg, end-start))
 
         if args.use_tfboard:
           info = {
             'loss': loss_temp,
-            'bin_loss': bin_loss_temp,
-            'cls_loss': cls_loss_temp
+            'loss_bin': loss_bin_temp,
+            'loss_cls': loss_cls_temp
           }
           logger.add_scalars("logs_s_{}/losses".format(args.session), info, (epoch - 1) * iters_per_epoch + step)
 
         loss_temp = 0
-        cls_loss_temp = 0
-        bin_loss_temp = 0
+        loss_cls_temp = 0
+        loss_bin_temp = 0
         start = time.time()
 
     save_name = os.path.join(output_dir, 'ho_rcnn_{}_{}_{}.pth'.format(args.session, epoch, step))
