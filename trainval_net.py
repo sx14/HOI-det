@@ -304,6 +304,8 @@ if __name__ == '__main__':
     # setting to train mode
     fasterRCNN.train()
     loss_temp = 0
+    cls_loss_temp = 0
+    bin_loss_temp = 0
     start = time.time()
 
     if epoch % (args.lr_decay_step + 1) == 0:
@@ -330,7 +332,17 @@ if __name__ == '__main__':
           fasterRCNN(im_data, im_info, hboxes, oboxes, iboxes, hoi_classes, bin_classes, num_hois)
 
       loss = RCNN_loss_cls.mean() + RCNN_loss_bin.mean()
+
+      if args.mGPUs:
+          cls_loss = RCNN_loss_cls.mean().item()
+          bin_loss = RCNN_loss_bin.mean().item()
+      else:
+          cls_loss = RCNN_loss_cls.item()
+          bin_loss = RCNN_loss_bin.item()
+
       loss_temp += loss.item()
+      bin_loss_temp += bin_loss
+      cls_loss_temp += cls_loss
 
       # backward
       optimizer.zero_grad()
@@ -343,13 +355,8 @@ if __name__ == '__main__':
         end = time.time()
         if step > 0:
           loss_temp /= (args.disp_interval + 1)
-
-        if args.mGPUs:
-            cls_loss = RCNN_loss_cls.mean().item()
-            bin_loss = RCNN_loss_bin.mean().item()
-        else:
-            cls_loss = RCNN_loss_cls.item()
-            bin_loss = RCNN_loss_bin.item()
+          bin_loss_temp /= (args.disp_interval + 1)
+          cls_loss_temp /= (args.disp_interval + 1)
 
         nNeg = torch.sum(bin_classes).item()
         nPos = bin_classes.shape[1] - nNeg
@@ -362,15 +369,16 @@ if __name__ == '__main__':
 
         if args.use_tfboard:
           info = {
-            'loss': loss_temp
+            'loss': loss_temp,
+            'bin_loss': bin_loss_temp,
+            'cls_loss': cls_loss_temp
           }
           logger.add_scalars("logs_s_{}/losses".format(args.session), info, (epoch - 1) * iters_per_epoch + step)
 
         loss_temp = 0
+        cls_loss_temp = 0
+        bin_loss_temp = 0
         start = time.time()
-        # test(fasterRCNN)
-
-    # test(fasterRCNN)
 
     save_name = os.path.join(output_dir, 'ho_rcnn_{}_{}_{}.pth'.format(args.session, epoch, step))
     save_checkpoint({
