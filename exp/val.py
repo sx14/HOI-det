@@ -39,7 +39,6 @@ def val(model, dataset, hoi_classes, hoi2int, show=False):
         obj_vecs = Variable(data[1]).cuda()
         hoi_cates = Variable(data[2]).cuda()
         bin_cates = Variable(data[3]).cuda()
-        int_mask = Variable(data[5]).cuda()
 
         pos_mask = torch.eq(bin_cates, 0)
         if pos_mask.sum().item() == 0:
@@ -47,7 +46,7 @@ def val(model, dataset, hoi_classes, hoi2int, show=False):
 
         bin_prob, hoi_prob, \
         loss_bin, loss_hoi, \
-        error_bin, error_hoi = model(spa_maps, obj_vecs, hoi_cates, bin_cates, pos_mask, int_mask)
+        error_bin, error_hoi = model(spa_maps, obj_vecs, hoi_cates, bin_cates, pos_mask)
         num_ins = spa_maps.shape[0]
         error_bin_all += error_bin.data.item()
         error_hoi_all += error_hoi.data.item()
