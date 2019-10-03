@@ -40,7 +40,7 @@ def test_image(model, im_obj_dets, image_size, det_obj2hoi_obj, obj2vec):
                     oscore = obj_det[5]
                     oind = det_obj2hoi_obj[obj_det[4]]
                     ovec = torch.from_numpy(obj2vec[oind]).view((1, -1))
-                    spa_map_raw = spatial_map(hbox, obox, obj_det[4], 80)
+                    spa_map_raw = spatial_map(hbox, obox, oind, 80)
                     spa_map_raw = torch.from_numpy(spa_map_raw[np.newaxis, :, :, :])
 
                     obj_vecs.data.resize_(ovec.size()).copy_(ovec)
