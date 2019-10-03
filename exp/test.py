@@ -87,7 +87,7 @@ if __name__ == '__main__':
     if not os.path.exists(output_path):
         print('Loading models ...')
         model_save_dir = config['model_save_dir']
-        model = SpaLan(config['lan_feature_dim'] + config['spa_feature_dim'],
+        model = SpaLan(config['spa_feature_dim'],
                 config['num_classes'])
         model = model.cuda()
         resume_dict = torch.load(os.path.join(model_save_dir, '%s_99_weights.pkl' % model))

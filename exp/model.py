@@ -9,7 +9,7 @@ class SpaConv(nn.Module):
     def __init__(self):
         super(SpaConv, self).__init__()
         # (batch,64,64,2)->(batch,60,60,64)
-        self.conv1 = nn.Conv2d(in_channels=81, out_channels=64, kernel_size=5)
+        self.conv1 = nn.Conv2d(in_channels=2, out_channels=64, kernel_size=5)
         # (batch,60,60,64)->(batch,30,30,64)
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
         # (batch,30,30,64)->(batch,26,26,32)
@@ -42,7 +42,7 @@ class SpaLan(nn.Module):
                 m.bias.data.zero_()
 
     def __str__(self):
-        return 'SpaObjMap'
+        return 'SpaMap'
 
     def __init__(self, in_feat_dim, class_num):
         super(SpaLan, self).__init__()
@@ -70,7 +70,8 @@ class SpaLan(nn.Module):
         num_ins = spa_map.shape[0]
 
         spa_vec = self.spa_conv(spa_map)
-        in_feat = torch.cat([spa_vec, obj_vec], dim=1)
+        # in_feat = torch.cat([spa_vec, obj_vec], dim=1)
+        in_feat = spa_vec
         hidden = self.hidden_layer(in_feat)
         bin_scores = self.proposal(hidden)
         hoi_scores = self.classifier(hidden)

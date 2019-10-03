@@ -41,7 +41,7 @@ def main(data_root, config):
 
     print('===== done =====')
 
-    model = SpaLan(config['lan_feature_dim'] + config['spa_feature_dim'],
+    model = SpaLan(config['spa_feature_dim'],
                    config['num_classes'])
     model = model.cuda()
 

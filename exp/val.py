@@ -39,6 +39,7 @@ def val(model, dataset, hoi_classes, hoi2int, show=False):
         obj_vecs = Variable(data[1]).cuda()
         hoi_cates = Variable(data[2]).cuda()
         bin_cates = Variable(data[3]).cuda()
+        int_mask = Variable(data[5]).cuda()
 
         pos_mask = torch.eq(bin_cates, 0)
         if pos_mask.sum().item() == 0:
@@ -46,7 +47,7 @@ def val(model, dataset, hoi_classes, hoi2int, show=False):
 
         bin_prob, hoi_prob, \
         loss_bin, loss_hoi, \
-        error_bin, error_hoi = model(spa_maps, obj_vecs, hoi_cates, bin_cates, pos_mask)
+        error_bin, error_hoi = model(spa_maps, obj_vecs, hoi_cates, bin_cates, pos_mask, int_mask)
         num_ins = spa_maps.shape[0]
         error_bin_all += error_bin.data.item()
         error_hoi_all += error_hoi.data.item()
@@ -94,6 +95,9 @@ if __name__ == '__main__':
         config = yaml.load(f)
 
     data_root = '../data/hico'
+    hoi_classes_path = os.path.join(data_root, 'hoi_categories.pkl')
+    hoi_classes, obj_classes, vrb_classes, hoi2int, obj2int = load_hoi_classes(hoi_classes_path)
+
     data_save_dir = config['data_save_dir']
     hoi_db = prepare_hico(data_root, data_save_dir)
     test_dataset = HICODatasetSpa(hoi_db['val'])
@@ -101,15 +105,14 @@ if __name__ == '__main__':
 
     print('Loading models ...')
     model_save_dir = config['model_save_dir']
-    model = SpaLan(config['lan_feature_dim'] + config['spa_feature_dim'],
+    model = SpaLan(config['spa_feature_dim'],
             config['num_classes'])
     model = model.cuda()
     resume_dict = torch.load(os.path.join(model_save_dir, '%s_99_weights.pkl' % model))
     model.load_state_dict(resume_dict)
     model.eval()
 
-    hoi_classes_path = os.path.join(data_root, 'hoi_categories.pkl')
-    hoi_classes, obj_classes, vrb_classes, hoi2int = load_hoi_classes(hoi_classes_path)
+
 
     val(model, dataloader, hoi_classes, hoi2int, show=True)
 
