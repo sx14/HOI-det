@@ -46,8 +46,14 @@ class vgg16(_fasterRCNN):
     self.RCNN_top = vgg.classifier
 
     # not using the last maxpool layer
-    self.RCNN_cls_score = nn.Linear(4096, self.n_classes)
-    self.RCNN_bin_score = nn.Linear(4096, 2)
+    self.iRCNN_cls_score = nn.Linear(4096, self.n_classes)
+    self.iRCNN_bin_score = nn.Linear(4096, 2)
+
+    self.hRCNN_cls_score = nn.Linear(4096, self.n_classes)
+    self.hRCNN_bin_score = nn.Linear(4096, 2)
+
+    self.oRCNN_cls_score = nn.Linear(4096, self.n_classes)
+    self.oRCNN_bin_score = nn.Linear(4096, 2)
 
   def _head_to_tail(self, pool5):
     

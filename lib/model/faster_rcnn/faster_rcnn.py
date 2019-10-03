@@ -60,36 +60,68 @@ class _fasterRCNN(nn.Module):
         orois[:, :, 1:] = oboxes
         irois[:, :, 1:] = iboxes
 
-        # rois = Variable(rois)
         # do roi pooling based on predicted rois
-
         if cfg.POOLING_MODE == 'crop':
             # pdb.set_trace()
             # pooled_feat_anchor = _crop_pool_layer(base_feat, rois.view(-1, 5))
             grid_xy = _affine_grid_gen(irois.view(-1, 5), base_feat.size()[2:], self.grid_size)
             grid_yx = torch.stack([grid_xy.data[:, :, :, 1], grid_xy.data[:, :, :, 0]], 3).contiguous()
-            pooled_feat = self.RCNN_roi_crop(base_feat, Variable(grid_yx).detach())
+            iroi_pooled_feat = self.RCNN_roi_crop(base_feat, Variable(grid_yx).detach())
             if cfg.CROP_RESIZE_WITH_MAX_POOL:
-                pooled_feat = F.max_pool2d(pooled_feat, 2, 2)
+                iroi_pooled_feat = F.max_pool2d(iroi_pooled_feat, 2, 2)
         elif cfg.POOLING_MODE == 'align':
-            pooled_feat = self.RCNN_roi_align(base_feat, irois.view(-1, 5))
+            iroi_pooled_feat = self.RCNN_roi_align(base_feat, irois.view(-1, 5))
         elif cfg.POOLING_MODE == 'pool':
-            pooled_feat = self.RCNN_roi_pool(base_feat, irois.view(-1, 5))
+            iroi_pooled_feat = self.RCNN_roi_pool(base_feat, irois.view(-1, 5))
 
         # feed pooled features to top  model
-        pooled_feat = self._head_to_tail(pooled_feat)
+        iroi_pooled_feat = self._head_to_tail(iroi_pooled_feat)
 
-        # compute bbox offset
-        # bbox_pred = self.RCNN_bbox_pred(pooled_feat)
-        # if self.training and not self.class_agnostic:
-        #     # select the corresponding columns according to roi labels
-        #     bbox_pred_view = bbox_pred.view(bbox_pred.size(0), int(bbox_pred.size(1) / 4), 4)
-        #     bbox_pred_select = torch.gather(bbox_pred_view, 1, rois_label.view(rois_label.size(0), 1, 1).expand(rois_label.size(0), 1, 4))
-        #     bbox_pred = bbox_pred_select.squeeze(1)
+        if cfg.POOLING_MODE == 'crop':
+            # pdb.set_trace()
+            # pooled_feat_anchor = _crop_pool_layer(base_feat, rois.view(-1, 5))
+            grid_xy = _affine_grid_gen(hrois.view(-1, 5), base_feat.size()[2:], self.grid_size)
+            grid_yx = torch.stack([grid_xy.data[:, :, :, 1], grid_xy.data[:, :, :, 0]], 3).contiguous()
+            hroi_pooled_feat = self.RCNN_roi_crop(base_feat, Variable(grid_yx).detach())
+            if cfg.CROP_RESIZE_WITH_MAX_POOL:
+                hroi_pooled_feat = F.max_pool2d(hroi_pooled_feat, 2, 2)
+        elif cfg.POOLING_MODE == 'align':
+            hroi_pooled_feat = self.RCNN_roi_align(base_feat, hrois.view(-1, 5))
+        elif cfg.POOLING_MODE == 'pool':
+            hroi_pooled_feat = self.RCNN_roi_pool(base_feat, hrois.view(-1, 5))
+
+        # feed pooled features to top  model
+        hroi_pooled_feat = self._head_to_tail(hroi_pooled_feat)
+
+        if cfg.POOLING_MODE == 'crop':
+            # pdb.set_trace()
+            # pooled_feat_anchor = _crop_pool_layer(base_feat, rois.view(-1, 5))
+            grid_xy = _affine_grid_gen(orois.view(-1, 5), base_feat.size()[2:], self.grid_size)
+            grid_yx = torch.stack([grid_xy.data[:, :, :, 1], grid_xy.data[:, :, :, 0]], 3).contiguous()
+            oroi_pooled_feat = self.RCNN_roi_crop(base_feat, Variable(grid_yx).detach())
+            if cfg.CROP_RESIZE_WITH_MAX_POOL:
+                oroi_pooled_feat = F.max_pool2d(oroi_pooled_feat, 2, 2)
+        elif cfg.POOLING_MODE == 'align':
+            oroi_pooled_feat = self.RCNN_roi_align(base_feat, orois.view(-1, 5))
+        elif cfg.POOLING_MODE == 'pool':
+            oroi_pooled_feat = self.RCNN_roi_pool(base_feat, orois.view(-1, 5))
+
+        # feed pooled features to top  model
+        oroi_pooled_feat = self._head_to_tail(oroi_pooled_feat)
+
 
         # compute object classification probability
-        cls_score = self.RCNN_cls_score(pooled_feat)
-        bin_score = self.RCNN_bin_score(pooled_feat)
+        icls_score = self.iRCNN_cls_score(iroi_pooled_feat)
+        ibin_score = self.iRCNN_bin_score(iroi_pooled_feat)
+
+        hcls_score = self.hRCNN_cls_score(hroi_pooled_feat)
+        hbin_score = self.hRCNN_bin_score(hroi_pooled_feat)
+
+        ocls_score = self.iRCNN_cls_score(oroi_pooled_feat)
+        obin_score = self.iRCNN_bin_score(oroi_pooled_feat)
+
+        cls_score = icls_score + hcls_score + ocls_score
+        bin_score = ibin_score + hbin_score + obin_score
 
         bin_prob = F.softmax(bin_score, 1)
         cls_prob = F.sigmoid(cls_score)

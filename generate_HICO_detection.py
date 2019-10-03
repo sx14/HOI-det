@@ -112,6 +112,7 @@ def save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, classid, begin, finis
                     d_score_noi = element[6][1]
 
                     score_old = element[3][begin - 1 + i] * human_score * object_score
+                    print 'H: %.4f O: %.4f I: %.4f' % (human_score, object_score, element[3][begin - 1 + i])
 
                     hoi_num = begin - 1 + i
 
