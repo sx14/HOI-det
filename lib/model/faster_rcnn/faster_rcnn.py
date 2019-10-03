@@ -16,8 +16,10 @@ import time
 import pdb
 from model.utils.net_utils import _smooth_l1_loss, _crop_pool_layer, _affine_grid_gen, _affine_theta
 
+
 class _fasterRCNN(nn.Module):
     """ faster RCNN """
+
     def __init__(self, classes, class_agnostic):
         super(_fasterRCNN, self).__init__()
         self.classes = classes
@@ -27,8 +29,8 @@ class _fasterRCNN(nn.Module):
         # define rpn
         # self.RCNN_rpn = _RPN(self.dout_base_model)
         # self.RCNN_proposal_target = _ProposalTargetLayer(self.n_classes)
-        self.RCNN_roi_pool = _RoIPooling(cfg.POOLING_SIZE, cfg.POOLING_SIZE, 1.0/16.0)
-        self.RCNN_roi_align = RoIAlignAvg(cfg.POOLING_SIZE, cfg.POOLING_SIZE, 1.0/16.0)
+        self.RCNN_roi_pool = _RoIPooling(cfg.POOLING_SIZE, cfg.POOLING_SIZE, 1.0 / 16.0)
+        self.RCNN_roi_align = RoIAlignAvg(cfg.POOLING_SIZE, cfg.POOLING_SIZE, 1.0 / 16.0)
 
         self.grid_size = cfg.POOLING_SIZE * 2 if cfg.CROP_RESIZE_WITH_MAX_POOL else cfg.POOLING_SIZE
         self.RCNN_roi_crop = _RoICrop()
@@ -57,7 +59,7 @@ class _fasterRCNN(nn.Module):
         hrois[:, :, 1:] = hboxes
         orois[:, :, 1:] = oboxes
         irois[:, :, 1:] = iboxes
-        
+
         # rois = Variable(rois)
         # do roi pooling based on predicted rois
 
@@ -65,7 +67,7 @@ class _fasterRCNN(nn.Module):
             # pdb.set_trace()
             # pooled_feat_anchor = _crop_pool_layer(base_feat, rois.view(-1, 5))
             grid_xy = _affine_grid_gen(irois.view(-1, 5), base_feat.size()[2:], self.grid_size)
-            grid_yx = torch.stack([grid_xy.data[:,:,:,1], grid_xy.data[:,:,:,0]], 3).contiguous()
+            grid_yx = torch.stack([grid_xy.data[:, :, :, 1], grid_xy.data[:, :, :, 0]], 3).contiguous()
             pooled_feat = self.RCNN_roi_crop(base_feat, Variable(grid_yx).detach())
             if cfg.CROP_RESIZE_WITH_MAX_POOL:
                 pooled_feat = F.max_pool2d(pooled_feat, 2, 2)
@@ -74,7 +76,7 @@ class _fasterRCNN(nn.Module):
         elif cfg.POOLING_MODE == 'pool':
             pooled_feat = self.RCNN_roi_pool(base_feat, irois.view(-1, 5))
 
-        # feed pooled features to top model
+        # feed pooled features to top  model
         pooled_feat = self._head_to_tail(pooled_feat)
 
         # compute bbox offset
@@ -97,8 +99,8 @@ class _fasterRCNN(nn.Module):
 
         if self.training:
             # classification loss
-            RCNN_loss_cls = F.binary_cross_entropy(cls_prob, hoi_classes.view(-1, hoi_classes.shape[2]))
-            RCNN_loss_bin = F.cross_entropy(bin_score, bin_classes.view(bin_classes.shape[1]))
+            RCNN_loss_cls = F.binary_cross_entropy(cls_prob, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
+            RCNN_loss_bin = F.cross_entropy(bin_score, bin_classes.view(bin_classes.shape[1]), size_average=False)
 
         cls_prob = cls_prob.view(batch_size, irois.size(1), -1)
         bin_prob = bin_prob.view(batch_size, irois.size(1), -1)
@@ -112,7 +114,7 @@ class _fasterRCNN(nn.Module):
             """
             # x is a parameter
             if truncated:
-                m.weight.data.normal_().fmod_(2).mul_(stddev).add_(mean) # not a perfect approximation
+                m.weight.data.normal_().fmod_(2).mul_(stddev).add_(mean)  # not a perfect approximation
             else:
                 m.weight.data.normal_(mean, stddev)
                 m.bias.data.zero_()

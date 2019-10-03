@@ -63,7 +63,7 @@ def parse_args():
                       nargs=argparse.REMAINDER)
   parser.add_argument('--load_dir', dest='load_dir',
                       help='directory to load models',
-                      default="model")
+                      default="weights")
   parser.add_argument('--output_dir', dest='output_dir',
                       help='directory to load images for demo',
                       default="output")
@@ -85,10 +85,10 @@ def parse_args():
                       default=1, type=int)
   parser.add_argument('--checkepoch', dest='checkepoch',
                       help='checkepoch to load network',
-                      default=6, type=int)
+                      default=4, type=int)
   parser.add_argument('--checkpoint', dest='checkpoint',
                       help='checkpoint to load network',
-                      default=10021, type=int)
+                      default=75265, type=int)
 
 
   args = parser.parse_args()
@@ -148,6 +148,14 @@ if __name__ == '__main__':
   pprint.pprint(cfg)
   np.random.seed(cfg.RNG_SEED)
 
+  output_path = os.path.join(args.output_dir, 'all_hoi_detections.pkl')
+  if os.path.exists(output_path):
+      print('Test results found!')
+      generate_HICO_detection(output_path, 'output/results', 0.6, 0.4)
+      os.chdir('benchmark')
+      os.system('matlab -nodesktop -nosplash -r "Generate_detection ' + '../output/results/' + '/;quit;"')
+      exit(0)
+
   print('Loading object detections ...')
   det_path = 'data/hico/Test_Faster_RCNN_R-50-PFN_2x_HICO_DET.pkl'
   with open(det_path) as f:
@@ -159,12 +167,7 @@ if __name__ == '__main__':
   load_name = os.path.join(input_dir,
     'ho_rcnn_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
 
-  pascal_classes = np.asarray(['__background__',
-                       'aeroplane', 'bicycle', 'bird', 'boat',
-                       'bottle', 'bus', 'car', 'cat', 'chair',
-                       'cow', 'diningtable', 'dog', 'horse',
-                       'motorbike', 'person', 'pottedplant',
-                       'sheep', 'sofa', 'train', 'tvmonitor'])
+  pascal_classes = ['1'] * 600
 
   # initilize the network here.
   if args.net == 'vgg16':
@@ -243,6 +246,7 @@ if __name__ == '__main__':
   all_results = {}
   image_path_template = 'data/hico/images/test2015/HICO_test2015_%s.jpg'
   for i, im_id in enumerate(det_db):
+      print('test [%d/%d]' % (i + 1, num_images))
       im_file = image_path_template % str(im_id).zfill(8)
       im_in = np.array(imread(im_file))
       if len(im_in.shape) == 2:
@@ -260,7 +264,7 @@ if __name__ == '__main__':
       oscores = []
 
       num_cand = 0
-
+      im_results = []
       for human_det in det_db[im_id]:
           if (np.max(human_det[5]) > human_thres) and (human_det[1] == 'Human'):
               # This is a valid human
@@ -277,10 +281,10 @@ if __name__ == '__main__':
                                        object_det[2][2],
                                        object_det[2][3]]).reshape(1, 4)
 
-                      ibox = np.array([min(hbox[0], obox[0]),
-                                       min(hbox[1], obox[1]),
-                                       max(hbox[2], obox[2]),
-                                       max(hbox[3], obox[3])]).reshape(1, 4)
+                      ibox = np.array([min(hbox[0, 0], obox[0, 0]),
+                                       min(hbox[0, 1], obox[0, 1]),
+                                       max(hbox[0, 2], obox[0, 2]),
+                                       max(hbox[0, 3], obox[0, 3])]).reshape(1, 4)
 
                       hboxes_raw = np.concatenate((hboxes_raw, hbox))
                       oboxes_raw = np.concatenate((oboxes_raw, obox))
@@ -289,14 +293,21 @@ if __name__ == '__main__':
                       hscores.append(human_det[5])
                       oscores.append(object_det[5])
                       num_cand += 1
+      if num_cand == 0:
+          all_results[im_id] = im_results
+          continue
+
+      hboxes_raw = hboxes_raw[np.newaxis, :, :]
+      oboxes_raw = oboxes_raw[np.newaxis, :, :]
+      iboxes_raw = iboxes_raw[np.newaxis, :, :]
 
       hboxes_t = torch.from_numpy(hboxes_raw * im_scales[0])
       oboxes_t = torch.from_numpy(oboxes_raw * im_scales[0])
       iboxes_t = torch.from_numpy(iboxes_raw * im_scales[0])
 
-      hboxes.data.resize_(hboxes_t[2].size()).copy_(hboxes_raw[2])
-      oboxes.data.resize_(oboxes_t[3].size()).copy_(oboxes_raw[3])
-      iboxes.data.resize_(iboxes_t[4].size()).copy_(iboxes_raw[4])
+      hboxes.data.resize_(hboxes_t.size()).copy_(hboxes_t)
+      oboxes.data.resize_(oboxes_t.size()).copy_(oboxes_t)
+      iboxes.data.resize_(iboxes_t.size()).copy_(iboxes_t)
 
       assert len(im_scales) == 1, "Only single-image batch implemented"
       im_blob = blobs
@@ -316,22 +327,25 @@ if __name__ == '__main__':
 
       for j in range(num_cand):
           temp = []
-          temp.append(hboxes_raw[j].tolist())  # Human box
-          temp.append(oboxes_raw[j].tolist())  # Object box
+          temp.append(hboxes_raw[0, j])  # Human box
+          temp.append(oboxes_raw[0, j])  # Object box
           temp.append(obj_classes[j])  # Object class
-          temp.append(hoi_prob.cpu().data.numpy()[j].tolist())  # Score (600)
+          temp.append(hoi_prob.cpu().data.numpy()[0, j].tolist())  # Score (600)
           temp.append(hscores[j])  # Human score
           temp.append(oscores[j])  # Object score
-          temp.append(bin_prob.cpu().data.numpy()[0].tolist())  # binary score
-          all_results.append(temp)
+          temp.append(bin_prob.cpu().data.numpy()[0, j].tolist())  # binary score
+          im_results.append(temp)
 
-  if os.path.exists(args.output_dir):
+      all_results[im_id] = im_results
+
+  if not os.path.exists(args.output_dir):
       os.mkdir(args.output_dir)
 
   print('Saving results ...')
-  output_path = os.path.join(args.output_dir, 'all_hoi_detections.pkl')
+  with open(output_path, 'wb') as f:
+      pickle.dump(all_results, f)
 
-  generate_HICO_detection(output_path, 'output/results', 0.6, 0.4)
+  generate_HICO_detection(output_path, 'output/results', 0.9, 0.1)
 
   os.chdir('benchmark')
   os.system('matlab -nodesktop -nosplash -r "Generate_detection ' + '../output/results/' + '/;quit;"')
