@@ -278,7 +278,7 @@ if __name__ == '__main__':
 
   if args.resume:
     load_name = os.path.join(output_dir,
-      'ho_rcnn_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
+      'ho_rcnn3_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
     print("loading checkpoint %s" % (load_name))
     checkpoint = torch.load(load_name)
     args.session = checkpoint['session']

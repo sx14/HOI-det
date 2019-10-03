@@ -117,11 +117,11 @@ class _fasterRCNN(nn.Module):
         hcls_score = self.hRCNN_cls_score(hroi_pooled_feat)
         hbin_score = self.hRCNN_bin_score(hroi_pooled_feat)
 
-        ocls_score = self.iRCNN_cls_score(oroi_pooled_feat)
-        obin_score = self.iRCNN_bin_score(oroi_pooled_feat)
+        ocls_score = self.oRCNN_cls_score(oroi_pooled_feat)
+        obin_score = self.oRCNN_bin_score(oroi_pooled_feat)
 
-        cls_score = icls_score + hcls_score + ocls_score
-        bin_score = ibin_score + hbin_score + obin_score
+        cls_score = (icls_score + hcls_score + ocls_score) / 3.0
+        bin_score = (ibin_score + hbin_score + obin_score) / 3.0
 
         bin_prob = F.softmax(bin_score, 1)
         cls_prob = F.sigmoid(cls_score)
