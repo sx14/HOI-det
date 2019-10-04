@@ -42,7 +42,8 @@ def main(data_root, config):
 
     model = SpaLan(config['spa_feature_dim'],
                    config['num_hoi_classes'],
-                   config['num_obj_classes'])
+                   config['num_obj_classes'],
+                   config['num_key_points'])
     model = model.cuda()
 
     # Optimizer

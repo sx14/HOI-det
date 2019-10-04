@@ -280,7 +280,10 @@ def prepare_hico(hico_root, save_dir):
 
                 obj_class = obj2ind[hoi_cates[hoi_class_ids[0]].object_name()]
                 hoi_class = [0] * hoi_class_num
-                skeleton = raw_hoi[5]
+                if pn == 0:
+                    skeleton = raw_hoi[5]
+                else:
+                    skeleton = raw_hoi[7]
 
                 for id in hoi_class_ids:
                     hoi_class[id] = 1
@@ -317,7 +320,7 @@ def prepare_hico(hico_root, save_dir):
         'obj_classes': np.array(obj_classes[:num_train]),
         'hoi_classes': np.array(hoi_classes[:num_train]),
         'bin_classes': np.array(bin_classes[:num_train]),
-        'skeletons': np.array(skeletons[:num_train])
+        'skeletons': skeletons[:num_train]
     }
 
     val_db = {
@@ -328,7 +331,7 @@ def prepare_hico(hico_root, save_dir):
         'obj_classes': np.array(obj_classes[num_train:]),
         'hoi_classes': np.array(hoi_classes[num_train:]),
         'bin_classes': np.array(bin_classes[num_train:]),
-        'skeletons': np.array(skeletons[num_train:])
+        'skeletons': skeletons[num_train:]
     }
 
     hoi_db = {

@@ -98,7 +98,7 @@ def gen_pose_feat(skeleton, obj_box):
         return xmin <= pt_x <= xmax and ymin <= pt_y <= ymax
 
     pose_feat = np.zeros(17)
-    if skeleton is not None and len(skeleton) == 51:
+    if skeleton is not None and isinstance(skeleton, list) and len(skeleton) == 51:
         for i in range(17):
             pose_x = skeleton[i*3+0]
             pose_y = skeleton[i*3+1]
