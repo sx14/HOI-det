@@ -39,12 +39,11 @@ def test_image(model, im_obj_dets, image_size, det_obj2hoi_obj, obj2vec):
                     # This is a valid object
                     obox = obj_det[2]
                     oscore = obj_det[5]
-
+                    oind = det_obj2hoi_obj[obj_det[4]]
 
                     spa_map_raw = spatial_map(hbox, obox, oind, 80)
                     spa_map_raw = torch.from_numpy(spa_map_raw[np.newaxis, :, :, :])
 
-                    oind = det_obj2hoi_obj[obj_det[4]]
                     # ovec = torch.from_numpy(obj2vec[oind]).view((1, -1))
                     # obj_vecs.data.resize_(ovec.size()).copy_(ovec)
                     obj_vecs[0, oind] = 1
@@ -92,7 +91,8 @@ if __name__ == '__main__':
         print('Loading models ...')
         model_save_dir = config['model_save_dir']
         model = SpaLan(config['spa_feature_dim'],
-                config['num_classes'])
+                       config['num_hoi_classes'],
+                       config['num_obj_classes'])
         model = model.cuda()
         resume_dict = torch.load(os.path.join(model_save_dir, '%s_99_weights.pkl' % model))
         model.load_state_dict(resume_dict)

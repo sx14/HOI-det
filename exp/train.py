@@ -38,14 +38,12 @@ def main(data_root, config):
     train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True)
     hoi_classes_path = os.path.join(data_root, 'hoi_categories.pkl')
     hoi_classes, _, _, hoi2int = load_hoi_classes(hoi_classes_path)
-
     print('===== done =====')
 
     model = SpaLan(config['spa_feature_dim'],
                    config['num_hoi_classes'],
                    config['num_obj_classes'])
     model = model.cuda()
-
 
     # Optimizer
     lr = config['learning_rate']
