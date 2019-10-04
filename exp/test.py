@@ -22,7 +22,8 @@ def test_image(model, im_obj_dets, image_size, det_obj2hoi_obj, obj2vec):
     spa_maps = torch.FloatTensor(1)
     spa_maps = Variable(spa_maps).cuda()
 
-    obj_vecs = torch.FloatTensor(1)
+    obj_class_num = obj2vec.shape[0]
+    obj_vecs = torch.zeros((1, obj_class_num))
     obj_vecs = Variable(obj_vecs).cuda()
 
     hum_thr = 0.8
@@ -38,12 +39,15 @@ def test_image(model, im_obj_dets, image_size, det_obj2hoi_obj, obj2vec):
                     # This is a valid object
                     obox = obj_det[2]
                     oscore = obj_det[5]
-                    oind = det_obj2hoi_obj[obj_det[4]]
-                    ovec = torch.from_numpy(obj2vec[oind]).view((1, -1))
+
+
                     spa_map_raw = spatial_map(hbox, obox, oind, 80)
                     spa_map_raw = torch.from_numpy(spa_map_raw[np.newaxis, :, :, :])
 
-                    obj_vecs.data.resize_(ovec.size()).copy_(ovec)
+                    oind = det_obj2hoi_obj[obj_det[4]]
+                    # ovec = torch.from_numpy(obj2vec[oind]).view((1, -1))
+                    # obj_vecs.data.resize_(ovec.size()).copy_(ovec)
+                    obj_vecs[0, oind] = 1
                     spa_maps.data.resize_(spa_map_raw.size()).copy_(spa_map_raw)
 
                     with torch.no_grad():

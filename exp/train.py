@@ -42,7 +42,8 @@ def main(data_root, config):
     print('===== done =====')
 
     model = SpaLan(config['spa_feature_dim'],
-                   config['num_classes'])
+                   config['num_hoi_classes'],
+                   config['num_obj_classes'])
     model = model.cuda()
 
 
@@ -66,6 +67,7 @@ def main(data_root, config):
             obj_vecs = Variable(data[1]).cuda()
             hoi_cates = Variable(data[2]).cuda()
             bin_cates = Variable(data[3]).cuda()
+            obj_cates = Variable(data[4]).cuda()
 
             pos_mask = torch.eq(bin_cates, 0)
             if pos_mask.sum().item() == 0:
@@ -74,7 +76,7 @@ def main(data_root, config):
             optimizer.zero_grad()
             bin_prob, hoi_prob, \
             loss_bin, loss_hoi, \
-            error_bin, error_hoi = model(spa_maps, obj_vecs, hoi_cates, bin_cates, pos_mask)
+            error_bin, error_hoi = model(spa_maps, obj_cates, hoi_cates, bin_cates, pos_mask)
 
             loss = loss_bin + loss_hoi
             loss.backward()

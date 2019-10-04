@@ -101,10 +101,14 @@ class HICODatasetSpa(Dataset):
         self.bin_classes = torch.from_numpy(hoi_db['bin_classes']).long()
         self.spa_feats = torch.from_numpy(hoi_db['spa_feats']).float()
         self.obj2vec = torch.from_numpy(hoi_db['obj2vec']).float()
+        self.num_obj_class = 80
 
     def __len__(self):
         return len(self.hboxes)
 
     def __getitem__(self, item):
         spa_map = torch.from_numpy(spatial_map(self.hboxes[item], self.oboxes[item], self.obj_classes[item], 80))
-        return spa_map, self.obj2vec[self.obj_classes[item].item()], self.hoi_classes[item], self.bin_classes[item], self.obj_classes[item]
+        obj_class_ind = self.obj_classes[item]
+        obj_class_vec = torch.zeros((self.num_obj_class))
+        obj_class_vec[obj_class_ind] = 1
+        return spa_map, self.obj2vec[self.obj_classes[item].item()], self.hoi_classes[item], self.bin_classes[item], obj_class_vec

@@ -44,22 +44,35 @@ class SpaLan(nn.Module):
     def __str__(self):
         return 'SpaMap'
 
-    def __init__(self, in_feat_dim, class_num):
+    def __init__(self, in_feat_dim, num_hoi_class, num_obj_class):
         super(SpaLan, self).__init__()
 
         self.spa_conv = SpaConv()
 
-        self.hidden_layer = nn.Sequential(
+        self.spa_hidden_layer = nn.Sequential(
             nn.LeakyReLU(),
             nn.Dropout(p=0.5),
             nn.Linear(in_feat_dim, 1024))
 
-        self.classifier = nn.Sequential(
+        self.spa_classifier = nn.Sequential(
             nn.LeakyReLU(),
             nn.Dropout(p=0.5),
-            nn.Linear(1024, class_num))
+            nn.Linear(1024, num_hoi_class))
 
-        self.proposal = nn.Sequential(
+        self.spa_proposal = nn.Sequential(
+            nn.LeakyReLU(),
+            nn.Dropout(p=0.5),
+            nn.Linear(1024, 2))
+
+        self.obj_hidden_layer = nn.Sequential(
+            nn.Linear(num_obj_class, 1024))
+
+        self.obj_classifier = nn.Sequential(
+            nn.LeakyReLU(),
+            nn.Dropout(p=0.5),
+            nn.Linear(1024, num_hoi_class))
+
+        self.obj_proposal = nn.Sequential(
             nn.LeakyReLU(),
             nn.Dropout(p=0.5),
             nn.Linear(1024, 2))
@@ -70,11 +83,16 @@ class SpaLan(nn.Module):
         num_ins = spa_map.shape[0]
 
         spa_vec = self.spa_conv(spa_map)
-        # in_feat = torch.cat([spa_vec, obj_vec], dim=1)
-        in_feat = spa_vec
-        hidden = self.hidden_layer(in_feat)
-        bin_scores = self.proposal(hidden)
-        hoi_scores = self.classifier(hidden)
+        spa_hidden = self.spa_hidden_layer(spa_vec)
+        spa_bin_scores = self.spa_proposal(spa_hidden)
+        spa_hoi_scores = self.spa_classifier(spa_hidden)
+
+        obj_hidden = self.obj_hidden_layer(obj_vec)
+        obj_bin_scores = self.obj_proposal(obj_hidden)
+        obj_hoi_scores = self.spa_classifier(obj_hidden)
+
+        bin_scores = (spa_bin_scores + obj_bin_scores) / 2
+        hoi_scores = (spa_hoi_scores + obj_hoi_scores) / 2
 
         bin_prob = F.softmax(bin_scores, dim=1)
         hoi_prob = F.sigmoid(hoi_scores)

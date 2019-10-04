@@ -18,7 +18,8 @@ test_freq: 10000
 batch_size: 32
 lan_feature_dim: 300
 spa_feature_dim: 5408
-num_classes: 600
+num_hoi_classes: 600
+num_obj_classes: 80
 
 save_freq: 10       # frequency of saving weights
 print_freq: 100     # frequency of printing training error rate
