@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 from torch.autograd import Variable
 
 from load_data import prepare_hico, load_hoi_classes
-from dataset import HICODatasetSpa, spatial_map
+from dataset import HICODatasetSpa, gen_spatial_map, gen_pose_feat
 from model import SpaLan
 from load_data import load_image_info, extract_spatial_feature, object_class_mapping
 from generate_HICO_detection import generate_HICO_detection
@@ -26,6 +26,9 @@ def test_image(model, im_obj_dets, image_size, det_obj2hoi_obj, obj2vec):
     obj_vecs = torch.zeros((1, obj_class_num))
     obj_vecs = Variable(obj_vecs).cuda()
 
+    pose_vecs = torch.zeros((1, 17))
+    pose_vecs = Variable(pose_vecs).cuda()
+
     hum_thr = 0.8
     obj_thr = 0.3
 
@@ -34,6 +37,7 @@ def test_image(model, im_obj_dets, image_size, det_obj2hoi_obj, obj2vec):
             # This is a valid human
             hbox = hum_det[2]
             hscore = hum_det[5]
+            skeleton = hum_det[6]
             for obj_det in im_obj_dets:
                 if (np.max(obj_det[5]) > obj_thr) and not (np.all(obj_det[2] == hum_det[2])):
                     # This is a valid object
@@ -41,16 +45,20 @@ def test_image(model, im_obj_dets, image_size, det_obj2hoi_obj, obj2vec):
                     oscore = obj_det[5]
                     oind = det_obj2hoi_obj[obj_det[4]]
 
-                    spa_map_raw = spatial_map(hbox, obox, oind, 80)
+                    spa_map_raw = gen_spatial_map(hbox, obox, oind, 80)
                     spa_map_raw = torch.from_numpy(spa_map_raw[np.newaxis, :, :, :])
+
+                    pose_feat_raw = gen_pose_feat(skeleton, obox)
+                    pose_feat_raw = torch.from_numpy(pose_feat_raw[np.newaxis, :, :, :])
 
                     # ovec = torch.from_numpy(obj2vec[oind]).view((1, -1))
                     # obj_vecs.data.resize_(ovec.size()).copy_(ovec)
                     obj_vecs[0, oind] = 1
                     spa_maps.data.resize_(spa_map_raw.size()).copy_(spa_map_raw)
+                    pose_feat_raw.data.resize_(pose_feat_raw.size()).copy_(pose_feat_raw)
 
                     with torch.no_grad():
-                        bin_prob, hoi_prob, _, _, _, _ = model(spa_maps, obj_vecs)
+                        bin_prob, hoi_prob, _, _, _, _ = model(spa_maps, obj_vecs, pose_vecs)
 
                     temp = []
                     temp.append(hum_det[2])             # Human box
@@ -109,7 +117,7 @@ if __name__ == '__main__':
             obj2vec = pickle.load(f)
 
         print('Loading object detections ...')
-        obj_det_path = os.path.join(data_root, 'Test_Faster_RCNN_R-50-PFN_2x_HICO_DET.pkl')
+        obj_det_path = os.path.join(data_root, 'Test_Faster_RCNN_R-50-PFN_2x_HICO_DET_with_pose.pkl')
         with open(obj_det_path) as f:
             obj_det_db = pickle.load(f)
 

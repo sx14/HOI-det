@@ -20,6 +20,7 @@ lan_feature_dim: 300
 spa_feature_dim: 5408
 num_hoi_classes: 600
 num_obj_classes: 80
+num_key_points: 17
 
 save_freq: 10       # frequency of saving weights
 print_freq: 100     # frequency of printing training error rate

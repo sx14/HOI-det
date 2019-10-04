@@ -226,8 +226,8 @@ def prepare_hico(hico_root, save_dir):
     obj2vec = load_object_word2vec(obj_cates, 'GoogleNews-vectors-negative300.bin', save_dir)
 
     print('Loading annotations ...')
-    anno_gt_path = os.path.join(hico_root, 'train_GT_HICO.pkl')
-    anno_ng_path = os.path.join(hico_root, 'train_NG_HICO.pkl')
+    anno_gt_path = os.path.join(hico_root, 'train_GT_HICO_with_pose.pkl')
+    anno_ng_path = os.path.join(hico_root, 'train_NG_HICO_with_pose.pkl')
     anno_gt = pickle.load(open(anno_gt_path))
     anno_ng = pickle.load(open(anno_ng_path))
 
@@ -237,6 +237,7 @@ def prepare_hico(hico_root, save_dir):
     hoi_classes = []
     bin_classes = []
     obj_classes = []
+    skeletons = []
 
     print('Processing annotations ...')
     anno_gt_db = {}
@@ -279,6 +280,8 @@ def prepare_hico(hico_root, save_dir):
 
                 obj_class = obj2ind[hoi_cates[hoi_class_ids[0]].object_name()]
                 hoi_class = [0] * hoi_class_num
+                skeleton = raw_hoi[5]
+
                 for id in hoi_class_ids:
                     hoi_class[id] = 1
 
@@ -301,6 +304,7 @@ def prepare_hico(hico_root, save_dir):
                 obj_classes.append(obj_class)
                 hoi_classes.append(hoi_class)
                 bin_classes.append(bin_class)
+                skeletons.append(skeleton)
 
     num_item = len(hboxes)
     num_train = int(num_item * 0.7)
@@ -313,6 +317,7 @@ def prepare_hico(hico_root, save_dir):
         'obj_classes': np.array(obj_classes[:num_train]),
         'hoi_classes': np.array(hoi_classes[:num_train]),
         'bin_classes': np.array(bin_classes[:num_train]),
+        'skeletons': np.array(skeletons[:num_train])
     }
 
     val_db = {
@@ -323,6 +328,7 @@ def prepare_hico(hico_root, save_dir):
         'obj_classes': np.array(obj_classes[num_train:]),
         'hoi_classes': np.array(hoi_classes[num_train:]),
         'bin_classes': np.array(bin_classes[num_train:]),
+        'skeletons': np.array(skeletons[num_train:])
     }
 
     hoi_db = {
