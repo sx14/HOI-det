@@ -217,6 +217,7 @@ def resnet152(pretrained=False):
     model.load_state_dict(model_zoo.load_url(model_urls['resnet152']))
   return model
 
+
 class resnet(_fasterRCNN):
   def __init__(self, classes, num_layers=101, pretrained=False, class_agnostic=False):
     self.model_path = 'data/pretrained_model/resnet101_caffe.pth'
@@ -240,11 +241,14 @@ class resnet(_fasterRCNN):
 
     self.RCNN_top = nn.Sequential(resnet.layer4)
 
-    self.RCNN_cls_score = nn.Linear(2048, self.n_classes)
-    if self.class_agnostic:
-      self.RCNN_bbox_pred = nn.Linear(2048, 4)
-    else:
-      self.RCNN_bbox_pred = nn.Linear(2048, 4 * self.n_classes)
+    self.iRCNN_cls_score = nn.Linear(2048, self.n_classes)
+    self.iRCNN_bin_score = nn.Linear(2048, 2)
+
+    self.hRCNN_cls_score = nn.Linear(2048, self.n_classes)
+    self.hRCNN_bin_score = nn.Linear(2048, 2)
+
+    self.oRCNN_cls_score = nn.Linear(2048, self.n_classes)
+    self.oRCNN_bin_score = nn.Linear(2048, 2)
 
     # Fix blocks
     for p in self.RCNN_base[0].parameters(): p.requires_grad=False
