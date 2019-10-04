@@ -151,7 +151,7 @@ if __name__ == '__main__':
   output_path = os.path.join(args.output_dir, 'all_hoi_detections.pkl')
   if os.path.exists(output_path):
       print('Test results found!')
-      generate_HICO_detection(output_path, 'output/results', 0.6, 0.4)
+      generate_HICO_detection(output_path, 'output/results', 0.9, 0.1)
       os.chdir('benchmark')
       os.system('matlab -nodesktop -nosplash -r "Generate_detection ' + '../output/results/' + '/;quit;"')
       exit(0)
@@ -165,7 +165,7 @@ if __name__ == '__main__':
   if not os.path.exists(input_dir):
     raise Exception('There is no input directory for loading network from ' + input_dir)
   load_name = os.path.join(input_dir,
-    'ho_rcnn_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
+    'ho_rcnn3_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
 
   pascal_classes = ['1'] * 600
 
