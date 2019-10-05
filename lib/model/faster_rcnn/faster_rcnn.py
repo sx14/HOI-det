@@ -17,6 +17,32 @@ import pdb
 from model.utils.net_utils import _smooth_l1_loss, _crop_pool_layer, _affine_grid_gen, _affine_theta
 
 
+class SpaConv(nn.Module):
+    def __init__(self):
+        super(SpaConv, self).__init__()
+        # (batch,64,64,2)->(batch,60,60,64)
+        self.conv1 = nn.Conv2d(in_channels=2, out_channels=64, kernel_size=5)
+        # (batch,60,60,64)->(batch,30,30,64)
+        self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
+        # (batch,30,30,64)->(batch,26,26,32)
+        self.conv2 = nn.Conv2d(in_channels=64, out_channels=32, kernel_size=5)
+        # (batch,26,26,32)->(batch,13,13,32)
+        self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
+
+        self.hidden = nn.Sequential(
+            nn.LeakyReLU(),
+            nn.Dropout(p=0.5),
+            nn.Linear(5408, 1024))
+
+    def forward(self, spa_map):
+        conv1 = self.conv1(spa_map)
+        pool1 = self.pool1(conv1)
+        conv2 = self.conv2(pool1)
+        pool2 = self.pool2(conv2)
+        pool_feat = pool2.view(spa_map.shape[0], -1)
+        return self.hidden(pool_feat)
+
+
 class _fasterRCNN(nn.Module):
     """ faster RCNN """
 
@@ -34,8 +60,19 @@ class _fasterRCNN(nn.Module):
 
         self.grid_size = cfg.POOLING_SIZE * 2 if cfg.CROP_RESIZE_WITH_MAX_POOL else cfg.POOLING_SIZE
         self.RCNN_roi_crop = _RoICrop()
+        self.SpaCNN = SpaConv()
 
-    def forward(self, im_data, im_info, hboxes, oboxes, iboxes, hoi_classes, bin_classes, num_hois):
+        self.spa_cls_score = nn.Sequential(
+            nn.LeakyReLU(),
+            nn.Dropout(p=0.5),
+            nn.Linear(1024, self.n_classes))
+
+        self.spa_bin_score = nn.Sequential(
+            nn.LeakyReLU(),
+            nn.Dropout(p=0.5),
+            nn.Linear(1024, 2))
+
+    def forward(self, im_data, im_info, hboxes, oboxes, iboxes, hoi_classes, bin_classes, spa_maps, num_hois):
         batch_size = im_data.size(0)
 
         im_info = im_info.data
@@ -109,6 +146,9 @@ class _fasterRCNN(nn.Module):
         # feed pooled features to top  model
         oroi_pooled_feat = self._head_to_tail(oroi_pooled_feat)
 
+        spa_feat = self.SpaCNN(spa_maps)
+        scls_score = self.spa_cls_score(spa_feat)
+        sbin_score = self.spa_bin_score(spa_feat)
 
         # compute object classification probability
         icls_score = self.iRCNN_cls_score(iroi_pooled_feat)
@@ -122,6 +162,9 @@ class _fasterRCNN(nn.Module):
 
         cls_score = (icls_score + hcls_score + ocls_score) / 3.0
         bin_score = (ibin_score + hbin_score + obin_score) / 3.0
+
+        cls_score = (cls_score + scls_score) / 2.0
+        bin_score = (bin_score + sbin_score) / 2.0
 
         bin_prob = F.softmax(bin_score, 1)
         cls_prob = F.sigmoid(cls_score)

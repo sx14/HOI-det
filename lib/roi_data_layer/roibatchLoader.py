@@ -20,6 +20,92 @@ import time
 import pdb
 
 
+def bbox_trans(human_box_roi, object_box_roi, size=64):
+    human_box = human_box_roi.copy()
+    object_box = object_box_roi.copy()
+
+    union_box = [min(human_box[0], object_box[0]), min(human_box[1], object_box[1]),
+                          max(human_box[2], object_box[2]), max(human_box[3], object_box[3])]
+
+    height = union_box[3] - union_box[1] + 1
+    width = union_box[2] - union_box[0] + 1
+
+    if height > width:
+        ratio = 'height'
+    else:
+        ratio = 'width'
+
+    # shift the top-left corner to (0,0)
+    human_box[0] -= union_box[0]
+    human_box[2] -= union_box[0]
+    human_box[1] -= union_box[1]
+    human_box[3] -= union_box[1]
+    object_box[0] -= union_box[0]
+    object_box[2] -= union_box[0]
+    object_box[1] -= union_box[1]
+    object_box[3] -= union_box[1]
+
+    if ratio == 'height':  # height is larger than width
+
+        human_box[0] = 0 + size * human_box[0] / height
+        human_box[1] = 0 + size * human_box[1] / height
+        human_box[2] = (size * width / height - 1) - size * (width - 1 - human_box[2]) / height
+        human_box[3] = (size - 1) - size * (height - 1 - human_box[3]) / height
+
+        object_box[0] = 0 + size * object_box[0] / height
+        object_box[1] = 0 + size * object_box[1] / height
+        object_box[2] = (size * width / height - 1) - size * (width - 1 - object_box[2]) / height
+        object_box[3] = (size - 1) - size * (height - 1 - object_box[3]) / height
+
+        # Need to shift horizontally
+        union_box = [min(human_box[0], object_box[0]), min(human_box[1], object_box[1]),
+                              max(human_box[2], object_box[2]), max(human_box[3], object_box[3])]
+        if human_box[3] > object_box[3]:
+            human_box[3] = size - 1
+        else:
+            object_box[3] = size - 1
+
+        shift = size / 2 - (union_box[2] + 1) / 2
+        human_box += [shift, 0, shift, 0]
+        object_box += [shift, 0, shift, 0]
+
+    else:  # width is larger than height
+
+        human_box[0] = 0 + size * human_box[0] / width
+        human_box[1] = 0 + size * human_box[1] / width
+        human_box[2] = (size - 1) - size * (width - 1 - human_box[2]) / width
+        human_box[3] = (size * height / width - 1) - size * (height - 1 - human_box[3]) / width
+
+        object_box[0] = 0 + size * object_box[0] / width
+        object_box[1] = 0 + size * object_box[1] / width
+        object_box[2] = (size - 1) - size * (width - 1 - object_box[2]) / width
+        object_box[3] = (size * height / width - 1) - size * (height - 1 - object_box[3]) / width
+
+        # Need to shift vertically
+        union_box = [min(human_box[0], object_box[0]), min(human_box[1], object_box[1]),
+                              max(human_box[2], object_box[2]), max(human_box[3], object_box[3])]
+
+        if human_box[2] > object_box[2]:
+            human_box[2] = size - 1
+        else:
+            object_box[2] = size - 1
+
+        shift = size / 2 - (union_box[3] + 1) / 2
+
+        human_box = human_box + [0, shift, 0, shift]
+        object_box = object_box + [0, shift, 0, shift]
+
+    return np.round(human_box), np.round(object_box)
+
+
+def gen_spatial_map(human_box, object_box):
+    hbox, obox = bbox_trans(human_box, object_box)
+    spa_map = np.zeros((2, 64, 64), dtype='float32')
+    spa_map[0, int(hbox[1]):int(hbox[3]) + 1, int(hbox[0]):int(hbox[2]) + 1] = 1
+    spa_map[1, int(obox[1]):int(obox[3]) + 1, int(obox[0]):int(obox[2]) + 1] = 1
+    return spa_map
+
+
 class roibatchLoader(data.Dataset):
   def __init__(self, roidb, ratio_list, ratio_index, batch_size, num_classes, training=True, normalize=None):
     self._roidb = roidb
@@ -89,6 +175,11 @@ class roibatchLoader(data.Dataset):
     gt_binaries = np.tile(blobs['bin_classes'], (3,))
     gt_binaries = torch.from_numpy(gt_binaries)
 
+    raw_spa_maps = np.zeros((num_hoi, 2, 64, 64))
+    for i in range(num_hoi):
+        raw_spa_maps[i] = gen_spatial_map(blobs['hboxes'][i], blobs['oboxes'][i])
+    raw_spa_maps = np.tile(raw_spa_maps, (3, 1))
+    gt_spa_maps = torch.from_numpy(raw_spa_maps)
 
     ########################################################
     # padding the input image to fixed size for each group #
@@ -217,6 +308,7 @@ class roibatchLoader(data.Dataset):
         gt_boxes = gt_boxes[keep]
         gt_classes = gt_classes[keep]
         gt_binaries = gt_binaries[keep]
+        gt_spa_maps = gt_spa_maps[keep]
 
         gt_num_boxes = int(gt_boxes.size(0) / 3)
 
@@ -229,19 +321,24 @@ class roibatchLoader(data.Dataset):
 
         hoi_classes_padding = gt_classes[:num_boxes]
         bin_classes_padding = gt_binaries[:num_boxes].long()
+        spa_maps_padding = gt_spa_maps[:num_boxes]
     else:
         hboxes_padding = torch.FloatTensor(1, gt_boxes.size(1)).zero_()
         oboxes_padding = torch.FloatTensor(1, gt_boxes.size(1)).zero_()
         iboxes_padding = torch.FloatTensor(1, gt_boxes.size(1)).zero_()
         hoi_classes_padding = torch.FloatTensor(1, gt_classes.size(1)).zero_()
         bin_classes_padding = torch.LongTensor(1).zero_()
+        spa_maps_padding = torch.LongTensor(1, 2, 64, 64).zero_()
         num_boxes = 0
 
         # permute trim_data to adapt to downstream processing
     padding_data = padding_data.permute(2, 0, 1).contiguous()
     im_info = im_info.view(3)
 
-    return padding_data, im_info, hboxes_padding, oboxes_padding, iboxes_padding, hoi_classes_padding, bin_classes_padding, num_boxes
+    return padding_data, im_info, \
+           hboxes_padding, oboxes_padding, iboxes_padding, \
+           hoi_classes_padding, bin_classes_padding, \
+           spa_maps_padding, num_boxes
 
   def __len__(self):
     return len(self._roidb)

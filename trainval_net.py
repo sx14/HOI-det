@@ -44,7 +44,7 @@ def parse_args():
                       default='hico_full', type=str)
   parser.add_argument('--net', dest='net',
                       help='vgg16, res101',
-                      default='res101', type=str)
+                      default='vgg16', type=str)
   parser.add_argument('--start_epoch', dest='start_epoch',
                       help='starting epoch',
                       default=1, type=int)
@@ -212,6 +212,7 @@ if __name__ == '__main__':
   iboxes = torch.FloatTensor(1)
   hoi_classes = torch.FloatTensor(1)
   bin_classes = torch.LongTensor(1)
+  spa_maps = torch.LongTensor(1)
 
   # ship to cuda
   if args.cuda:
@@ -223,6 +224,7 @@ if __name__ == '__main__':
     iboxes = iboxes.cuda()
     hoi_classes = hoi_classes.cuda()
     bin_classes = bin_classes.cuda()
+    spa_maps = spa_maps.cuda()
 
   # make variable
   im_data = Variable(im_data)
@@ -233,6 +235,7 @@ if __name__ == '__main__':
   iboxes = Variable(iboxes)
   hoi_classes = Variable(hoi_classes)
   bin_classes = Variable(bin_classes)
+  spa_maps = Variable(spa_maps)
 
   if args.cuda:
     cfg.CUDA = True
@@ -325,14 +328,15 @@ if __name__ == '__main__':
       iboxes.data.resize_(data[4].size()).copy_(data[4])
       hoi_classes.resize_(data[5].size()).copy_(data[5])
       bin_classes.resize_(data[6].size()).copy_(data[6])
-      num_hois.data.resize_(data[7].size()).copy_(data[7])
+      spa_maps.data.resize_(data[7].size()).copy_(data[7])
+      num_hois.data.resize_(data[8].size()).copy_(data[8])
 
       if num_hois.data.item() == 0:
           continue
 
       fasterRCNN.zero_grad()
       cls_prob, bin_prob, RCNN_loss_cls, RCNN_loss_bin = \
-          fasterRCNN(im_data, im_info, hboxes, oboxes, iboxes, hoi_classes, bin_classes, num_hois)
+          fasterRCNN(im_data, im_info, hboxes, oboxes, iboxes, hoi_classes, bin_classes, spa_maps, num_hois)
 
       loss = RCNN_loss_cls.mean() + RCNN_loss_bin.mean()
 

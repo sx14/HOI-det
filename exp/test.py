@@ -100,7 +100,8 @@ if __name__ == '__main__':
         model_save_dir = config['model_save_dir']
         model = SpaLan(config['spa_feature_dim'],
                        config['num_hoi_classes'],
-                       config['num_obj_classes'])
+                       config['num_obj_classes'],
+                       config['num_key_points'])
         model = model.cuda()
         resume_dict = torch.load(os.path.join(model_save_dir, '%s_99_weights.pkl' % model))
         model.load_state_dict(resume_dict)
@@ -129,7 +130,7 @@ if __name__ == '__main__':
             pickle.dump(all_results, f)
         print('Done.')
 
-    generate_HICO_detection(output_path, 'output/results', 0.6, 0.4)
+    generate_HICO_detection(output_path, 'output/results', 1.0, 0)
 
     os.chdir('benchmark')
     os.system('matlab -nodesktop -nosplash -r "Generate_detection '+ '../output/results/' + '/;quit;"')

@@ -26,7 +26,7 @@ import torchvision.transforms as transforms
 import torchvision.datasets as dset
 from scipy.misc import imread
 from roi_data_layer.roidb import combined_roidb
-from roi_data_layer.roibatchLoader import roibatchLoader
+from roi_data_layer.roibatchLoader import roibatchLoader, gen_spatial_map
 from model.utils.config import cfg, cfg_from_file, cfg_from_list, get_output_dir
 from model.rpn.bbox_transform import clip_boxes
 from model.nms.nms_wrapper import nms
@@ -57,7 +57,7 @@ def parse_args():
                       default='cfgs/vgg16.yml', type=str)
   parser.add_argument('--net', dest='net',
                       help='vgg16, res50, res101, res152',
-                      default='res101', type=str)
+                      default='vgg16', type=str)
   parser.add_argument('--set', dest='set_cfgs',
                       help='set config keys', default=None,
                       nargs=argparse.REMAINDER)
@@ -205,6 +205,7 @@ if __name__ == '__main__':
   iboxes = torch.FloatTensor(1)
   hoi_classes = torch.FloatTensor(1)
   bin_classes = torch.LongTensor(1)
+  spa_maps = torch.LongTensor(1)
 
   # ship to cuda
   if args.cuda > 0:
@@ -216,6 +217,7 @@ if __name__ == '__main__':
     iboxes = iboxes.cuda()
     hoi_classes = hoi_classes.cuda()
     bin_classes = bin_classes.cuda()
+    spa_maps = spa_maps.cuda()
 
   # make variable
   with torch.no_grad():
@@ -227,6 +229,7 @@ if __name__ == '__main__':
       iboxes = Variable(iboxes)
       hoi_classes = Variable(hoi_classes)
       bin_classes = Variable(bin_classes)
+      spa_maps = Variable(spa_maps)
 
   if args.cuda > 0:
     cfg.CUDA = True
@@ -259,6 +262,7 @@ if __name__ == '__main__':
       hboxes_raw = np.zeros((0, 4))
       oboxes_raw = np.zeros((0, 4))
       iboxes_raw = np.zeros((0, 4))
+      spa_maps_raw = np.zeros((0, 2, 64, 64))
       obj_classes = []
       hscores = []
       oscores = []
@@ -285,7 +289,8 @@ if __name__ == '__main__':
                                        min(hbox[0, 1], obox[0, 1]),
                                        max(hbox[0, 2], obox[0, 2]),
                                        max(hbox[0, 3], obox[0, 3])]).reshape(1, 4)
-
+                      spa_map_raw = gen_spatial_map(hbox, obox)
+                      spa_maps_raw = np.concatenate((spa_maps_raw, spa_map_raw))
                       hboxes_raw = np.concatenate((hboxes_raw, hbox))
                       oboxes_raw = np.concatenate((oboxes_raw, obox))
                       iboxes_raw = np.concatenate((iboxes_raw, ibox))
@@ -300,14 +305,17 @@ if __name__ == '__main__':
       hboxes_raw = hboxes_raw[np.newaxis, :, :]
       oboxes_raw = oboxes_raw[np.newaxis, :, :]
       iboxes_raw = iboxes_raw[np.newaxis, :, :]
+      spa_maps_raw = spa_maps_raw[np.newaxis, :, :, :, :]
 
       hboxes_t = torch.from_numpy(hboxes_raw * im_scales[0])
       oboxes_t = torch.from_numpy(oboxes_raw * im_scales[0])
       iboxes_t = torch.from_numpy(iboxes_raw * im_scales[0])
+      spa_maps_t = torch.from_numpy(spa_maps_raw)
 
       hboxes.data.resize_(hboxes_t.size()).copy_(hboxes_t)
       oboxes.data.resize_(oboxes_t.size()).copy_(oboxes_t)
       iboxes.data.resize_(iboxes_t.size()).copy_(iboxes_t)
+      spa_maps.data.resize_(spa_maps_t.size()).copy_(spa_maps_t)
 
       assert len(im_scales) == 1, "Only single-image batch implemented"
       im_blob = blobs
@@ -323,7 +331,7 @@ if __name__ == '__main__':
       det_tic = time.time()
 
       hoi_prob, bin_prob, RCNN_loss_cls, RCNN_loss_bin = \
-          fasterRCNN(im_data, im_info, hboxes, oboxes, iboxes, hoi_classes, bin_classes, num_hois)
+          fasterRCNN(im_data, im_info, hboxes, oboxes, iboxes, hoi_classes, bin_classes, spa_maps, num_hois)
 
       for j in range(num_cand):
           temp = []
