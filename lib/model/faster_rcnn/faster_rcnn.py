@@ -60,7 +60,7 @@ class _fasterRCNN(nn.Module):
 
         self.grid_size = cfg.POOLING_SIZE * 2 if cfg.CROP_RESIZE_WITH_MAX_POOL else cfg.POOLING_SIZE
         self.RCNN_roi_crop = _RoICrop()
-        self.SpaCNN = SpaConv()
+        self.spaCNN = SpaConv()
 
         self.spa_cls_score = nn.Sequential(
             nn.LeakyReLU(),
@@ -146,7 +146,7 @@ class _fasterRCNN(nn.Module):
         # feed pooled features to top  model
         oroi_pooled_feat = self._head_to_tail(oroi_pooled_feat)
 
-        spa_feat = self.SpaCNN(spa_maps)
+        spa_feat = self.spaCNN(spa_maps[0])
         scls_score = self.spa_cls_score(spa_feat)
         sbin_score = self.spa_bin_score(spa_feat)
 

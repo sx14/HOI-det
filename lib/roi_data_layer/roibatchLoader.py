@@ -178,8 +178,8 @@ class roibatchLoader(data.Dataset):
     raw_spa_maps = np.zeros((num_hoi, 2, 64, 64))
     for i in range(num_hoi):
         raw_spa_maps[i] = gen_spatial_map(blobs['hboxes'][i], blobs['oboxes'][i])
-    raw_spa_maps = np.tile(raw_spa_maps, (3, 1))
-    gt_spa_maps = torch.from_numpy(raw_spa_maps)
+    raw_spa_maps = np.tile(raw_spa_maps, (3, 1, 1, 1))
+    gt_spa_maps = torch.from_numpy(raw_spa_maps).float()
 
     ########################################################
     # padding the input image to fixed size for each group #

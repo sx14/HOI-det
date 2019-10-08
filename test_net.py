@@ -205,7 +205,7 @@ if __name__ == '__main__':
   iboxes = torch.FloatTensor(1)
   hoi_classes = torch.FloatTensor(1)
   bin_classes = torch.LongTensor(1)
-  spa_maps = torch.LongTensor(1)
+  spa_maps = torch.FloatTensor(1)
 
   # ship to cuda
   if args.cuda > 0:
@@ -289,7 +289,8 @@ if __name__ == '__main__':
                                        min(hbox[0, 1], obox[0, 1]),
                                        max(hbox[0, 2], obox[0, 2]),
                                        max(hbox[0, 3], obox[0, 3])]).reshape(1, 4)
-                      spa_map_raw = gen_spatial_map(hbox, obox)
+                      spa_map_raw = gen_spatial_map(human_det[2], object_det[2])
+                      spa_map_raw = spa_map_raw[np.newaxis, : ,: ,:]
                       spa_maps_raw = np.concatenate((spa_maps_raw, spa_map_raw))
                       hboxes_raw = np.concatenate((hboxes_raw, hbox))
                       oboxes_raw = np.concatenate((oboxes_raw, obox))

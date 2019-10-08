@@ -212,7 +212,7 @@ if __name__ == '__main__':
   iboxes = torch.FloatTensor(1)
   hoi_classes = torch.FloatTensor(1)
   bin_classes = torch.LongTensor(1)
-  spa_maps = torch.LongTensor(1)
+  spa_maps = torch.FloatTensor(1)
 
   # ship to cuda
   if args.cuda:
@@ -387,7 +387,7 @@ if __name__ == '__main__':
         loss_bin_temp = 0
         start = time.time()
 
-    save_name = os.path.join(output_dir, 'ho_rcnn3_{}_{}_{}.pth'.format(args.session, epoch, step))
+    save_name = os.path.join(output_dir, 'ho_spa_rcnn3_{}_{}_{}.pth'.format(args.session, epoch, step))
     save_checkpoint({
       'session': args.session,
       'epoch': epoch + 1,
