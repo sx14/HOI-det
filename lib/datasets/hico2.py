@@ -269,14 +269,18 @@ class hico2(imdb):
                 image_anno['oboxes'] = np.zeros((0, 4))
                 image_anno['iboxes'] = np.zeros((0, 4))
                 image_anno['obj_classes'] = np.zeros(0)
-                image_anno['bin_classes'] = np.zeros(0)
+                image_anno['bin_classes'] = np.zeros(0, 2)
                 image_anno['hoi_classes'] = np.zeros((0, self.num_classes))
             else:
                 image_anno['hboxes'] = np.array(image_anno['hboxes'])
                 image_anno['oboxes'] = np.array(image_anno['oboxes'])
                 image_anno['iboxes'] = np.array(image_anno['iboxes'])
                 image_anno['obj_classes'] = np.array(image_anno['obj_classes'])
-                image_anno['bin_classes'] = np.array(image_anno['bin_classes'])
+
+                bin_classes = image_anno['bin_classes']
+                image_anno['bin_classes'] = np.zeros((len(bin_classes), 2))
+                for i, ins_class in enumerate(bin_classes):
+                    image_anno['bin_classes'][i, ins_class] = 1
 
                 hoi_classes = image_anno['hoi_classes']
                 image_anno['hoi_classes'] = np.zeros((len(hoi_classes), self.num_classes))
