@@ -204,7 +204,7 @@ if __name__ == '__main__':
   oboxes = torch.FloatTensor(1)
   iboxes = torch.FloatTensor(1)
   hoi_classes = torch.FloatTensor(1)
-  bin_classes = torch.LongTensor(1)
+  bin_classes = torch.FloatTensor(1)
   spa_maps = torch.FloatTensor(1)
 
   # ship to cuda

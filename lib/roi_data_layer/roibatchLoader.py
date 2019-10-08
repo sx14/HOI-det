@@ -172,7 +172,7 @@ class roibatchLoader(data.Dataset):
     gt_classes = np.tile(blobs['hoi_classes'], (3, 1))
     gt_classes = torch.from_numpy(gt_classes)
 
-    gt_binaries = np.tile(blobs['bin_classes'], (3,))
+    gt_binaries = np.tile(blobs['bin_classes'], (3, 1))
     gt_binaries = torch.from_numpy(gt_binaries)
 
     raw_spa_maps = np.zeros((num_hoi, 2, 64, 64))

@@ -211,7 +211,7 @@ if __name__ == '__main__':
   oboxes = torch.FloatTensor(1)
   iboxes = torch.FloatTensor(1)
   hoi_classes = torch.FloatTensor(1)
-  bin_classes = torch.LongTensor(1)
+  bin_classes = torch.FloatTensor(1)
   spa_maps = torch.FloatTensor(1)
 
   # ship to cuda
@@ -281,7 +281,7 @@ if __name__ == '__main__':
 
   if args.resume:
     load_name = os.path.join(output_dir,
-      'ho_spa_rcnn3_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
+      'ho_spa_rcnn3_lf_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
     print("loading checkpoint %s" % (load_name))
     checkpoint = torch.load(load_name)
     args.session = checkpoint['session']
@@ -365,7 +365,7 @@ if __name__ == '__main__':
           loss_bin_temp /= (args.disp_interval + 1)
           loss_cls_temp /= (args.disp_interval + 1)
 
-        nNeg = torch.sum(bin_classes).item()
+        nNeg = torch.sum(bin_classes[:, :, 1]).item()
         nPos = bin_classes.shape[1] - nNeg
 
 
@@ -387,7 +387,7 @@ if __name__ == '__main__':
         loss_bin_temp = 0
         start = time.time()
 
-    save_name = os.path.join(output_dir, 'ho_spa_rcnn3_{}_{}_{}.pth'.format(args.session, epoch, step))
+    save_name = os.path.join(output_dir, 'ho_spa_rcnn3_lf_{}_{}_{}.pth'.format(args.session, epoch, step))
     save_checkpoint({
       'session': args.session,
       'epoch': epoch + 1,
