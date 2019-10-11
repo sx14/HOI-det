@@ -57,7 +57,7 @@ def parse_args():
                       default='cfgs/vgg16.yml', type=str)
   parser.add_argument('--net', dest='net',
                       help='vgg16, res50, res101, res152',
-                      default='vgg16', type=str)
+                      default='res101', type=str)
   parser.add_argument('--set', dest='set_cfgs',
                       help='set config keys', default=None,
                       nargs=argparse.REMAINDER)
@@ -165,7 +165,7 @@ if __name__ == '__main__':
   if not os.path.exists(input_dir):
     raise Exception('There is no input directory for loading network from ' + input_dir)
   load_name = os.path.join(input_dir,
-    'ho_spa_rcnn3_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
+    'ho_spa_rcnn3_lf_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
 
   pascal_classes = ['1'] * 600
 
@@ -331,8 +331,9 @@ if __name__ == '__main__':
 
       det_tic = time.time()
 
-      hoi_prob, bin_prob, RCNN_loss_cls, RCNN_loss_bin = \
-          fasterRCNN(im_data, im_info, hboxes, oboxes, iboxes, hoi_classes, bin_classes, spa_maps, num_hois)
+      with torch.no_grad():
+          hoi_prob, bin_prob, RCNN_loss_cls, RCNN_loss_bin = \
+              fasterRCNN(im_data, im_info, hboxes, oboxes, iboxes, hoi_classes, bin_classes, spa_maps, num_hois)
 
       for j in range(num_cand):
           temp = []

@@ -44,7 +44,7 @@ def parse_args():
                       default='hico_full', type=str)
   parser.add_argument('--net', dest='net',
                       help='vgg16, res101',
-                      default='vgg16', type=str)
+                      default='res101', type=str)
   parser.add_argument('--start_epoch', dest='start_epoch',
                       help='starting epoch',
                       default=1, type=int)
@@ -87,7 +87,7 @@ def parse_args():
                       default="sgd", type=str)
   parser.add_argument('--lr', dest='lr',
                       help='starting learning rate',
-                      default=0.001, type=float)
+                      default=0.00001, type=float)
   parser.add_argument('--lr_decay_step', dest='lr_decay_step',
                       help='step to do learning rate decay, unit is epoch',
                       default=1, type=int)
