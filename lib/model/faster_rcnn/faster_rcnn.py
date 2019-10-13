@@ -64,7 +64,10 @@ class _fasterRCNN(nn.Module):
 
         self.spa_cls_score = nn.Sequential(
             nn.LeakyReLU(),
-            nn.Dropout(p=0.5),
+            nn.Dropout(),
+            nn.Linear(1024, 1024),
+            nn.LeakyReLU(),
+            nn.Dropout(),
             nn.Linear(1024, self.n_classes))
 
         # self.spa_bin_score = nn.Sequential(
