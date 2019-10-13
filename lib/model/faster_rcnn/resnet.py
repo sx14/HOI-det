@@ -241,14 +241,35 @@ class resnet(_fasterRCNN):
 
     self.RCNN_top = nn.Sequential(resnet.layer4)
 
-    self.iRCNN_cls_score = nn.Linear(2048, self.n_classes)
     # self.iRCNN_bin_score = nn.Linear(2048, 2)
+    # self.iRCNN_cls_score = nn.Linear(2048, self.n_classes)
+    self.iRCNN_cls_score = nn.Sequential(nn.Linear(2048, 2048),
+                                         nn.ReLU(True),
+                                         nn.Dropout(),
+                                         nn.Linear(2048, 1024),
+                                         nn.ReLU(True),
+                                         nn.Dropout(),
+                                         nn.Linear(1024, self.n_classes))
 
-    self.hRCNN_cls_score = nn.Linear(2048, self.n_classes)
     # self.hRCNN_bin_score = nn.Linear(2048, 2)
+    # self.hRCNN_cls_score = nn.Linear(2048, self.n_classes)
+    self.hRCNN_cls_score = nn.Sequential(nn.Linear(2048, 2048),
+                                         nn.ReLU(True),
+                                         nn.Dropout(),
+                                         nn.Linear(2048, 1024),
+                                         nn.ReLU(True),
+                                         nn.Dropout(),
+                                         nn.Linear(1024, self.n_classes))
 
-    self.oRCNN_cls_score = nn.Linear(2048, self.n_classes)
     # self.oRCNN_bin_score = nn.Linear(2048, 2)
+    self.oRCNN_cls_score = nn.Linear(2048, self.n_classes)
+    self.oRCNN_cls_score = nn.Sequential(nn.Linear(2048, 2048),
+                                         nn.ReLU(True),
+                                         nn.Dropout(),
+                                         nn.Linear(2048, 1024),
+                                         nn.ReLU(True),
+                                         nn.Dropout(),
+                                         nn.Linear(1024, self.n_classes))
 
     # Fix blocks
     for p in self.RCNN_base[0].parameters(): p.requires_grad=False
@@ -288,5 +309,6 @@ class resnet(_fasterRCNN):
       self.RCNN_top.apply(set_bn_eval)
 
   def _head_to_tail(self, pool5):
+    # average pooling
     fc7 = self.RCNN_top(pool5).mean(3).mean(2)
     return fc7
