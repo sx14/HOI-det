@@ -339,16 +339,16 @@ if __name__ == '__main__':
       cls_prob, bin_prob, RCNN_loss_cls, RCNN_loss_bin = \
           fasterRCNN(im_data, im_info, hboxes, oboxes, iboxes, hoi_classes, bin_classes, spa_maps, num_hois)
 
-      # loss = RCNN_loss_cls.mean() + RCNN_loss_bin.mean()
+      loss = RCNN_loss_cls.mean() + RCNN_loss_bin.mean()
       loss = RCNN_loss_cls.mean()
 
       if args.mGPUs:
           loss_cls = RCNN_loss_cls.mean().item()
-          # loss_bin = RCNN_loss_bin.mean().item()
+          loss_bin = RCNN_loss_bin.mean().item()
           loss_bin = 0
       else:
           loss_cls = RCNN_loss_cls.item()
-          # loss_bin = RCNN_loss_bin.item()
+          loss_bin = RCNN_loss_bin.item()
           loss_bin = 0
 
       loss_temp += loss.item()
