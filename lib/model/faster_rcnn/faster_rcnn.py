@@ -210,13 +210,24 @@ class _fasterRCNN(nn.Module):
                 m.weight.data.normal_(mean, stddev)
                 m.bias.data.zero_()
 
-        normal_init(self.iRCNN_cls_score, 0, 0.01, cfg.TRAIN.TRUNCATED)
+        for layer in self.iRCNN_cls_score:
+            if hasattr(layer, 'weight'):
+                normal_init(layer, 0, 0.01, cfg.TRAIN.TRUNCATED)
+
+        for layer in self.hRCNN_cls_score:
+            if hasattr(layer, 'weight'):
+                normal_init(layer, 0, 0.01, cfg.TRAIN.TRUNCATED)
+
+        for layer in self.oRCNN_cls_score:
+            if hasattr(layer, 'weight'):
+                normal_init(layer, 0, 0.01, cfg.TRAIN.TRUNCATED)
+        # normal_init(self.iRCNN_cls_score, 0, 0.01, cfg.TRAIN.TRUNCATED)
         # normal_init(self.iRCNN_bin_score, 0, 0.01, cfg.TRAIN.TRUNCATED)
 
-        normal_init(self.hRCNN_cls_score, 0, 0.01, cfg.TRAIN.TRUNCATED)
+        # normal_init(self.hRCNN_cls_score, 0, 0.01, cfg.TRAIN.TRUNCATED)
         # normal_init(self.hRCNN_bin_score, 0, 0.01, cfg.TRAIN.TRUNCATED)
 
-        normal_init(self.oRCNN_cls_score, 0, 0.01, cfg.TRAIN.TRUNCATED)
+        # normal_init(self.oRCNN_cls_score, 0, 0.01, cfg.TRAIN.TRUNCATED)
         # normal_init(self.oRCNN_bin_score, 0, 0.01, cfg.TRAIN.TRUNCATED)
 
     def create_architecture(self):
