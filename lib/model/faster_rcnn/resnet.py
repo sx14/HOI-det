@@ -241,13 +241,22 @@ class resnet(_fasterRCNN):
 
     self.RCNN_top = nn.Sequential(resnet.layer4)
 
-    self.iRCNN_cls_score = nn.Linear(2048, self.n_classes)
+    self.iRCNN_cls_score = nn.Sequential(nn.ReLU(True),
+                                         nn.Dropout(),
+                                         nn.Linear(2048, self.n_classes))
+    # self.iRCNN_cls_score = nn.Linear(2048, self.n_classes)
     # self.iRCNN_bin_score = nn.Linear(2048, 2)
 
-    self.hRCNN_cls_score = nn.Linear(2048, self.n_classes)
+    self.hRCNN_cls_score = nn.Sequential(nn.ReLU(True),
+                                         nn.Dropout(),
+                                         nn.Linear(2048, self.n_classes))
+    # self.hRCNN_cls_score = nn.Linear(2048, self.n_classes)
     # self.hRCNN_bin_score = nn.Linear(2048, 2)
 
-    self.oRCNN_cls_score = nn.Linear(2048, self.n_classes)
+    self.oRCNN_cls_score = nn.Sequential(nn.ReLU(True),
+                                         nn.Dropout(),
+                                         nn.Linear(2048, self.n_classes))
+    # self.oRCNN_cls_score = nn.Linear(2048, self.n_classes)
     # self.oRCNN_bin_score = nn.Linear(2048, 2)
 
     # Fix blocks
