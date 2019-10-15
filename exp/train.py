@@ -78,7 +78,8 @@ def main(data_root, config):
             loss_bin, loss_hoi, \
             error_bin, error_hoi = model(spa_maps, obj_cates, pose_feats, hoi_cates, bin_cates, pos_mask)
 
-            loss = loss_bin + loss_hoi
+            # loss = loss_bin + loss_hoi
+            loss = loss_hoi
             loss.backward()
             optimizer.step()
 

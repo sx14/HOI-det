@@ -3,6 +3,7 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.autograd import Variable
 
 
 class SpaConv(nn.Module):
@@ -121,11 +122,11 @@ class SpaLan(nn.Module):
         # bin_pred = torch.argmax(bin_prob, dim=1)
         hoi_pred = (hoi_prob > 0.5).float()
 
-        bin_error = torch.zeros(num_ins)
-        hoi_error = torch.zeros(num_ins)
+        bin_error = torch.zeros(1)
+        hoi_error = torch.zeros(1)
 
-        loss_cls = torch.zeros(num_ins)
-        loss_bin = torch.ones(num_ins)
+        loss_cls = torch.zeros(1)
+        loss_bin = torch.zeros(1)
 
         if hoi_cates is not None and bin_cates is not None:
             # bin_error = torch.abs(bin_pred - bin_cates).sum().float() / num_ins
@@ -135,6 +136,7 @@ class SpaLan(nn.Module):
             obj_loss_cls = F.binary_cross_entropy(obj_hoi_prob[pos_mask], hoi_cates[pos_mask], size_average=False)
             pos_loss_cls = F.binary_cross_entropy(pose_hoi_prob[pos_mask], hoi_cates[pos_mask], size_average=False)
             loss_cls = spa_loss_cls + obj_loss_cls + pos_loss_cls
+            loss_bin = Variable(loss_bin)
         return bin_prob, hoi_prob, loss_bin, loss_cls, bin_error, hoi_error
 
 
