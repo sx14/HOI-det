@@ -112,7 +112,7 @@ class _fasterRCNN(nn.Module):
             iroi_pooled_feat = self.RCNN_roi_pool(base_feat, irois.view(-1, 5))
 
         # feed pooled features to top  model
-        iroi_pooled_feat = self._head_to_tail(iroi_pooled_feat)
+        iroi_pooled_feat = self._ihead_to_tail(iroi_pooled_feat)
 
         if cfg.POOLING_MODE == 'crop':
             # pdb.set_trace()
@@ -128,7 +128,7 @@ class _fasterRCNN(nn.Module):
             hroi_pooled_feat = self.RCNN_roi_pool(base_feat, hrois.view(-1, 5))
 
         # feed pooled features to top  model
-        hroi_pooled_feat = self._head_to_tail(hroi_pooled_feat)
+        hroi_pooled_feat = self._hhead_to_tail(hroi_pooled_feat)
 
         if cfg.POOLING_MODE == 'crop':
             # pdb.set_trace()
@@ -144,7 +144,7 @@ class _fasterRCNN(nn.Module):
             oroi_pooled_feat = self.RCNN_roi_pool(base_feat, orois.view(-1, 5))
 
         # feed pooled features to top  model
-        oroi_pooled_feat = self._head_to_tail(oroi_pooled_feat)
+        oroi_pooled_feat = self._ohead_to_tail(oroi_pooled_feat)
 
         spa_feat = self.spaCNN(spa_maps[0])
         scls_score = self.spa_cls_score(spa_feat)

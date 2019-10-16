@@ -231,7 +231,7 @@ class resnet(_fasterRCNN):
     resnet = resnet101()
 
     if self.pretrained == True:
-      print("Loading pretrained weights from %s" %(self.model_path))
+      print("Loading pretrained weights from %s" % self.model_path)
       state_dict = torch.load(self.model_path)
       resnet.load_state_dict({k:v for k,v in state_dict.items() if k in resnet.state_dict()})
 
@@ -239,7 +239,11 @@ class resnet(_fasterRCNN):
     self.RCNN_base = nn.Sequential(resnet.conv1, resnet.bn1,resnet.relu,
       resnet.maxpool,resnet.layer1,resnet.layer2,resnet.layer3)
 
-    self.RCNN_top = nn.Sequential(resnet.layer4)
+    import copy
+    self.iRCNN_top = nn.Sequential(resnet.layer4)
+    self.hRCNN_top = nn.Sequential(copy.deepcopy(resnet.layer4))
+    self.oRCNN_top = nn.Sequential(copy.deepcopy(resnet.layer4))
+
 
     self.iRCNN_cls_score = nn.Linear(2048, self.n_classes)
     # self.iRCNN_bin_score = nn.Linear(2048, 2)
@@ -287,6 +291,14 @@ class resnet(_fasterRCNN):
       self.RCNN_base.apply(set_bn_eval)
       self.RCNN_top.apply(set_bn_eval)
 
-  def _head_to_tail(self, pool5):
-    fc7 = self.RCNN_top(pool5).mean(3).mean(2)
+  def _ihead_to_tail(self, pool5):
+    fc7 = self.iRCNN_top(pool5).mean(3).mean(2)
+    return fc7
+
+  def _hhead_to_tail(self, pool5):
+    fc7 = self.hRCNN_top(pool5).mean(3).mean(2)
+    return fc7
+
+  def _ohead_to_tail(self, pool5):
+    fc7 = self.oRCNN_top(pool5).mean(3).mean(2)
     return fc7
