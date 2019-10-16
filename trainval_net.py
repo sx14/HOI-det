@@ -50,7 +50,7 @@ def parse_args():
                       default=1, type=int)
   parser.add_argument('--epochs', dest='max_epochs',
                       help='number of epochs to train',
-                      default=4, type=int)
+                      default=16, type=int)
   parser.add_argument('--disp_interval', dest='disp_interval',
                       help='number of iterations to display',
                       default=100, type=int)
@@ -70,7 +70,7 @@ def parse_args():
                       action='store_true')
   parser.add_argument('--ls', dest='large_scale',
                       help='whether use large imag scale',
-                      action='store_true')                      
+                      action='store_true')
   parser.add_argument('--mGPUs', dest='mGPUs',
                       help='whether use multiple GPUs',
                       action='store_true')
@@ -90,7 +90,7 @@ def parse_args():
                       default=0.00001, type=float)
   parser.add_argument('--lr_decay_step', dest='lr_decay_step',
                       help='step to do learning rate decay, unit is epoch',
-                      default=1, type=int)
+                      default=4, type=int)
   parser.add_argument('--lr_decay_gamma', dest='lr_decay_gamma',
                       help='learning rate decay ratio',
                       default=0.1, type=float)
@@ -109,10 +109,10 @@ def parse_args():
                       default=1, type=int)
   parser.add_argument('--checkepoch', dest='checkepoch',
                       help='checkepoch to load model',
-                      default=1, type=int)
+                      default=8, type=int)
   parser.add_argument('--checkpoint', dest='checkpoint',
                       help='checkpoint to load model',
-                      default=0, type=int)
+                      default=75265, type=int)
 # log and display
   parser.add_argument('--use_tfb', dest='use_tfboard',
                       help='whether use tensorboard',
@@ -263,11 +263,12 @@ if __name__ == '__main__':
   params = []
   for key, value in dict(fasterRCNN.named_parameters()).items():
     if value.requires_grad:
+      lr_tmp = lr
       if 'bias' in key:
-        params += [{'params':[value],'lr':lr*(cfg.TRAIN.DOUBLE_BIAS + 1), \
+        params += [{'params':[value],'lr':lr_tmp*(cfg.TRAIN.DOUBLE_BIAS + 1), \
                 'weight_decay': cfg.TRAIN.BIAS_DECAY and cfg.TRAIN.WEIGHT_DECAY or 0}]
       else:
-        params += [{'params':[value],'lr':lr, 'weight_decay': cfg.TRAIN.WEIGHT_DECAY}]
+        params += [{'params':[value],'lr':lr_tmp, 'weight_decay': cfg.TRAIN.WEIGHT_DECAY}]
 
   if args.optimizer == "adam":
     lr = lr * 0.1
@@ -281,7 +282,7 @@ if __name__ == '__main__':
 
   if args.resume:
     load_name = os.path.join(output_dir,
-      'ho_spa_rcnn3_lf_no_nis_act_drop_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
+      'ho_spa_rcnn3_lf_no_nis_fc2_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
     print("loading checkpoint %s" % (load_name))
     checkpoint = torch.load(load_name)
     args.session = checkpoint['session']
@@ -390,7 +391,7 @@ if __name__ == '__main__':
         loss_bin_temp = 0
         start = time.time()
 
-    save_name = os.path.join(output_dir, 'ho_spa_rcnn3_lf_no_nis_act_drop_{}_{}_{}.pth'.format(args.session, epoch, step))
+    save_name = os.path.join(output_dir, 'ho_spa_rcnn3_lf_no_nis_fc3_{}_{}_{}.pth'.format(args.session, epoch, step))
     save_checkpoint({
       'session': args.session,
       'epoch': epoch + 1,
