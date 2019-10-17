@@ -267,6 +267,7 @@ class resnet(_fasterRCNN):
     for p in self.RCNN_base[1].parameters(): p.requires_grad=False
 
     assert (0 <= cfg.RESNET.FIXED_BLOCKS < 4)
+    print('resnet: fixed block %d:' % cfg.RESNET.FIXED_BLOCKS)
     if cfg.RESNET.FIXED_BLOCKS >= 3:
       for p in self.RCNN_base[6].parameters(): p.requires_grad=False
     if cfg.RESNET.FIXED_BLOCKS >= 2:
