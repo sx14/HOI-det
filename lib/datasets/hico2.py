@@ -16,6 +16,7 @@ import scipy.sparse
 import subprocess
 import math
 import random
+from random import randint
 import glob
 import uuid
 import scipy.io as sio
@@ -192,6 +193,83 @@ class hico2(imdb):
         print('wrote gt roidb to {}'.format(cache_file))
         return gt_roidb_dict
 
+    @staticmethod
+    def augment_box(bbox, shape, augment=15):
+
+        def bb_IOU(boxA, boxB):
+
+            ixmin = np.maximum(boxA[0], boxB[0])
+            iymin = np.maximum(boxA[1], boxB[1])
+            ixmax = np.minimum(boxA[2], boxB[2])
+            iymax = np.minimum(boxA[3], boxB[3])
+            iw = np.maximum(ixmax - ixmin + 1., 0.)
+            ih = np.maximum(iymax - iymin + 1., 0.)
+            inters = iw * ih
+
+            # union
+            uni = ((boxB[2] - boxB[0] + 1.) * (boxB[3] - boxB[1] + 1.) +
+                   (boxA[2] - boxA[0] + 1.) *
+                   (boxA[3] - boxA[1] + 1.) - inters)
+
+            overlaps = inters / uni
+            return overlaps
+
+        thres_ = 0.7
+
+        box = np.array([bbox[0], bbox[1], bbox[2], bbox[3]]).reshape(1, 4)
+        box = box.astype(np.float64)
+
+        count = 0
+        time_count = 0
+        while count < augment:
+
+            time_count += 1
+            height = bbox[3] - bbox[1]
+            width = bbox[2] - bbox[0]
+
+            height_cen = (bbox[3] + bbox[1]) / 2
+            width_cen = (bbox[2] + bbox[0]) / 2
+
+            ratio = 1 + randint(-10, 10) * 0.01
+
+            height_shift = randint(-np.floor(height), np.floor(height)) * 0.1
+            width_shift = randint(-np.floor(width), np.floor(width)) * 0.1
+
+            H_0 = max(0, width_cen + width_shift - ratio * width / 2)
+            H_2 = min(shape[1] - 1, width_cen + width_shift + ratio * width / 2)
+            H_1 = max(0, height_cen + height_shift - ratio * height / 2)
+            H_3 = min(shape[0] - 1, height_cen + height_shift + ratio * height / 2)
+
+            if bb_IOU(bbox, np.array([H_0, H_1, H_2, H_3])) > thres_:
+                box_ = np.array([H_0, H_1, H_2, H_3]).reshape(1, 4)
+                box = np.concatenate((box, box_), axis=0)
+                count += 1
+            if time_count > 150:
+                return box
+        return box
+
+    def augment_hoi_instances(self, raw_hois, im_hw):
+        new_hois = []
+        for raw_hoi in raw_hois:
+
+            hbox = raw_hoi[2]
+            obox = raw_hoi[3]
+            aug_hboxes = self.augment_box(hbox, im_hw)
+            aug_oboxes = self.augment_box(obox, im_hw)
+
+            aug_hboxes = aug_hboxes[:min(len(aug_hboxes), len(aug_oboxes))]
+            aug_oboxes = aug_oboxes[:min(len(aug_hboxes), len(aug_oboxes))]
+
+            for i in range(aug_hboxes.shape[0]):
+                aug_cls_ids = raw_hoi[1]
+                aug_hbox = aug_hboxes[i]
+                aug_obox = aug_oboxes[i]
+                new_hois.append([[0],
+                                 aug_cls_ids,
+                                 aug_hbox,
+                                 aug_obox])
+        return new_hois
+
     def _load_all_annotations(self):
         all_annos = {}
 
@@ -211,6 +289,12 @@ class hico2(imdb):
         image_id_template = 'HICO_train2015_%s'
         for image_id, img_pos_hois in anno_gt_db.items():
             image_name = image_id_template % str(image_id).zfill(8)
+
+            # augment positive instances
+            image_hw = [self._all_image_info[image_name][1],
+                        self._all_image_info[image_name][0]]
+            img_pos_hois = self.augment_hoi_instances(img_pos_hois, image_hw)
+
             if image_id in anno_ng_db and len(anno_ng_db[image_id]) > 0:
                 img_neg_hois0 = anno_ng_db[image_id]
                 if len(img_neg_hois0) > len(img_pos_hois):
