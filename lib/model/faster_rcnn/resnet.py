@@ -272,7 +272,9 @@ class resnet(_fasterRCNN):
         for p in m.parameters(): p.requires_grad=False
 
     self.RCNN_base.apply(set_bn_fix)
-    self.RCNN_top.apply(set_bn_fix)
+    self.iRCNN_top.apply(set_bn_fix)
+    self.hRCNN_top.apply(set_bn_fix)
+    self.oRCNN_top.apply(set_bn_fix)
 
   def train(self, mode=True):
     # Override train so that the training mode is set as we want
@@ -289,7 +291,9 @@ class resnet(_fasterRCNN):
           m.eval()
 
       self.RCNN_base.apply(set_bn_eval)
-      self.RCNN_top.apply(set_bn_eval)
+      self.iRCNN_top.apply(set_bn_eval)
+      self.hRCNN_top.apply(set_bn_eval)
+      self.oRCNN_top.apply(set_bn_eval)
 
   def _ihead_to_tail(self, pool5):
     fc7 = self.iRCNN_top(pool5).mean(3).mean(2)
