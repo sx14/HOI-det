@@ -159,11 +159,11 @@ if __name__ == '__main__':
   if args.dataset == "hico_mini":
       args.imdb_name = "hico2_mini_train"
       args.imdbval_name = "hico2_mini_test"
-      args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '40']
+      args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '75']
   elif args.dataset == "hico_full":
       args.imdb_name = "hico2_full_train"
       args.imdbval_name = "hico_full_test"
-      args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '40']
+      args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '75']
   else:
       print('Only support HICO-DET dataset now.')
 
