@@ -67,11 +67,6 @@ class _fasterRCNN(nn.Module):
             nn.Dropout(p=0.5),
             nn.Linear(1024, self.n_classes))
 
-        # self.spa_bin_score = nn.Sequential(
-        #     nn.LeakyReLU(),
-        #     nn.Dropout(p=0.5),
-        #     nn.Linear(1024, 2))
-
     def forward(self, im_data, im_info, hboxes, oboxes, iboxes, hoi_classes, bin_classes, spa_maps, num_hois):
         batch_size = im_data.size(0)
 
@@ -176,11 +171,11 @@ class _fasterRCNN(nn.Module):
 
         if self.training:
             # classification loss
-            scls_loss = F.binary_cross_entropy(scls_prob, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
-            icls_loss = F.binary_cross_entropy(icls_prob, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
-            hcls_loss = F.binary_cross_entropy(hcls_prob, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
-            ocls_loss = F.binary_cross_entropy(ocls_prob, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
-
+            pos_map = bin_classes[0, :, 0]
+            scls_loss = F.binary_cross_entropy(scls_prob, hoi_classes.view(-1, hoi_classes.shape[2]))
+            icls_loss = F.binary_cross_entropy(icls_prob[pos_map, :], hoi_classes.view(-1, hoi_classes.shape[2])[pos_map, :])
+            hcls_loss = F.binary_cross_entropy(hcls_prob[pos_map, :], hoi_classes.view(-1, hoi_classes.shape[2])[pos_map, :])
+            ocls_loss = F.binary_cross_entropy(ocls_prob[pos_map, :], hoi_classes.view(-1, hoi_classes.shape[2])[pos_map, :])
             RCNN_loss_cls = scls_loss + icls_loss + hcls_loss + ocls_loss
 
             # sbin_loss = F.binary_cross_entropy(sbin_prob, bin_classes.view(-1, bin_classes.shape[2]), size_average=False)

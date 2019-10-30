@@ -244,7 +244,6 @@ class resnet(_fasterRCNN):
     self.hRCNN_top = nn.Sequential(copy.deepcopy(resnet.layer4))
     self.oRCNN_top = nn.Sequential(copy.deepcopy(resnet.layer4))
 
-
     self.iRCNN_cls_score = nn.Linear(2048, self.n_classes)
     # self.iRCNN_bin_score = nn.Linear(2048, 2)
 
