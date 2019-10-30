@@ -298,16 +298,16 @@ class hico2(imdb):
             # select negative instances
             if image_id in anno_ng_db and len(anno_ng_db[image_id]) > 0:
                 img_neg_hois0 = anno_ng_db[image_id]
-                if len(img_neg_hois0) > len(img_pos_hois) * 4:
-                    inds = random.sample(range(len(img_neg_hois0)), len(img_pos_hois) * 4)
+                if len(img_neg_hois0) > len(img_pos_hois):
+                    inds = random.sample(range(len(img_neg_hois0)), len(img_pos_hois))
                 else:
                     inds = []
-                    for i in range(int(len(img_pos_hois) * 4 / len(img_neg_hois0))):
+                    for i in range(int(len(img_pos_hois) / len(img_neg_hois0))):
                         inds += range(len(img_neg_hois0))
-                    for i in range(len(img_pos_hois) * 4 - len(inds)):
+                    for i in range(len(img_pos_hois) - len(inds)):
                         inds.append(i)
                 img_neg_hois = [img_neg_hois0[ind] for ind in inds]
-                assert len(img_neg_hois) == (len(img_pos_hois) * 4)
+                assert len(img_neg_hois) == (len(img_pos_hois))
             else:
                 img_neg_hois = []
 
@@ -404,7 +404,6 @@ class hico2(imdb):
             assert self._image_index[image_id] == image_name
             all_widths.append(image_anno['size']['width'][0, 0][0, 0])     # image width
         return all_widths
-
 
 
     def _get_voc_results_file_template(self):

@@ -171,7 +171,7 @@ class _fasterRCNN(nn.Module):
 
         if self.training:
             # classification loss
-            pos_map = bin_classes[0, :, 0]
+            pos_map = bin_classes[0, :, 0].long()
             scls_loss = F.binary_cross_entropy(scls_prob, hoi_classes.view(-1, hoi_classes.shape[2]))
             icls_loss = F.binary_cross_entropy(icls_prob[pos_map, :], hoi_classes.view(-1, hoi_classes.shape[2])[pos_map, :])
             hcls_loss = F.binary_cross_entropy(hcls_prob[pos_map, :], hoi_classes.view(-1, hoi_classes.shape[2])[pos_map, :])
