@@ -299,7 +299,7 @@ class hico2(imdb):
             if image_id in anno_ng_db and len(anno_ng_db[image_id]) > 0:
                 img_neg_hois0 = anno_ng_db[image_id]
                 if len(img_neg_hois0) > len(img_pos_hois) * 4:
-                    inds = random.sample(range(len(img_neg_hois0)), len(img_pos_hois))
+                    inds = random.sample(range(len(img_neg_hois0)), len(img_pos_hois) * 4)
                 else:
                     inds = []
                     for i in range(int(len(img_pos_hois) * 4 / len(img_neg_hois0))):
@@ -307,7 +307,7 @@ class hico2(imdb):
                     for i in range(len(img_pos_hois) * 4 - len(inds)):
                         inds.append(i)
                 img_neg_hois = [img_neg_hois0[ind] for ind in inds]
-                assert len(img_neg_hois) == len(img_pos_hois)
+                assert len(img_neg_hois) == (len(img_pos_hois) * 4)
             else:
                 img_neg_hois = []
 
