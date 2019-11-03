@@ -199,7 +199,7 @@ class hico2(imdb):
         return gt_roidb_dict
 
     @staticmethod
-    def augment_box(bbox, shape, augment=15):
+    def augment_box(bbox, shape, augment=5):
 
         def bb_IOU(boxA, boxB):
 
