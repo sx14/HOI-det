@@ -332,8 +332,8 @@ if __name__ == '__main__':
       hoi_classes.resize_(data[5].size()).copy_(data[5])
       bin_classes.resize_(data[6].size()).copy_(data[6])
       hoi_masks.resize_(data[7].size()).copy_(data[7])
-      spa_maps.data.resize_(data[7].size()).copy_(data[8])
-      num_hois.data.resize_(data[8].size()).copy_(data[9])
+      spa_maps.data.resize_(data[8].size()).copy_(data[8])
+      num_hois.data.resize_(data[9].size()).copy_(data[9])
 
       if num_hois.data.item() == 0:
           continue
