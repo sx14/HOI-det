@@ -89,21 +89,26 @@ class hico2(imdb):
 
     def _load_hoi_classes(self):
         hoi_cls_list = []
-        object_cls_list = []
-        verb_cls_list = []
+        obj_cls_list = []
+        vrb_cls_list = []
+        obj2int = {}
+
         with open(os.path.join(self._data_path, 'hoi_categories.pkl')) as f:
             mat_hoi_classes = pickle.load(f)
         for hoi_cls_id, hoi_cls in enumerate(mat_hoi_classes):
-            object_cls_name = hoi_cls.split(' ')[1]
-            if object_cls_name not in object_cls_list:
-                object_cls_list.append(object_cls_name)
+            obj_cls_name = hoi_cls.split(' ')[1]
+            if obj_cls_name not in obj_cls_list:
+                obj_cls_list.append(obj_cls_name)
+                obj2int[obj_cls_name] = [hoi_cls_id, hoi_cls_id]
+            else:
+                obj2int[obj_cls_name][1] = hoi_cls_id
 
             verb_cls_name = hoi_cls.split(' ')[0]
-            if verb_cls_name not in verb_cls_list:
-                verb_cls_list.append(verb_cls_name)
+            if verb_cls_name not in vrb_cls_list:
+                vrb_cls_list.append(verb_cls_name)
 
-            hoi_cls_list.append(hoi_class(object_cls_name, verb_cls_name, hoi_cls_id))
-        return hoi_cls_list, object_cls_list, verb_cls_list
+            hoi_cls_list.append(hoi_class(obj_cls_name, verb_cls_name, hoi_cls_id))
+        return hoi_cls_list, obj_cls_list, vrb_cls_list, obj2int
 
     def __init__(self, image_set, version):
         imdb.__init__(self, 'hico2_' + version + '_' + image_set)
@@ -111,11 +116,11 @@ class hico2(imdb):
         self._image_set = image_set
         self._data_path = self._get_default_path()
 
-        self.hoi_classes, self.object_classes, self.verb_classes = self._load_hoi_classes()
+        self.hoi_classes, self.obj_classes, self.vrb_classes, self.obj2int = self._load_hoi_classes()
         self._classes = [hoi_class.hoi_name() for hoi_class in self.hoi_classes]
         self.hoi_class2ind = dict(zip(self._classes, xrange(self.num_classes)))
-        self.obj_class2ind = dict(zip(self.object_classes, xrange(len(self.object_classes))))
-        self.verb_class2ind = dict(zip(self.verb_classes, xrange(len(self.verb_classes))))
+        self.obj_class2ind = dict(zip(self.obj_classes, xrange(len(self.obj_classes))))
+        self.verb_class2ind = dict(zip(self.vrb_classes, xrange(len(self.vrb_classes))))
 
         self._class_to_ind = dict(zip(self._classes, xrange(len(self._classes))))
         self._image_ext = '.jpg'
@@ -318,6 +323,7 @@ class hico2(imdb):
                           'hoi_classes': [],
                           'obj_classes': [],
                           'bin_classes': [],
+                          'hoi_masks': [],
                           'width': self._all_image_info[image_name][0],
                           'height': self._all_image_info[image_name][1],
                           'flipped': False}
@@ -330,7 +336,8 @@ class hico2(imdb):
                     if isinstance(hoi_class_ids, int):
                         hoi_class_ids = [hoi_class_ids]
                     hoi_classes = [self.hoi_classes[class_id] for class_id in hoi_class_ids]
-                    obj_class_id = self.obj_class2ind[hoi_classes[0].object_name()]
+                    obj_class_name = hoi_classes[0].object_name()
+                    obj_class_id = self.obj_class2ind[obj_class_name]
 
                     hbox = raw_hoi[2]
                     obox = raw_hoi[3]
@@ -341,6 +348,7 @@ class hico2(imdb):
                     image_anno['iboxes'].append(ibox)
                     image_anno['hoi_classes'].append(hoi_class_ids)
                     image_anno['obj_classes'].append(obj_class_id)
+                    image_anno['hoi_masks'].append(self.obj2int[obj_class_name])
                     if pn == 0:
                         # positive - 0
                         image_anno['bin_classes'].append(0)
@@ -356,6 +364,7 @@ class hico2(imdb):
                 image_anno['obj_classes'] = np.zeros(0)
                 image_anno['bin_classes'] = np.zeros(0, 2)
                 image_anno['hoi_classes'] = np.zeros((0, self.num_classes))
+                image_anno['hoi_masks'] = np.ones((0, self.num_classes))
             else:
                 image_anno['hboxes'] = np.array(image_anno['hboxes'])
                 image_anno['oboxes'] = np.array(image_anno['oboxes'])
@@ -372,6 +381,12 @@ class hico2(imdb):
                 for i, ins_classes in enumerate(hoi_classes):
                     for cls in ins_classes:
                         image_anno['hoi_classes'][i, cls] = 1
+
+                hoi_intervals = image_anno['hoi_masks']
+                image_anno['hoi_masks'] = np.zeros((len(hoi_intervals), self.num_classes))
+                for i, ins_interval in enumerate(hoi_intervals):
+                    image_anno['hoi_masks'][i, ins_interval[0]:ins_interval[1]+1] = 1
+
         return all_annos
 
     def append_flipped_images(self):

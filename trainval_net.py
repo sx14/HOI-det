@@ -212,6 +212,7 @@ if __name__ == '__main__':
   iboxes = torch.FloatTensor(1)
   hoi_classes = torch.FloatTensor(1)
   bin_classes = torch.FloatTensor(1)
+  hoi_masks = torch.FloatTensor(1)
   spa_maps = torch.FloatTensor(1)
 
   # ship to cuda
@@ -224,6 +225,7 @@ if __name__ == '__main__':
     iboxes = iboxes.cuda()
     hoi_classes = hoi_classes.cuda()
     bin_classes = bin_classes.cuda()
+    hoi_masks = hoi_masks.cuda()
     spa_maps = spa_maps.cuda()
 
   # make variable
@@ -235,6 +237,7 @@ if __name__ == '__main__':
   iboxes = Variable(iboxes)
   hoi_classes = Variable(hoi_classes)
   bin_classes = Variable(bin_classes)
+  hoi_masks = Variable(hoi_masks)
   spa_maps = Variable(spa_maps)
 
   if args.cuda:
@@ -328,8 +331,9 @@ if __name__ == '__main__':
       iboxes.data.resize_(data[4].size()).copy_(data[4])
       hoi_classes.resize_(data[5].size()).copy_(data[5])
       bin_classes.resize_(data[6].size()).copy_(data[6])
-      spa_maps.data.resize_(data[7].size()).copy_(data[7])
-      num_hois.data.resize_(data[8].size()).copy_(data[8])
+      hoi_masks.resize_(data[7].size()).copy_(data[7])
+      spa_maps.data.resize_(data[7].size()).copy_(data[8])
+      num_hois.data.resize_(data[8].size()).copy_(data[9])
 
       if num_hois.data.item() == 0:
           continue
