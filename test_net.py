@@ -205,7 +205,9 @@ if __name__ == '__main__':
   iboxes = torch.FloatTensor(1)
   hoi_classes = torch.FloatTensor(1)
   bin_classes = torch.FloatTensor(1)
+  hoi_masks = torch.FloatTensor(1)
   spa_maps = torch.FloatTensor(1)
+
 
   # ship to cuda
   if args.cuda > 0:
@@ -217,6 +219,7 @@ if __name__ == '__main__':
     iboxes = iboxes.cuda()
     hoi_classes = hoi_classes.cuda()
     bin_classes = bin_classes.cuda()
+    hoi_masks = hoi_masks.cuda()
     spa_maps = spa_maps.cuda()
 
   # make variable
@@ -229,6 +232,7 @@ if __name__ == '__main__':
       iboxes = Variable(iboxes)
       hoi_classes = Variable(hoi_classes)
       bin_classes = Variable(bin_classes)
+      hoi_masks = Variable(hoi_masks)
       spa_maps = Variable(spa_maps)
 
   if args.cuda > 0:
@@ -333,7 +337,7 @@ if __name__ == '__main__':
 
       with torch.no_grad():
           hoi_prob, bin_prob, RCNN_loss_cls, RCNN_loss_bin = \
-              fasterRCNN(im_data, im_info, hboxes, oboxes, iboxes, hoi_classes, bin_classes, spa_maps, num_hois)
+              fasterRCNN(im_data, im_info, hboxes, oboxes, iboxes, hoi_classes, bin_classes, hoi_masks, spa_maps, num_hois)
 
       for j in range(num_cand):
           temp = []
