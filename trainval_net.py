@@ -211,6 +211,7 @@ if __name__ == '__main__':
   oboxes = torch.FloatTensor(1)
   iboxes = torch.FloatTensor(1)
   hoi_classes = torch.FloatTensor(1)
+  vrb_classes = torch.FloatTensor(1)
   bin_classes = torch.FloatTensor(1)
   hoi_masks = torch.FloatTensor(1)
   spa_maps = torch.FloatTensor(1)
@@ -224,6 +225,7 @@ if __name__ == '__main__':
     oboxes = oboxes.cuda()
     iboxes = iboxes.cuda()
     hoi_classes = hoi_classes.cuda()
+    vrb_classes = vrb_classes.cuda()
     bin_classes = bin_classes.cuda()
     hoi_masks = hoi_masks.cuda()
     spa_maps = spa_maps.cuda()
@@ -236,6 +238,7 @@ if __name__ == '__main__':
   oboxes = Variable(oboxes)
   iboxes = Variable(iboxes)
   hoi_classes = Variable(hoi_classes)
+  vrb_classes = Variable(vrb_classes)
   bin_classes = Variable(bin_classes)
   hoi_masks = Variable(hoi_masks)
   spa_maps = Variable(spa_maps)
@@ -284,7 +287,7 @@ if __name__ == '__main__':
 
   if args.resume:
     load_name = os.path.join(output_dir,
-      'ho_spa_rcnn3_lf_no_nis_3b_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
+      'ho_spa_rcnn3_lf_no_nis_3b_vrb_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
     print("loading checkpoint %s" % (load_name))
     checkpoint = torch.load(load_name)
     args.session = checkpoint['session']
@@ -330,17 +333,18 @@ if __name__ == '__main__':
       oboxes.data.resize_(data[3].size()).copy_(data[3])
       iboxes.data.resize_(data[4].size()).copy_(data[4])
       hoi_classes.resize_(data[5].size()).copy_(data[5])
-      bin_classes.resize_(data[6].size()).copy_(data[6])
-      hoi_masks.resize_(data[7].size()).copy_(data[7])
-      spa_maps.data.resize_(data[8].size()).copy_(data[8])
-      num_hois.data.resize_(data[9].size()).copy_(data[9])
+      vrb_classes.resize_(data[6].size()).copy_(data[6])
+      bin_classes.resize_(data[7].size()).copy_(data[7])
+      hoi_masks.resize_(data[8].size()).copy_(data[8])
+      spa_maps.data.resize_(data[9].size()).copy_(data[9])
+      num_hois.data.resize_(data[10].size()).copy_(data[10])
 
       if num_hois.data.item() == 0:
           continue
 
       fasterRCNN.zero_grad()
       cls_prob, bin_prob, RCNN_loss_cls, RCNN_loss_bin = \
-          fasterRCNN(im_data, im_info, hboxes, oboxes, iboxes, hoi_classes, bin_classes, hoi_masks, spa_maps, num_hois)
+          fasterRCNN(im_data, im_info, hboxes, oboxes, iboxes, vrb_classes, bin_classes, hoi_masks, spa_maps, num_hois)
 
       # loss = RCNN_loss_cls.mean() + RCNN_loss_bin.mean()
       loss = RCNN_loss_cls.mean()
@@ -394,7 +398,7 @@ if __name__ == '__main__':
         loss_bin_temp = 0
         start = time.time()
 
-    save_name = os.path.join(output_dir, 'ho_spa_rcnn3_lf_no_nis_3b_{}_{}_{}.pth'.format(args.session, epoch, step))
+    save_name = os.path.join(output_dir, 'ho_spa_rcnn3_lf_no_nis_3b_vrb_{}_{}_{}.pth'.format(args.session, epoch, step))
     save_checkpoint({
       'session': args.session,
       'epoch': epoch + 1,

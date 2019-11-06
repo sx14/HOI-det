@@ -164,6 +164,7 @@ class roibatchLoader(data.Dataset):
     blobs['oboxes'] = blobs['oboxes'][hoi_inds]
     blobs['iboxes'] = blobs['iboxes'][hoi_inds]
     blobs['hoi_classes'] = blobs['hoi_classes'][hoi_inds]
+    blobs['vrb_classes'] = blobs['vrb_classes'][hoi_inds]
     blobs['bin_classes'] = blobs['bin_classes'][hoi_inds]
     blobs['hoi_masks'] = blobs['hoi_masks'][hoi_inds]
 
@@ -172,6 +173,9 @@ class roibatchLoader(data.Dataset):
 
     gt_classes = np.tile(blobs['hoi_classes'], (3, 1))
     gt_classes = torch.from_numpy(gt_classes)
+
+    gt_verbs = np.tile(blobs['vrb_classes'], (3, 1))
+    gt_verbs = torch.from_numpy(gt_verbs)
 
     gt_binaries = np.tile(blobs['bin_classes'], (3, 1))
     gt_binaries = torch.from_numpy(gt_binaries)
@@ -311,6 +315,7 @@ class roibatchLoader(data.Dataset):
     if keep.numel() != 0:
         gt_boxes = gt_boxes[keep]
         gt_classes = gt_classes[keep]
+        gt_verbs = gt_verbs[keep]
         gt_binaries = gt_binaries[keep]
         gt_spa_maps = gt_spa_maps[keep]
         gt_masks = gt_masks[keep]
@@ -325,6 +330,7 @@ class roibatchLoader(data.Dataset):
         iboxes_padding = gt_boxes[gt_num_boxes * 2: gt_num_boxes * 2 + num_boxes]
 
         hoi_classes_padding = gt_classes[:num_boxes]
+        vrb_classes_padding = gt_verbs[:num_boxes]
         bin_classes_padding = gt_binaries[:num_boxes].long()
         spa_maps_padding = gt_spa_maps[:num_boxes]
         hoi_masks_padding = gt_masks[:num_boxes]
@@ -333,6 +339,7 @@ class roibatchLoader(data.Dataset):
         oboxes_padding = torch.FloatTensor(1, gt_boxes.size(1)).zero_()
         iboxes_padding = torch.FloatTensor(1, gt_boxes.size(1)).zero_()
         hoi_classes_padding = torch.FloatTensor(1, gt_classes.size(1)).zero_()
+        vrb_classes_padding = torch.FloatTensor(1, gt_verbs.size(1)).zero_()
         bin_classes_padding = torch.LongTensor(1).zero_()
         spa_maps_padding = torch.LongTensor(1, 2, 64, 64).zero_()
         hoi_masks_padding = torch.LongTensor(1, gt_classes.size(1)).zero_()
@@ -344,7 +351,7 @@ class roibatchLoader(data.Dataset):
 
     return padding_data, im_info, \
            hboxes_padding, oboxes_padding, iboxes_padding, \
-           hoi_classes_padding, bin_classes_padding, \
+           hoi_classes_padding, vrb_classes_padding, bin_classes_padding, \
            hoi_masks_padding, spa_maps_padding, num_boxes
 
   def __len__(self):
