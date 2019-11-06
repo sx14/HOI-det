@@ -143,27 +143,29 @@ class _fasterRCNN(nn.Module):
 
         spa_feat = self.spaCNN(spa_maps[0])
         scls_score = self.spa_cls_score(spa_feat)
-        scls_prob = F.sigmoid(scls_score)
+        # scls_prob = F.sigmoid(scls_score)
         # sbin_score = self.spa_bin_score(spa_feat)
         # sbin_prob = F.sigmoid(sbin_score)
 
         # compute object classification probability
         icls_score = self.iRCNN_cls_score(iroi_pooled_feat)
-        icls_prob = F.sigmoid(icls_score)
+        # icls_prob = F.sigmoid(icls_score)
         # ibin_score = self.iRCNN_bin_score(iroi_pooled_feat)
         # ibin_prob = F.sigmoid(ibin_score)
 
         hcls_score = self.hRCNN_cls_score(hroi_pooled_feat)
-        hcls_prob = F.sigmoid(hcls_score)
+        # hcls_prob = F.sigmoid(hcls_score)
         # hbin_score = self.hRCNN_bin_score(hroi_pooled_feat)
         # hbin_prob = F.sigmoid(hbin_score)
 
         ocls_score = self.oRCNN_cls_score(oroi_pooled_feat)
-        ocls_prob = F.sigmoid(ocls_score)
+        # ocls_prob = F.sigmoid(ocls_score)
         # obin_score = self.oRCNN_bin_score(oroi_pooled_feat)
         # obin_prob = F.sigmoid(obin_score)
 
-        cls_prob = (icls_prob + hcls_prob + ocls_prob) * scls_prob
+        cls_score = icls_score + hcls_score + ocls_score + scls_score
+        cls_prob = F.sigmoid(cls_score)
+        # cls_prob = icls_prob + hcls_prob + ocls_prob + scls_prob
         # bin_prob = (ibin_prob + hbin_prob + obin_prob) * sbin_prob
 
         RCNN_loss_cls = 0
@@ -173,11 +175,13 @@ class _fasterRCNN(nn.Module):
             # classification loss
             pos_map = bin_classes[0, :, 0].long()
             hoi_masks = hoi_masks.view(-1, hoi_masks.shape[2])
-            scls_loss = F.binary_cross_entropy(scls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
-            icls_loss = F.binary_cross_entropy(icls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
-            hcls_loss = F.binary_cross_entropy(hcls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
-            ocls_loss = F.binary_cross_entropy(ocls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
-            RCNN_loss_cls = scls_loss + icls_loss + hcls_loss + ocls_loss
+            # scls_loss = F.binary_cross_entropy(scls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
+            # icls_loss = F.binary_cross_entropy(icls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
+            # hcls_loss = F.binary_cross_entropy(hcls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
+            # ocls_loss = F.binary_cross_entropy(ocls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
+            # RCNN_loss_cls = scls_loss + icls_loss + hcls_loss + ocls_loss
+
+            RCNN_loss_cls = F.binary_cross_entropy(cls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
 
             # sbin_loss = F.binary_cross_entropy(sbin_prob, bin_classes.view(-1, bin_classes.shape[2]), size_average=False)
             # ibin_loss = F.binary_cross_entropy(ibin_prob, bin_classes.view(-1, bin_classes.shape[2]), size_average=False)
