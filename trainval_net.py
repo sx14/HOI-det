@@ -350,8 +350,8 @@ if __name__ == '__main__':
       cls_prob, bin_prob, RCNN_loss_cls, RCNN_loss_bin = \
           fasterRCNN(im_data, im_info,
                      hboxes, oboxes, iboxes,
-                     vrb_classes, bin_classes,
-                     vrb_masks, spa_maps, num_hois)
+                     hoi_classes, bin_classes,
+                     hoi_masks, spa_maps, num_hois)
 
       # loss = RCNN_loss_cls.mean() + RCNN_loss_bin.mean()
       loss = RCNN_loss_cls.mean()

@@ -129,8 +129,8 @@ class hico2(imdb):
         self._data_path = self._get_default_path()
 
         self.hoi_classes, self.obj_classes, self.vrb_classes, self.obj2int, self.hoi2vrb = self.load_hoi_classes(self._data_path)
-        # self._classes = [hoi_class.hoi_name() for hoi_class in self.hoi_classes]
-        self._classes = self.vrb_classes
+        self._classes = [hoi_class.hoi_name() for hoi_class in self.hoi_classes]
+        # self._classes = self.vrb_classes
         self.hoi_class2ind = dict(zip([hoi_class.hoi_name() for hoi_class in self.hoi_classes], xrange(len(self.hoi_classes))))
         self.obj_class2ind = dict(zip(self.obj_classes, xrange(len(self.obj_classes))))
         self.verb_class2ind = dict(zip(self.vrb_classes, xrange(len(self.vrb_classes))))
