@@ -111,7 +111,7 @@ class hico(imdb):
 
         self.hoi_classes, self.object_classes, self.verb_classes = self._load_hoi_classes()
         self._classes = [hoi_class.hoi_name() for hoi_class in self.hoi_classes]
-        self.hoi_class2ind = dict(zip(self._classes, xrange(self.num_classes)))
+        self.hoi_class2ind = dict(zip(self._classes, xrange(len(self.hoi_classes))))
         self.object_class2ind = dict(zip(self.object_classes, xrange(len(self.object_classes))))
         self.verb_class2ind = dict(zip(self.verb_classes, xrange(len(self.verb_classes))))
 
@@ -252,13 +252,13 @@ class hico(imdb):
                 image_anno['hboxes'] = np.zeros((0, 4))
                 image_anno['oboxes'] = np.zeros((0, 4))
                 image_anno['iboxes'] = np.zeros((0, 4))
-                image_anno['hoi_classes'] = np.zeros((0, self.num_classes))
+                image_anno['hoi_classes'] = np.zeros((0, len(self.hoi_classes)))
             else:
                 hoi_classes = image_anno['hoi_classes']
                 image_anno['hboxes'] = np.array(image_anno['hboxes'])
                 image_anno['oboxes'] = np.array(image_anno['oboxes'])
                 image_anno['iboxes'] = np.array(image_anno['iboxes'])
-                image_anno['hoi_classes'] = np.zeros((len(hoi_classes), self.num_classes))
+                image_anno['hoi_classes'] = np.zeros((len(hoi_classes), len(self.hoi_classes)))
                 for i, cls in enumerate(hoi_classes):
                     image_anno['hoi_classes'][i, cls] = 1
 

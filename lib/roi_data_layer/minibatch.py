@@ -47,6 +47,7 @@ def get_minibatch(roidb, num_classes):
   vrb_classes = roidb[0]['vrb_classes']
   bin_classes = roidb[0]['bin_classes']
   hoi_masks = roidb[0]['hoi_masks']
+  vrb_masks = roidb[0]['vrb_masks']
 
   blobs['hboxes'] = hboxes
   blobs['oboxes'] = oboxes
@@ -55,6 +56,7 @@ def get_minibatch(roidb, num_classes):
   blobs['vrb_classes'] = vrb_classes
   blobs['bin_classes'] = bin_classes
   blobs['hoi_masks'] = hoi_masks
+  blobs['vrb_masks'] = vrb_masks
   blobs['im_info'] = np.array(
     [[im_blob.shape[1], im_blob.shape[2], im_scales[0]]],
     dtype=np.float32)

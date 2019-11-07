@@ -131,7 +131,7 @@ class hico2(imdb):
         self.hoi_classes, self.obj_classes, self.vrb_classes, self.obj2int, self.hoi2vrb = self.load_hoi_classes(self._data_path)
         # self._classes = [hoi_class.hoi_name() for hoi_class in self.hoi_classes]
         self._classes = self.vrb_classes
-        self.hoi_class2ind = dict(zip(self._classes, xrange(self.num_classes)))
+        self.hoi_class2ind = dict(zip([hoi_class.hoi_name() for hoi_class in self.hoi_classes], xrange(len(self.hoi_classes))))
         self.obj_class2ind = dict(zip(self.obj_classes, xrange(len(self.obj_classes))))
         self.verb_class2ind = dict(zip(self.vrb_classes, xrange(len(self.vrb_classes))))
 
@@ -338,6 +338,7 @@ class hico2(imdb):
                           'vrb_classes': [],
                           'bin_classes': [],
                           'hoi_masks': [],
+                          'vrb_masks': [],
                           'width': self._all_image_info[image_name][0],
                           'height': self._all_image_info[image_name][1],
                           'flipped': False}
@@ -364,6 +365,9 @@ class hico2(imdb):
                     image_anno['vrb_classes'].append([self.hoi2vrb[hoi_id] for hoi_id in hoi_class_ids])
                     image_anno['obj_classes'].append(obj_class_id)
                     image_anno['hoi_masks'].append(self.obj2int[obj_class_name])
+                    image_anno['vrb_masks'].append([self.hoi2vrb[hoi]
+                                                    for hoi in range(self.obj2int[obj_class_name][0],
+                                                                     self.obj2int[obj_class_name][1]+1)])
                     if pn == 0:
                         # positive - 0
                         image_anno['bin_classes'].append(0)
@@ -378,9 +382,10 @@ class hico2(imdb):
                 image_anno['iboxes'] = np.zeros((0, 4))
                 image_anno['obj_classes'] = np.zeros(0)
                 image_anno['bin_classes'] = np.zeros(0, 2)
-                image_anno['hoi_classes'] = np.zeros((0, self.num_classes))
+                image_anno['hoi_classes'] = np.zeros((0, len(self.hoi_classes)))
                 image_anno['vrb_classes'] = np.zeros((0, len(self.vrb_classes)))
-                image_anno['hoi_masks'] = np.ones((0, self.num_classes))
+                image_anno['hoi_masks'] = np.ones((0, len(self.hoi_classes)))
+                image_anno['vrb_masks'] = np.ones((0, len(self.vrb_classes)))
             else:
                 image_anno['hboxes'] = np.array(image_anno['hboxes'])
                 image_anno['oboxes'] = np.array(image_anno['oboxes'])
@@ -393,13 +398,13 @@ class hico2(imdb):
                     image_anno['bin_classes'][i, ins_class] = 1
 
                 hoi_classes = image_anno['hoi_classes']
-                image_anno['hoi_classes'] = np.zeros((len(hoi_classes), self.num_classes))
+                image_anno['hoi_classes'] = np.zeros((len(hoi_classes), len(self.hoi_classes)))
                 for i, ins_classes in enumerate(hoi_classes):
                     for cls in ins_classes:
                         image_anno['hoi_classes'][i, cls] = 1
 
                 hoi_intervals = image_anno['hoi_masks']
-                image_anno['hoi_masks'] = np.zeros((len(hoi_intervals), self.num_classes))
+                image_anno['hoi_masks'] = np.zeros((len(hoi_intervals), len(self.hoi_classes)))
                 for i, ins_interval in enumerate(hoi_intervals):
                     image_anno['hoi_masks'][i, ins_interval[0]:ins_interval[1]+1] = 1
 
@@ -408,6 +413,12 @@ class hico2(imdb):
                 for i, ins_verbs in enumerate(vrb_classes):
                     for vrb_id in ins_verbs:
                         image_anno['vrb_classes'][i, vrb_id] = 1
+
+                vrb_masks = image_anno['vrb_masks']
+                image_anno['vrb_masks'] = np.zeros((len(vrb_masks), len(self.vrb_classes)))
+                for i, ins_verbs in enumerate(vrb_masks):
+                    for vrb_id in ins_verbs:
+                        image_anno['vrb_masks'][i, vrb_id] = 1
 
         return all_annos
 
