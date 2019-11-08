@@ -87,7 +87,7 @@ def parse_args():
                       default=1, type=int)
   parser.add_argument('--checkepoch', dest='checkepoch',
                       help='checkepoch to load network',
-                      default=4, type=int)
+                      default=6, type=int)
   parser.add_argument('--checkpoint', dest='checkpoint',
                       help='checkpoint to load network',
                       default=75265, type=int)
@@ -167,9 +167,9 @@ if __name__ == '__main__':
   if not os.path.exists(input_dir):
     raise Exception('There is no input directory for loading network from ' + input_dir)
   load_name = os.path.join(input_dir,
-    'ho_spa_rcnn3_lf_no_nis_3b_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
+    'ho_spa_rcnn3_lf_no_nis_3b_vrb_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
 
-  hoi_classes, obj_classes, vrb_classes, obj2int, hoi2vrb = hico2.load_hoi_classes(cfg.DATA_DIR, 'hico')
+  hoi_classes, obj_classes, vrb_classes, obj2int, hoi2vrb, vrb2hoi = hico2.load_hoi_classes(cfg.DATA_DIR + '/hico')
 
   pascal_classes = ['1'] * len(vrb_classes)
 
@@ -207,7 +207,7 @@ if __name__ == '__main__':
   hboxes = torch.FloatTensor(1)
   oboxes = torch.FloatTensor(1)
   iboxes = torch.FloatTensor(1)
-  hoi_classes = torch.FloatTensor(1)
+  # hoi_classes = torch.FloatTensor(1)
   vrb_classes = torch.FloatTensor(1)
   bin_classes = torch.FloatTensor(1)
   hoi_masks = torch.FloatTensor(1)
@@ -222,7 +222,7 @@ if __name__ == '__main__':
     hboxes = hboxes.cuda()
     oboxes = oboxes.cuda()
     iboxes = iboxes.cuda()
-    hoi_classes = hoi_classes.cuda()
+    # hoi_classes = hoi_classes.cuda()
     vrb_classes = vrb_classes.cuda()
     bin_classes = bin_classes.cuda()
     hoi_masks = hoi_masks.cuda()
@@ -236,7 +236,7 @@ if __name__ == '__main__':
       hboxes = Variable(hboxes)
       oboxes = Variable(oboxes)
       iboxes = Variable(iboxes)
-      hoi_classes = Variable(hoi_classes)
+      # hoi_classes = Variable(hoi_classes)
       vrb_classes = Variable(vrb_classes)
       bin_classes = Variable(bin_classes)
       hoi_masks = Variable(hoi_masks)
@@ -346,17 +346,21 @@ if __name__ == '__main__':
           vrb_prob, bin_prob, RCNN_loss_cls, RCNN_loss_bin = \
               fasterRCNN(im_data, im_info, hboxes, oboxes, iboxes, vrb_classes, bin_classes, hoi_masks, spa_maps, num_hois)
 
-      hoi_prob = np.zeros(vrb_prob.shape)
+      hoi_prob = np.zeros((1, num_cand, len(hoi_classes)))
+      # for j in range(num_cand):
+      #     for hoi_id in range(len(hoi_classes)):
+      #         hoi_prob[0, j, hoi_id] = vrb_prob[0, j, hoi2vrb[hoi_id]]
+
       for j in range(num_cand):
-          for hoi_id in range(len(hoi_classes)):
-              hoi_prob[0, j, hoi_id] = vrb_prob[0, j, hoi2vrb[hoi_id]]
+          for vrb_id in range(vrb_prob.shape[2]):
+              hoi_prob[0, j, vrb2hoi[vrb_id]] = vrb_prob[0, j, vrb_id]
 
       for j in range(num_cand):
           temp = []
           temp.append(hboxes_raw[0, j])  # Human box
           temp.append(oboxes_raw[0, j])  # Object box
           temp.append(obj_classes[j])  # Object class
-          temp.append(hoi_prob.cpu().data.numpy()[0, j].tolist())  # Score (600)
+          temp.append(hoi_prob[0, j].tolist())  # Score (600)
           temp.append(hscores[j])  # Human score
           temp.append(oscores[j])  # Object score
           temp.append(bin_prob.cpu().data.numpy()[0, j].tolist())  # binary score

@@ -96,6 +96,7 @@ class hico2(imdb):
         vrb_cls2ind = {}
         obj2int = {}
         hoi2vrb = {}
+        vrb2hoi = {}
 
         with open(os.path.join(data_path, 'hoi_categories.pkl')) as f:
             mat_hoi_classes = pickle.load(f)
@@ -116,11 +117,14 @@ class hico2(imdb):
             if vrb_cls_name not in vrb_cls2ind:
                 vrb_cls_list.append(vrb_cls_name)
                 vrb_cls2ind[vrb_cls_name] = vrb_id
+                vrb2hoi = [hoi_cls_id]
                 vrb_id += 1
+            else:
+                vrb2hoi[vrb_id].append(hoi_cls_id)
 
             hoi2vrb[hoi_cls_id] = vrb_cls2ind[vrb_cls_name]
             hoi_cls_list.append(hoi_class(obj_cls_name, vrb_cls_name, hoi_cls_id))
-        return hoi_cls_list, obj_cls_list, vrb_cls_list, obj2int, hoi2vrb
+        return hoi_cls_list, obj_cls_list, vrb_cls_list, obj2int, hoi2vrb, vrb2hoi
 
     def __init__(self, image_set, version):
         imdb.__init__(self, 'hico2_' + version + '_' + image_set)
@@ -128,7 +132,7 @@ class hico2(imdb):
         self._image_set = image_set
         self._data_path = self._get_default_path()
 
-        self.hoi_classes, self.obj_classes, self.vrb_classes, self.obj2int, self.hoi2vrb = self.load_hoi_classes(self._data_path)
+        self.hoi_classes, self.obj_classes, self.vrb_classes, self.obj2int, self.hoi2vrb, _ = self.load_hoi_classes(self._data_path)
         # self._classes = [hoi_class.hoi_name() for hoi_class in self.hoi_classes]
         self._classes = self.vrb_classes
         self.hoi_class2ind = dict(zip([hoi_class.hoi_name() for hoi_class in self.hoi_classes], xrange(len(self.hoi_classes))))
