@@ -359,11 +359,11 @@ if __name__ == '__main__':
       if args.mGPUs:
           loss_cls = RCNN_loss_cls.mean().item()
           loss_bin = RCNN_loss_bin.mean().item()
-          loss_bin = 0
+          # loss_bin = 0
       else:
           loss_cls = RCNN_loss_cls.item()
           loss_bin = RCNN_loss_bin.item()
-          loss_bin = 0
+          # loss_bin = 0
 
       loss_temp += loss.item()
       loss_bin_temp += loss_bin

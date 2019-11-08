@@ -70,7 +70,7 @@ class _fasterRCNN(nn.Module):
         self.spa_bin_score = nn.Sequential(
             nn.LeakyReLU(),
             nn.Dropout(p=0.5),
-            nn.Linear(1024, self.n_classes))
+            nn.Linear(1024, 2))
 
     def forward(self, im_data, im_info,
                 hboxes, oboxes, iboxes,
@@ -200,7 +200,6 @@ class _fasterRCNN(nn.Module):
             ibin_loss = F.binary_cross_entropy(ibin_prob, bin_classes.view(-1, bin_classes.shape[2]), size_average=False)
             hbin_loss = F.binary_cross_entropy(hbin_prob, bin_classes.view(-1, bin_classes.shape[2]), size_average=False)
             obin_loss = F.binary_cross_entropy(obin_prob, bin_classes.view(-1, bin_classes.shape[2]), size_average=False)
-
             RCNN_loss_bin = sbin_loss + ibin_loss + hbin_loss + obin_loss
 
 
