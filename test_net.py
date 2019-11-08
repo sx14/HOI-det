@@ -169,9 +169,9 @@ if __name__ == '__main__':
   load_name = os.path.join(input_dir,
     'ho_spa_rcnn3_lf_no_nis_3b_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
 
-  hoi_classes, obj_classes, vrb_classes, obj2int, hoi2vrb = hico2.load_hoi_classes(cfg.DATA_DIR, 'hico')
+  hoi_classes, obj_classes, vrb_classes, obj2int, hoi2vrb = hico2.load_hoi_classes(cfg.DATA_DIR+'/hico')
 
-  pascal_classes = ['1'] * len(vrb_classes)
+  pascal_classes = ['1'] * len(hoi_classes)
 
   # initilize the network here.
   if args.net == 'vgg16':
@@ -343,13 +343,13 @@ if __name__ == '__main__':
       det_tic = time.time()
 
       with torch.no_grad():
-          vrb_prob, bin_prob, RCNN_loss_cls, RCNN_loss_bin = \
+          hoi_prob, bin_prob, RCNN_loss_cls, RCNN_loss_bin = \
               fasterRCNN(im_data, im_info, hboxes, oboxes, iboxes, vrb_classes, bin_classes, hoi_masks, spa_maps, num_hois)
 
-      hoi_prob = np.zeros(vrb_prob.shape)
-      for j in range(num_cand):
-          for hoi_id in range(len(hoi_classes)):
-              hoi_prob[0, j, hoi_id] = vrb_prob[0, j, hoi2vrb[hoi_id]]
+      #hoi_prob = np.zeros(vrb_prob.shape)
+      #for j in range(num_cand):
+      #    for hoi_id in range(len(hoi_classes)):
+      #        hoi_prob[0, j, hoi_id] = vrb_prob[0, j, hoi2vrb[hoi_id]]
 
       for j in range(num_cand):
           temp = []
