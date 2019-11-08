@@ -167,7 +167,7 @@ if __name__ == '__main__':
   if not os.path.exists(input_dir):
     raise Exception('There is no input directory for loading network from ' + input_dir)
   load_name = os.path.join(input_dir,
-    'ho_spa_rcnn3_lf_no_nis_3b_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
+    'ho_spa_rcnn3_lf_nis_3b_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
 
   hoi_classes, obj_classes, vrb_classes, obj2int, hoi2vrb = hico2.load_hoi_classes(cfg.DATA_DIR+'/hico')
 
@@ -371,7 +371,7 @@ if __name__ == '__main__':
   with open(output_path, 'wb') as f:
       pickle.dump(all_results, f)
 
-  generate_HICO_detection(output_path, 'output/results', 1.0, 0.0)
+  generate_HICO_detection(output_path, 'output/results', 0.9, 0.1)
 
   os.chdir('benchmark')
   os.system('matlab -nodesktop -nosplash -r "Generate_detection ' + '../output/results/' + '/;quit;"')

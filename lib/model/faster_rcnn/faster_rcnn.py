@@ -54,8 +54,6 @@ class _fasterRCNN(nn.Module):
         self.class_agnostic = class_agnostic
 
         # define rpn
-        # self.RCNN_rpn = _RPN(self.dout_base_model)
-        # self.RCNN_proposal_target = _ProposalTargetLayer(self.n_classes)
         self.RCNN_roi_pool = _RoIPooling(cfg.POOLING_SIZE, cfg.POOLING_SIZE, 1.0 / 16.0)
         self.RCNN_roi_align = RoIAlignAvg(cfg.POOLING_SIZE, cfg.POOLING_SIZE, 1.0 / 16.0)
 
@@ -69,10 +67,10 @@ class _fasterRCNN(nn.Module):
             nn.Dropout(p=0.5),
             nn.Linear(1024, self.n_classes))
 
-        # self.spa_bin_score = nn.Sequential(
-        #     nn.LeakyReLU(),
-        #     nn.Dropout(p=0.5),
-        #     nn.Linear(1024, self.n_classes))
+        self.spa_bin_score = nn.Sequential(
+            nn.LeakyReLU(),
+            nn.Dropout(p=0.5),
+            nn.Linear(1024, self.n_classes))
 
     def forward(self, im_data, im_info,
                 hboxes, oboxes, iboxes,
@@ -153,32 +151,37 @@ class _fasterRCNN(nn.Module):
         # feed pooled features to top  model
         oroi_pooled_feat = self._ohead_to_tail(oroi_pooled_feat)
 
-        spa_feat = self.hoi_spa_cnn(spa_maps[0])
-        scls_score = self.spa_cls_score(spa_feat)
+        spa_cls_feat = self.hoi_spa_cnn(spa_maps[0])
+        scls_score = self.spa_cls_score(spa_cls_feat)
         scls_prob = F.sigmoid(scls_score)
-        # sbin_score = self.spa_bin_score(spa_feat)
-        # sbin_prob = F.sigmoid(sbin_score)
+
+        spa_bin_feat = self.bin_spa_cnn(spa_maps[0])
+        sbin_score = self.spa_bin_score(spa_bin_feat)
+        sbin_prob = F.sigmoid(sbin_score)
 
         # compute object classification probability
         icls_score = self.iRCNN_cls_score(iroi_pooled_feat)
         icls_prob = F.sigmoid(icls_score)
-        # ibin_score = self.iRCNN_bin_score(iroi_pooled_feat)
-        # ibin_prob = F.sigmoid(ibin_score)
+
+        ibin_score = self.iRCNN_bin_score(torch.cat((iroi_pooled_feat, spa_bin_feat), 1))
+        ibin_prob = F.sigmoid(ibin_score)
+
 
         hcls_score = self.hRCNN_cls_score(hroi_pooled_feat)
         hcls_prob = F.sigmoid(hcls_score)
-        # hbin_score = self.hRCNN_bin_score(hroi_pooled_feat)
-        # hbin_prob = F.sigmoid(hbin_score)
+
+        hbin_score = self.hRCNN_bin_score(torch.cat((hroi_pooled_feat, spa_bin_feat), 1))
+        hbin_prob = F.sigmoid(hbin_score)
+
 
         ocls_score = self.oRCNN_cls_score(oroi_pooled_feat)
         ocls_prob = F.sigmoid(ocls_score)
-        # obin_score = self.oRCNN_bin_score(oroi_pooled_feat)
-        # obin_prob = F.sigmoid(obin_score)
 
-        # cls_score = icls_score + hcls_score + ocls_score + scls_score
-        # cls_prob = F.sigmoid(cls_score)
+        obin_score = self.oRCNN_bin_score(torch.cat((oroi_pooled_feat, spa_bin_feat), 1))
+        obin_prob = F.sigmoid(obin_score)
+
         cls_prob = (icls_prob + hcls_prob + ocls_prob) * scls_prob
-        # bin_prob = (ibin_prob + hbin_prob + obin_prob) * sbin_prob
+        bin_prob = (ibin_prob + hbin_prob + obin_prob) * sbin_prob
 
         RCNN_loss_cls = 0
         RCNN_loss_bin = 0
@@ -193,19 +196,17 @@ class _fasterRCNN(nn.Module):
             ocls_loss = F.binary_cross_entropy(ocls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
             RCNN_loss_cls = scls_loss + icls_loss + hcls_loss + ocls_loss
 
-            # RCNN_loss_cls = F.binary_cross_entropy(cls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
+            sbin_loss = F.binary_cross_entropy(sbin_prob, bin_classes.view(-1, bin_classes.shape[2]), size_average=False)
+            ibin_loss = F.binary_cross_entropy(ibin_prob, bin_classes.view(-1, bin_classes.shape[2]), size_average=False)
+            hbin_loss = F.binary_cross_entropy(hbin_prob, bin_classes.view(-1, bin_classes.shape[2]), size_average=False)
+            obin_loss = F.binary_cross_entropy(obin_prob, bin_classes.view(-1, bin_classes.shape[2]), size_average=False)
 
-            # sbin_loss = F.binary_cross_entropy(sbin_prob, bin_classes.view(-1, bin_classes.shape[2]), size_average=False)
-            # ibin_loss = F.binary_cross_entropy(ibin_prob, bin_classes.view(-1, bin_classes.shape[2]), size_average=False)
-            # hbin_loss = F.binary_cross_entropy(hbin_prob, bin_classes.view(-1, bin_classes.shape[2]), size_average=False)
-            # obin_loss = F.binary_cross_entropy(obin_prob, bin_classes.view(-1, bin_classes.shape[2]), size_average=False)
-            #
-            # RCNN_loss_bin = sbin_loss + ibin_loss + hbin_loss + obin_loss
+            RCNN_loss_bin = sbin_loss + ibin_loss + hbin_loss + obin_loss
 
 
         cls_prob = cls_prob.view(batch_size, irois.size(1), -1)
-        # bin_prob = bin_prob.view(batch_size, irois.size(1), -1)
-        bin_prob = Variable(torch.zeros(batch_size, irois.size(1), 2)).cuda()
+        bin_prob = bin_prob.view(batch_size, irois.size(1), -1)
+        # bin_prob = Variable(torch.zeros(batch_size, irois.size(1), 2)).cuda()
 
 
         return cls_prob, bin_prob, RCNN_loss_cls, RCNN_loss_bin
