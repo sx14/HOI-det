@@ -117,10 +117,10 @@ class hico2(imdb):
             if vrb_cls_name not in vrb_cls2ind:
                 vrb_cls_list.append(vrb_cls_name)
                 vrb_cls2ind[vrb_cls_name] = vrb_id
-                vrb2hoi = [hoi_cls_id]
+                vrb2hoi[vrb_id] = [hoi_cls_id]
                 vrb_id += 1
             else:
-                vrb2hoi[vrb_id].append(hoi_cls_id)
+                vrb2hoi[vrb_cls2ind[vrb_cls_name]].append(hoi_cls_id)
 
             hoi2vrb[hoi_cls_id] = vrb_cls2ind[vrb_cls_name]
             hoi_cls_list.append(hoi_class(obj_cls_name, vrb_cls_name, hoi_cls_id))
