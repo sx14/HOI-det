@@ -50,7 +50,7 @@ def parse_args():
                       default=1, type=int)
   parser.add_argument('--epochs', dest='max_epochs',
                       help='number of epochs to train',
-                      default=4, type=int)
+                      default=8, type=int)
   parser.add_argument('--disp_interval', dest='disp_interval',
                       help='number of iterations to display',
                       default=100, type=int)
@@ -343,7 +343,7 @@ if __name__ == '__main__':
       spa_maps.data.resize_(data[10].size()).copy_(data[10])
       num_hois.data.resize_(data[11].size()).copy_(data[11])
 
-      if num_hois.data.item() == 0:
+      if num_hois.data.item() < 2:
           continue
 
       fasterRCNN.zero_grad()
