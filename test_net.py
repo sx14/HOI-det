@@ -87,7 +87,7 @@ def parse_args():
                       default=1, type=int)
   parser.add_argument('--checkepoch', dest='checkepoch',
                       help='checkepoch to load network',
-                      default=6, type=int)
+                      default=8, type=int)
   parser.add_argument('--checkpoint', dest='checkpoint',
                       help='checkpoint to load network',
                       default=75265, type=int)
@@ -167,7 +167,7 @@ if __name__ == '__main__':
   if not os.path.exists(input_dir):
     raise Exception('There is no input directory for loading network from ' + input_dir)
   load_name = os.path.join(input_dir,
-    'ho_spa_rcnn3_lf_no_nis_3b_vrb_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
+    'ho_spa_rcnn_lf_no_nis_vrb_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
 
   hoi_classes, obj_classes, vrb_classes, obj2int, hoi2vrb, vrb2hoi = hico2.load_hoi_classes(cfg.DATA_DIR + '/hico')
 
@@ -352,7 +352,7 @@ if __name__ == '__main__':
       hoi_prob = np.zeros((1, num_cand, len(hoi_classes)))
       for j in range(num_cand):
           for vrb_id in range(vrb_prob.shape[2]):
-              hoi_prob[0, j, vrb2hoi[vrb_id]] = vrb_prob[0, j, vrb_id] * hscores[j] * oscores[j]
+              hoi_prob[0, j, vrb2hoi[vrb_id]] = vrb_prob[0, j, vrb_id]
 
       for j in range(num_cand):
           temp = []
