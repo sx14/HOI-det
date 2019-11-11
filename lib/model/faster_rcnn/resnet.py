@@ -241,16 +241,16 @@ class resnet(_fasterRCNN):
       resnet.maxpool,resnet.layer1,resnet.layer2,resnet.layer3)
 
     self.cond_net = nn.Sequential(
-      # 224 -> 112
-      nn.Conv2d(8, 64, 3, 2), nn.LeakyReLU(0.1, True),
-      # 112 -> 56
-      nn.Conv2d(64, 128, 3, 2), nn.LeakyReLU(0.1, True),
-      # 56 -> 28
-      nn.Conv2d(128, 256, 3, 2), nn.LeakyReLU(0.1, True),
-      # 28 -> 14
-      nn.Conv2d(256, 512, 3, 2), nn.LeakyReLU(0.1, True),
+      # 224 -> 56
+      nn.Conv2d(8, 64, 3, 4), nn.LeakyReLU(0.1, True),
+      # 56 -> 14
+      nn.Conv2d(64, 128, 3, 4), nn.LeakyReLU(0.1, True),
+      # 14 -> 14
+      nn.Conv2d(128, 256, 1), nn.LeakyReLU(0.1, True),
       # 14 -> 7
-      nn.Conv2d(512, 1024, 3, 2))
+      nn.Conv2d(256, 512, 1, 2), nn.LeakyReLU(0.1, True),
+      # 7 -> 7
+      nn.Conv2d(512, 1024, 1, 1))
 
     import copy
     self.iRCNN_SFT = ResBlock_SFT()
