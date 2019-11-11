@@ -10,6 +10,7 @@ from __future__ import absolute_import
 import xml.dom.minidom as minidom
 
 import os
+import math
 # import PIL
 import numpy as np
 import scipy.sparse
@@ -73,7 +74,9 @@ def refine_human_box_with_skeleton(box, skeleton, conf_thr=0.01):
     xmin, ymin, xmax, ymax = box
     for i in range(len(skeleton)):
         pt_x = skeleton[i, 0]
+        pt_x = max(pt_x, 0)
         pt_y = skeleton[i, 1]
+        pt_y = max(pt_y, 0)
         pt_s = skeleton[i, 2]
         if pt_s > conf_thr:
             xmin = min(xmin, pt_x)
