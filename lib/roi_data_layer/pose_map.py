@@ -105,7 +105,7 @@ def gen_pose_obj_map(hbox, obox, ibox, skeleton):
     x_ratio = 64.0 / interact_wh[0]
     y_ratio = 64.0 / interact_wh[1]
 
-    pose_obj_map = np.zeros((8, 64, 64))
+    pose_obj_map = np.zeros((8, 224, 224))
     for i, body_part in enumerate(body_parts):
         box_conf = gen_body_part_box(skeleton, human_wh, body_part)
         if box_conf is not None:
