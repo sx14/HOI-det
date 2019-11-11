@@ -87,7 +87,7 @@ def parse_args():
                       default=1, type=int)
   parser.add_argument('--checkepoch', dest='checkepoch',
                       help='checkepoch to load network',
-                      default=6, type=int)
+                      default=8, type=int)
   parser.add_argument('--checkpoint', dest='checkpoint',
                       help='checkpoint to load network',
                       default=75265, type=int)
@@ -207,12 +207,10 @@ if __name__ == '__main__':
   hboxes = torch.FloatTensor(1)
   oboxes = torch.FloatTensor(1)
   iboxes = torch.FloatTensor(1)
-  # hoi_classes = torch.FloatTensor(1)
   vrb_classes = torch.FloatTensor(1)
   bin_classes = torch.FloatTensor(1)
   hoi_masks = torch.FloatTensor(1)
   spa_maps = torch.FloatTensor(1)
-
 
   # ship to cuda
   if args.cuda > 0:
@@ -236,7 +234,6 @@ if __name__ == '__main__':
       hboxes = Variable(hboxes)
       oboxes = Variable(oboxes)
       iboxes = Variable(iboxes)
-      # hoi_classes = Variable(hoi_classes)
       vrb_classes = Variable(vrb_classes)
       bin_classes = Variable(bin_classes)
       hoi_masks = Variable(hoi_masks)
