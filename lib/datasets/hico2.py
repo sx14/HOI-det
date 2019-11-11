@@ -374,11 +374,11 @@ class hico2(imdb):
                     obj_class_name = hoi_classes[0].object_name()
                     obj_class_id = self.obj_class2ind[obj_class_name]
 
-                    key_points = raw_hoi[4]
-                    if key_points is None or len(key_points) != 51:
-                        key_points = [-1] * 51
-                    key_points = np.array(key_points)
-                    key_points = np.reshape(key_points, (3, 17))
+                    raw_key_points = raw_hoi[4]
+                    if raw_key_points is None or len(raw_key_points) != 51:
+                        raw_key_points = [-1] * 51
+                    key_points = np.array(raw_key_points)
+                    key_points = np.reshape(key_points, (17, 3))
 
                     hbox = raw_hoi[2]
                     hbox = refine_human_box_with_skeleton(hbox, key_points)
@@ -392,7 +392,7 @@ class hico2(imdb):
                     image_anno['hoi_classes'].append(hoi_class_ids)
                     image_anno['vrb_classes'].append([self.hoi2vrb[hoi_id] for hoi_id in hoi_class_ids])
                     image_anno['obj_classes'].append(obj_class_id)
-                    image_anno['key_points'].append(key_points)
+                    image_anno['key_points'].append(raw_key_points)
                     image_anno['hoi_masks'].append(self.obj2int[obj_class_name])
                     image_anno['vrb_masks'].append([self.hoi2vrb[hoi]
                                                     for hoi in range(self.obj2int[obj_class_name][0],
