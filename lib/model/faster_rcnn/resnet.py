@@ -4,6 +4,7 @@ from __future__ import print_function
 
 from model.utils.config import cfg
 from model.faster_rcnn.faster_rcnn import _fasterRCNN
+from model.faster_rcnn.SFT_layer import ResBlock_SFT
 
 import torch
 import torch.nn as nn
@@ -239,7 +240,16 @@ class resnet(_fasterRCNN):
     self.RCNN_base = nn.Sequential(resnet.conv1, resnet.bn1,resnet.relu,
       resnet.maxpool,resnet.layer1,resnet.layer2,resnet.layer3)
 
+    self.CondNet = nn.Sequential(
+      # 224 -> 112; 112 -> 56
+      nn.Conv2d(8, 64, 3, 2), nn.LeakyReLU(0.1, True), nn.Conv2d(64, 128, 3, 2),
+      # 56 -> 28
+      nn.LeakyReLU(0.1, True), nn.Conv2d(128, 256, 3, 2), nn.LeakyReLU(0.1, True),
+      # 28 -> 14; 14 -> 7
+      nn.Conv2d(256, 512, 3, 2), nn.LeakyReLU(0.1, True), nn.Conv2d(512, 1024, 3, 2))
+
     import copy
+    self.iRCNN_SFT = ResBlock_SFT()
     self.iRCNN_top = nn.Sequential(resnet.layer4)
     # self.hRCNN_top = nn.Sequential(copy.deepcopy(resnet.layer4))
     # self.oRCNN_top = nn.Sequential(copy.deepcopy(resnet.layer4))
@@ -303,8 +313,9 @@ class resnet(_fasterRCNN):
       # self.hRCNN_top.apply(set_bn_eval)
       # self.oRCNN_top.apply(set_bn_eval)
 
-  def _ihead_to_tail(self, pool5):
-    fc7 = self.iRCNN_top(pool5).mean(3).mean(2)
+  def _ihead_to_tail(self, pool5, pose_map):
+    pool5_sft = self.iRCNN_SFT([pool5, pose_map])
+    fc7 = self.iRCNN_top(pool5_sft).mean(3).mean(2)
     return fc7
 
   # def _hhead_to_tail(self, pool5):

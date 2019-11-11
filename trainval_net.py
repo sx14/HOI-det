@@ -355,7 +355,7 @@ if __name__ == '__main__':
           fasterRCNN(im_data, im_info,
                      hboxes, oboxes, iboxes,
                      vrb_classes, bin_classes,
-                     vrb_masks, spa_maps, num_hois)
+                     vrb_masks, spa_maps, pose_maps, num_hois)
 
       loss = RCNN_loss_cls.mean()
 

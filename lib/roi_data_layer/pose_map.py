@@ -55,12 +55,12 @@ def get_body_part_kps(part, all_kps):
 
 def get_body_part_alpha(part):
     all_body_part_alpha = {
-        'head': 0.1,
-        'left_hand': 0.1,
-        'right_hand': 0.1,
-        'hip': 0.1,
-        'left_leg': 0.2,
-        'right_leg': 0.2
+        'head': 0.2,
+        'left_hand': 0.2,
+        'right_hand': 0.2,
+        'hip': 0.25,
+        'left_leg': 0.25,
+        'right_leg': 0.25
     }
     return all_body_part_alpha[part]
 

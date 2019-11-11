@@ -68,7 +68,7 @@ class _fasterRCNN(nn.Module):
             nn.Dropout(p=0.5),
             nn.Linear(1024, self.n_classes))
 
-    def forward(self, im_data, im_info, hboxes, oboxes, iboxes, hoi_classes, bin_classes, hoi_masks, spa_maps, num_hois):
+    def forward(self, im_data, im_info, hboxes, oboxes, iboxes, hoi_classes, bin_classes, hoi_masks, spa_maps, pose_maps, num_hois):
         batch_size = im_data.size(0)
 
         im_info = im_info.data
