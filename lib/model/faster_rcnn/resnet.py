@@ -240,20 +240,20 @@ class resnet(_fasterRCNN):
     self.RCNN_base = nn.Sequential(resnet.conv1, resnet.bn1,resnet.relu,
       resnet.maxpool,resnet.layer1,resnet.layer2,resnet.layer3)
 
-    self.cond_net = nn.Sequential(
-      # 224 -> 56
-      nn.Conv2d(8, 64, 3, 4), nn.LeakyReLU(0.1, True),
-      # 56 -> 14
-      nn.Conv2d(64, 128, 3, 4), nn.LeakyReLU(0.1, True),
-      # 14 -> 14
-      nn.Conv2d(128, 256, 1), nn.LeakyReLU(0.1, True),
-      # 14 -> 7
-      nn.Conv2d(256, 512, 1, 2), nn.LeakyReLU(0.1, True),
-      # 7 -> 7
-      nn.Conv2d(512, 1024, 1, 1)) 
+    # self.cond_net = nn.Sequential(
+    #   # 224 -> 56
+    #   nn.Conv2d(8, 64, 3, 4), nn.LeakyReLU(0.1, True),
+    #   # 56 -> 14
+    #   nn.Conv2d(64, 128, 3, 4), nn.LeakyReLU(0.1, True),
+    #   # 14 -> 14
+    #   nn.Conv2d(128, 256, 1), nn.LeakyReLU(0.1, True),
+    #   # 14 -> 7
+    #   nn.Conv2d(256, 512, 1, 2), nn.LeakyReLU(0.1, True),
+    #   # 7 -> 7
+    #   nn.Conv2d(512, 1024, 1, 1))
 
     import copy
-    self.iRCNN_SFT = ResBlock_SFT()
+    # self.iRCNN_SFT = ResBlock_SFT()
     self.iRCNN_top = nn.Sequential(resnet.layer4)
     # self.hRCNN_top = nn.Sequential(copy.deepcopy(resnet.layer4))
     # self.oRCNN_top = nn.Sequential(copy.deepcopy(resnet.layer4))
@@ -318,9 +318,9 @@ class resnet(_fasterRCNN):
       # self.oRCNN_top.apply(set_bn_eval)
 
   def _ihead_to_tail(self, pool5, pose_map):
-    pose_cond = self.cond_net(pose_map)
-    pool5_sft = self.iRCNN_SFT([pool5, pose_cond])
-    fc7 = self.iRCNN_top(pool5_sft).mean(3).mean(2)
+    # pose_cond = self.cond_net(pose_map)
+    # pool5 = self.iRCNN_SFT([pool5, pose_cond])
+    fc7 = self.iRCNN_top(pool5).mean(3).mean(2)
     return fc7
 
   # def _hhead_to_tail(self, pool5):
