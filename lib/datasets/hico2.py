@@ -309,8 +309,8 @@ class hico2(imdb):
         all_annos = {}
 
         print('Loading annotations ...')
-        anno_ng_db = pickle.load(open(os.path.join(self._data_path, '%s_NG_HICO.pkl' % self._image_set)))
-        anno_gt_tmp = pickle.load(open(os.path.join(self._data_path, '%s_GT_HICO.pkl' % self._image_set)))
+        anno_ng_db = pickle.load(open(os.path.join(self._data_path, '%s_NG_HICO_with_pose.pkl' % self._image_set)))
+        anno_gt_tmp = pickle.load(open(os.path.join(self._data_path, '%s_GT_HICO_with_pose.pkl' % self._image_set)))
 
         print('Processing annotations ...')
         anno_gt_db = {}
