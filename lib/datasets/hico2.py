@@ -301,7 +301,8 @@ class hico2(imdb):
                 new_hois.append([[0],
                                  aug_cls_ids,
                                  aug_hbox,
-                                 aug_obox])
+                                 aug_obox,
+                                 raw_hoi[5]])
         return new_hois
 
     def _load_all_annotations(self):
@@ -371,7 +372,7 @@ class hico2(imdb):
                     obj_class_name = hoi_classes[0].object_name()
                     obj_class_id = self.obj_class2ind[obj_class_name]
 
-                    key_points = raw_hoi[5]
+                    key_points = raw_hoi[4]
                     if key_points is None or len(key_points) != 51:
                         key_points = [0] * 51
 
