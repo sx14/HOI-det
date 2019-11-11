@@ -247,7 +247,7 @@ class resnet(_fasterRCNN):
     # self.iRCNN_cls_score = nn.Linear(2048, self.n_classes)
     self.iRCNN_cls_score = nn.Sequential(
       nn.Linear(2048, 2048),
-      nn.BatchNorm1d(2048),
+      # nn.BatchNorm1d(2048),
       nn.LeakyReLU(),
       nn.Dropout(p=0.5),
       nn.Linear(2048, self.n_classes))
@@ -257,7 +257,7 @@ class resnet(_fasterRCNN):
     # self.hRCNN_cls_score = nn.Linear(2048, self.n_classes)
     self.hRCNN_cls_score = nn.Sequential(
       nn.Linear(2048, 2048),
-      nn.BatchNorm1d(2048),
+      # nn.BatchNorm1d(2048),
       nn.LeakyReLU(),
       nn.Dropout(p=0.5),
       nn.Linear(2048, self.n_classes))
@@ -266,7 +266,7 @@ class resnet(_fasterRCNN):
     # self.oRCNN_cls_score = nn.Linear(2048, self.n_classes)
     self.oRCNN_cls_score = nn.Sequential(
       nn.Linear(2048, 2048),
-      nn.BatchNorm1d(2048),
+      # nn.BatchNorm1d(2048),
       nn.LeakyReLU(),
       nn.Dropout(p=0.5),
       nn.Linear(2048, self.n_classes))

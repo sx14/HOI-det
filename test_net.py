@@ -253,8 +253,8 @@ if __name__ == '__main__':
   fasterRCNN.eval()
 
   start = time.time()
-  human_thres = 0.8
-  object_thres = 0.3
+  human_thres = 0.4
+  object_thres = 0.4
 
   num_images = len(det_db)
   print('Loaded Photo: {} images.'.format(num_images))
