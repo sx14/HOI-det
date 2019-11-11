@@ -250,7 +250,7 @@ class resnet(_fasterRCNN):
       # 14 -> 7
       nn.Conv2d(256, 512, 1, 2), nn.LeakyReLU(0.1, True),
       # 7 -> 7
-      nn.Conv2d(512, 1024, 1, 1))
+      nn.Conv2d(512, 1024, 1, 1)) 
 
     import copy
     self.iRCNN_SFT = ResBlock_SFT()
