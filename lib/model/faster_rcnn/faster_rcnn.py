@@ -192,7 +192,7 @@ class _fasterRCNN(nn.Module):
                 m.weight.data.normal_(mean, stddev)
                 m.bias.data.zero_()
 
-        new_modules = [self.iRCNN_cls_score, self.hRCNN_cls_score, self.oRCNN_cls_score]
+        new_modules = [self.iRCNN_cls_score]
         for module in new_modules:
             if isinstance(module, collections.Iterable):
                 for layer in module:
