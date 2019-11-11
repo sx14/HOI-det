@@ -109,11 +109,11 @@ class roibatchLoader(data.Dataset):
     raw_spa_maps = np.tile(raw_spa_maps, (3, 1, 1, 1))
     gt_spa_maps = torch.from_numpy(raw_spa_maps).float()
 
-    raw_pose_maps = np.zeros((num_hoi, 7, 64, 64))
-    raw_key_points = blobs['key_points'][i]
-    key_points = np.array(raw_key_points)
-    key_points = np.reshape(key_points, (17, 3))
+    raw_pose_maps = np.zeros((num_hoi, 8, 64, 64))
     for i in range(num_hoi):
+        raw_key_points = blobs['key_points'][i]
+        key_points = np.array(raw_key_points)
+        key_points = np.reshape(key_points, (17, 3))
         raw_pose_maps[i] = gen_pose_obj_map(blobs['hboxes'][i], blobs['oboxes'][i],
                                             blobs['iboxes'][i], key_points)
     raw_pose_maps = np.tile(raw_pose_maps, (3, 1, 1, 1))
