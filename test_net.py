@@ -212,7 +212,7 @@ if __name__ == '__main__':
   bin_classes = torch.FloatTensor(1)
   hoi_masks = torch.FloatTensor(1)
   spa_maps = torch.FloatTensor(1)
-
+  pose_maps = torch.FloatTensor(1)
 
   # ship to cuda
   if args.cuda > 0:
@@ -227,6 +227,7 @@ if __name__ == '__main__':
     bin_classes = bin_classes.cuda()
     hoi_masks = hoi_masks.cuda()
     spa_maps = spa_maps.cuda()
+    pose_maps = pose_maps.cuda()
 
   # make variable
   with torch.no_grad():
@@ -241,6 +242,7 @@ if __name__ == '__main__':
       bin_classes = Variable(bin_classes)
       hoi_masks = Variable(hoi_masks)
       spa_maps = Variable(spa_maps)
+      pose_maps = Variable(pose_maps)
 
   if args.cuda > 0:
     cfg.CUDA = True
@@ -274,6 +276,7 @@ if __name__ == '__main__':
       oboxes_raw = np.zeros((0, 4))
       iboxes_raw = np.zeros((0, 4))
       spa_maps_raw = np.zeros((0, 2, 64, 64))
+      pose_maps_raw = np.zeros((0, 7, 64, 64))
       obj_classes = []
       hscores = []
       oscores = []
@@ -347,13 +350,9 @@ if __name__ == '__main__':
               fasterRCNN(im_data, im_info, hboxes, oboxes, iboxes, vrb_classes, bin_classes, hoi_masks, spa_maps, num_hois)
 
       hoi_prob = np.zeros((1, num_cand, len(hoi_classes)))
-      # for j in range(num_cand):
-      #     for hoi_id in range(len(hoi_classes)):
-      #         hoi_prob[0, j, hoi_id] = vrb_prob[0, j, hoi2vrb[hoi_id]]
-
       for j in range(num_cand):
           for vrb_id in range(vrb_prob.shape[2]):
-              hoi_prob[0, j, vrb2hoi[vrb_id]] = vrb_prob[0, j, vrb_id]
+              hoi_prob[0, j, vrb2hoi[vrb_id]] = vrb_prob[0, j, vrb_id] * hscores[j] * oscores[j]
 
       for j in range(num_cand):
           temp = []

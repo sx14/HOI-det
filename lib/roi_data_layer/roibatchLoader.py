@@ -12,98 +12,13 @@ import torch
 
 from model.utils.config import cfg
 from roi_data_layer.minibatch import get_minibatch, get_minibatch
-from model.rpn.bbox_transform import bbox_transform_inv, clip_boxes
+from roi_data_layer.spatial_map import gen_spatial_map
+from roi_data_layer.pose_map import gen_pose_obj_map
 
 import numpy as np
 import random
 import time
 import pdb
-
-
-def bbox_trans(human_box_roi, object_box_roi, size=64):
-    human_box = human_box_roi.copy()
-    object_box = object_box_roi.copy()
-
-    union_box = [min(human_box[0], object_box[0]), min(human_box[1], object_box[1]),
-                          max(human_box[2], object_box[2]), max(human_box[3], object_box[3])]
-
-    height = union_box[3] - union_box[1] + 1
-    width = union_box[2] - union_box[0] + 1
-
-    if height > width:
-        ratio = 'height'
-    else:
-        ratio = 'width'
-
-    # shift the top-left corner to (0,0)
-    human_box[0] -= union_box[0]
-    human_box[2] -= union_box[0]
-    human_box[1] -= union_box[1]
-    human_box[3] -= union_box[1]
-    object_box[0] -= union_box[0]
-    object_box[2] -= union_box[0]
-    object_box[1] -= union_box[1]
-    object_box[3] -= union_box[1]
-
-    if ratio == 'height':  # height is larger than width
-
-        human_box[0] = 0 + size * human_box[0] / height
-        human_box[1] = 0 + size * human_box[1] / height
-        human_box[2] = (size * width / height - 1) - size * (width - 1 - human_box[2]) / height
-        human_box[3] = (size - 1) - size * (height - 1 - human_box[3]) / height
-
-        object_box[0] = 0 + size * object_box[0] / height
-        object_box[1] = 0 + size * object_box[1] / height
-        object_box[2] = (size * width / height - 1) - size * (width - 1 - object_box[2]) / height
-        object_box[3] = (size - 1) - size * (height - 1 - object_box[3]) / height
-
-        # Need to shift horizontally
-        union_box = [min(human_box[0], object_box[0]), min(human_box[1], object_box[1]),
-                              max(human_box[2], object_box[2]), max(human_box[3], object_box[3])]
-        if human_box[3] > object_box[3]:
-            human_box[3] = size - 1
-        else:
-            object_box[3] = size - 1
-
-        shift = size / 2 - (union_box[2] + 1) / 2
-        human_box += [shift, 0, shift, 0]
-        object_box += [shift, 0, shift, 0]
-
-    else:  # width is larger than height
-
-        human_box[0] = 0 + size * human_box[0] / width
-        human_box[1] = 0 + size * human_box[1] / width
-        human_box[2] = (size - 1) - size * (width - 1 - human_box[2]) / width
-        human_box[3] = (size * height / width - 1) - size * (height - 1 - human_box[3]) / width
-
-        object_box[0] = 0 + size * object_box[0] / width
-        object_box[1] = 0 + size * object_box[1] / width
-        object_box[2] = (size - 1) - size * (width - 1 - object_box[2]) / width
-        object_box[3] = (size * height / width - 1) - size * (height - 1 - object_box[3]) / width
-
-        # Need to shift vertically
-        union_box = [min(human_box[0], object_box[0]), min(human_box[1], object_box[1]),
-                              max(human_box[2], object_box[2]), max(human_box[3], object_box[3])]
-
-        if human_box[2] > object_box[2]:
-            human_box[2] = size - 1
-        else:
-            object_box[2] = size - 1
-
-        shift = size / 2 - (union_box[3] + 1) / 2
-
-        human_box = human_box + [0, shift, 0, shift]
-        object_box = object_box + [0, shift, 0, shift]
-
-    return np.round(human_box), np.round(object_box)
-
-
-def gen_spatial_map(human_box, object_box):
-    hbox, obox = bbox_trans(human_box, object_box)
-    spa_map = np.zeros((2, 64, 64), dtype='float32')
-    spa_map[0, int(hbox[1]):int(hbox[3]) + 1, int(hbox[0]):int(hbox[2]) + 1] = 1
-    spa_map[1, int(obox[1]):int(obox[3]) + 1, int(obox[0]):int(obox[2]) + 1] = 1
-    return spa_map
 
 
 class roibatchLoader(data.Dataset):
@@ -168,6 +83,7 @@ class roibatchLoader(data.Dataset):
     blobs['bin_classes'] = blobs['bin_classes'][hoi_inds]
     blobs['hoi_masks'] = blobs['hoi_masks'][hoi_inds]
     blobs['vrb_masks'] = blobs['vrb_masks'][hoi_inds]
+    blobs['key_points'] = blobs['key_points'][hoi_inds]
 
     gt_boxes = np.concatenate((blobs['hboxes'], blobs['oboxes'], blobs['iboxes']))
     gt_boxes = torch.from_numpy(gt_boxes)
@@ -192,6 +108,15 @@ class roibatchLoader(data.Dataset):
         raw_spa_maps[i] = gen_spatial_map(blobs['hboxes'][i], blobs['oboxes'][i])
     raw_spa_maps = np.tile(raw_spa_maps, (3, 1, 1, 1))
     gt_spa_maps = torch.from_numpy(raw_spa_maps).float()
+
+    raw_pose_maps = np.zeros((num_hoi, 7, 64, 64))
+    for i in range(num_hoi):
+        raw_pose_maps[i] = gen_pose_obj_map(blobs['hboxes'][i],
+                                            blobs['oboxes'][i],
+                                            blobs['iboxes'][i],
+                                            blobs['key_points'][i])
+    raw_pose_maps = np.tile(raw_pose_maps, (3, 1, 1, 1))
+    gt_pose_maps = torch.from_numpy(raw_pose_maps).float()
 
     ########################################################
     # padding the input image to fixed size for each group #
@@ -324,6 +249,7 @@ class roibatchLoader(data.Dataset):
         gt_spa_maps = gt_spa_maps[keep]
         gt_hoi_masks = gt_hoi_masks[keep]
         gt_vrb_masks = gt_vrb_masks[keep]
+        gt_pose_maps = gt_pose_maps[keep]
 
         gt_num_boxes = int(gt_boxes.size(0) / 3)
 
@@ -340,6 +266,7 @@ class roibatchLoader(data.Dataset):
         spa_maps_padding = gt_spa_maps[:num_boxes]
         hoi_masks_padding = gt_hoi_masks[:num_boxes]
         vrb_masks_padding = gt_vrb_masks[:num_boxes]
+        pose_maps_padding = gt_pose_maps[:num_boxes]
     else:
         hboxes_padding = torch.FloatTensor(1, gt_boxes.size(1)).zero_()
         oboxes_padding = torch.FloatTensor(1, gt_boxes.size(1)).zero_()
@@ -350,6 +277,7 @@ class roibatchLoader(data.Dataset):
         spa_maps_padding = torch.LongTensor(1, 2, 64, 64).zero_()
         hoi_masks_padding = torch.LongTensor(1, gt_classes.size(1)).zero_()
         vrb_masks_padding = torch.LongTensor(1, gt_verbs.size(1)).zero_()
+        pose_maps_padding = torch.LongTensor(1, 7, 64, 64).zero_()
         num_boxes = 0
 
         # permute trim_data to adapt to downstream processing
@@ -359,7 +287,8 @@ class roibatchLoader(data.Dataset):
     return padding_data, im_info, \
            hboxes_padding, oboxes_padding, iboxes_padding, \
            hoi_classes_padding, vrb_classes_padding, bin_classes_padding, \
-           hoi_masks_padding, vrb_masks_padding, spa_maps_padding, num_boxes
+           hoi_masks_padding, vrb_masks_padding, \
+           spa_maps_padding, pose_maps_padding, num_boxes
 
   def __len__(self):
     return len(self._roidb)

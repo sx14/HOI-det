@@ -216,6 +216,7 @@ if __name__ == '__main__':
   hoi_masks = torch.FloatTensor(1)
   vrb_masks = torch.FloatTensor(1)
   spa_maps = torch.FloatTensor(1)
+  pose_maps = torch.FloatTensor(1)
 
   # ship to cuda
   if args.cuda:
@@ -231,6 +232,7 @@ if __name__ == '__main__':
     hoi_masks = hoi_masks.cuda()
     vrb_masks = vrb_masks.cuda()
     spa_maps = spa_maps.cuda()
+    pose_maps = pose_maps.cuda()
 
   # make variable
   im_data = Variable(im_data)
@@ -245,6 +247,7 @@ if __name__ == '__main__':
   hoi_masks = Variable(hoi_masks)
   vrb_masks = Variable(vrb_masks)
   spa_maps = Variable(spa_maps)
+  pose_maps = Variable(pose_maps)
 
   if args.cuda:
     cfg.CUDA = True
@@ -341,7 +344,8 @@ if __name__ == '__main__':
       hoi_masks.resize_(data[8].size()).copy_(data[8])
       vrb_masks.resize_(data[9].size()).copy_(data[9])
       spa_maps.data.resize_(data[10].size()).copy_(data[10])
-      num_hois.data.resize_(data[11].size()).copy_(data[11])
+      pose_maps.data.resize_(data[11].size()).copy_(data[11])
+      num_hois.data.resize_(data[12].size()).copy_(data[12])
 
       if num_hois.data.item() < 2:
           continue
@@ -353,16 +357,13 @@ if __name__ == '__main__':
                      vrb_classes, bin_classes,
                      vrb_masks, spa_maps, num_hois)
 
-      # loss = RCNN_loss_cls.mean() + RCNN_loss_bin.mean()
       loss = RCNN_loss_cls.mean()
 
       if args.mGPUs:
           loss_cls = RCNN_loss_cls.mean().item()
-          # loss_bin = RCNN_loss_bin.mean().item()
           loss_bin = 0
       else:
           loss_cls = RCNN_loss_cls.item()
-          # loss_bin = RCNN_loss_bin.item()
           loss_bin = 0
 
       loss_temp += loss.item()
@@ -385,7 +386,6 @@ if __name__ == '__main__':
 
         nNeg = torch.sum(bin_classes[:, :, 1]).item()
         nPos = bin_classes.shape[1] - nNeg
-
 
         print("[session %d][epoch %2d][iter %4d/%4d] loss: %.4f, lr: %.2e" \
                                 % (args.session, epoch, step, iters_per_epoch, loss_temp, lr))

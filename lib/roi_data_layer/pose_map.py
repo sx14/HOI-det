@@ -1,6 +1,5 @@
 import pickle
 import numpy as np
-from utils.show_box import show_boxes
 
 body_parts = ["head",
               "left_hand",
@@ -70,48 +69,53 @@ def gen_body_part_box(all_kps, human_wh, part, kp_thr=0.01, area_thr=0):
     ymin = 9999
     xmax = 0
     ymax = 0
+    conf_sum = 0.0
     for i in range(len(part_kps)):
         conf = part_kps[i, 2]
         if conf < kp_thr:
             return None
-
+        conf_sum += conf
         xmin = min(xmin, part_kps[i, 0])
         ymin = min(ymin, part_kps[i, 1])
         xmax = max(xmax, part_kps[i, 0])
         ymax = max(ymax, part_kps[i, 1])
-
+    conf_avg = conf_sum / len(part_kps)
     if (ymax - ymin + 1) * (xmax - xmin + 1) < area_thr:
         return None
     return [xmin - get_body_part_alpha(part) * human_wh[0],
             ymin - get_body_part_alpha(part) * human_wh[1],
             xmax + get_body_part_alpha(part) * human_wh[0],
-            ymax + get_body_part_alpha(part) * human_wh[1]]
+            ymax + get_body_part_alpha(part) * human_wh[1],
+            conf_avg]
 
 
-anno_path = '../data/hico/train_GT_HICO_with_pose.pkl'
-with open(anno_path) as f:
-    anno_db = pickle.load(f)
+def gen_pose_obj_map(hbox, obox, ibox, skeleton):
+    h_xmin, h_ymin, h_xmax, h_ymax = hbox
+    o_xmin, o_ymin, o_xmax, o_ymax = obox
+    i_xmin, i_ymin, i_xmax, i_ymax = ibox
 
-img_path_template = '../data/hico/images/train2015/HICO_train2015_%s.jpg'
-for ins_anno in anno_db:
-    img_id = ins_anno[0]
-    raw_kps = ins_anno[5]
-    human_box = ins_anno[2]
-    human_wh = [human_box[2] - human_box[0],
-                human_box[3] - human_box[1]]
-    img_path = img_path_template % (str(img_id).zfill(8))
-    if raw_kps is None or len(raw_kps) != 51:
-        continue
+    human_wh = [h_xmax - h_xmin + 1, h_ymax - h_ymin + 1]
+    interact_wh = [i_xmax - i_xmin + 1, i_ymax - i_ymin + 1]
 
-    all_kps = np.reshape(raw_kps, (len(key_points), 3))
-    body_part_boxes = []
-    body_part_names = []
-    for body_part in body_parts:
-        body_part_box = gen_body_part_box(all_kps, human_wh, body_part)
-        if body_part_box is not None:
-            body_part_boxes.append(body_part_box)
-            body_part_names.append(body_part)
+    skeleton[:, 0] = skeleton[:, 0] - i_xmin
+    skeleton[:, 1] = skeleton[:, 1] - i_ymin
 
+    x_ratio = 64.0 / interact_wh[0]
+    y_ratio = 64.0 / interact_wh[1]
 
-    show_boxes(img_path, body_part_boxes, body_part_names)
-
+    pose_obj_map = np.zeros((7, 64, 64))
+    for i, body_part in enumerate(body_parts):
+        box_conf = gen_body_part_box(skeleton, human_wh, body_part)
+        if box_conf is not None:
+            xmin, ymin, xmax, ymax, conf = box_conf
+            xmin = int(xmin * x_ratio)
+            ymin = int(ymin * y_ratio)
+            xmax = int(xmax * x_ratio)
+            ymax = int(ymax * y_ratio)
+            pose_obj_map[i, ymin:ymax+1, xmin:xmax+1] = conf
+    o_xmin = o_xmin * x_ratio
+    o_ymin = o_ymin * y_ratio
+    o_xmax = o_xmax * x_ratio
+    o_ymax = o_ymax * y_ratio
+    pose_obj_map[6, o_ymin:o_ymax+1, o_xmin:o_xmax+1] = 1
+    return pose_obj_map

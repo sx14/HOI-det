@@ -69,6 +69,18 @@ def iou(box1, box2):
     return iou
 
 
+def refine_human_box_with_skeleton(box, skeleton, conf_thr=0.01):
+    xmin, ymin, xmax, ymax = box
+    for i in range(len(skeleton)):
+        pt_x, pt_y, pt_s = skeleton[i]
+        if pt_s > conf_thr:
+            xmin = min(xmin, pt_x)
+            xmax = max(xmax, pt_x)
+            ymin = min(ymin, pt_y)
+            ymax = max(ymax, pt_y)
+    return [xmin, ymin, xmax, ymax]
+
+
 class hoi_class:
     def __init__(self, object_name, verb_name, hoi_id):
         self._object_name = object_name
@@ -343,6 +355,7 @@ class hico2(imdb):
                           'bin_classes': [],
                           'hoi_masks': [],
                           'vrb_masks': [],
+                          'key_points': [],
                           'width': self._all_image_info[image_name][0],
                           'height': self._all_image_info[image_name][1],
                           'flipped': False}
@@ -358,16 +371,24 @@ class hico2(imdb):
                     obj_class_name = hoi_classes[0].object_name()
                     obj_class_id = self.obj_class2ind[obj_class_name]
 
+                    key_points = raw_hoi[5]
+                    if key_points is None or len(key_points) != 51:
+                        key_points = [0] * 51
+
                     hbox = raw_hoi[2]
+                    hbox = refine_human_box_with_skeleton(hbox, key_points)
                     obox = raw_hoi[3]
                     ibox = [min(hbox[0], obox[0]), min(hbox[1], obox[1]),
                             max(hbox[2], obox[2]), max(hbox[3], obox[3])]
+
+
                     image_anno['hboxes'].append(hbox)
                     image_anno['oboxes'].append(obox)
                     image_anno['iboxes'].append(ibox)
                     image_anno['hoi_classes'].append(hoi_class_ids)
                     image_anno['vrb_classes'].append([self.hoi2vrb[hoi_id] for hoi_id in hoi_class_ids])
                     image_anno['obj_classes'].append(obj_class_id)
+                    image_anno['key_points'].append(key_points)
                     image_anno['hoi_masks'].append(self.obj2int[obj_class_name])
                     image_anno['vrb_masks'].append([self.hoi2vrb[hoi]
                                                     for hoi in range(self.obj2int[obj_class_name][0],
@@ -390,11 +411,13 @@ class hico2(imdb):
                 image_anno['vrb_classes'] = np.zeros((0, len(self.vrb_classes)))
                 image_anno['hoi_masks'] = np.ones((0, len(self.hoi_classes)))
                 image_anno['vrb_masks'] = np.ones((0, len(self.vrb_classes)))
+                image_anno['key_points'] = np.zeros((0, 51))
             else:
                 image_anno['hboxes'] = np.array(image_anno['hboxes'])
                 image_anno['oboxes'] = np.array(image_anno['oboxes'])
                 image_anno['iboxes'] = np.array(image_anno['iboxes'])
                 image_anno['obj_classes'] = np.array(image_anno['obj_classes'])
+                image_anno['key_points'] = np.array(image_anno['key_points'])
 
                 bin_classes = image_anno['bin_classes']
                 image_anno['bin_classes'] = np.zeros((len(bin_classes), 2))
