@@ -240,7 +240,7 @@ class resnet(_fasterRCNN):
     self.RCNN_base = nn.Sequential(resnet.conv1, resnet.bn1,resnet.relu,
       resnet.maxpool,resnet.layer1,resnet.layer2,resnet.layer3)
 
-    self.CondNet = nn.Sequential(
+    self.cond_net = nn.Sequential(
       # 224 -> 112; 112 -> 56
       nn.Conv2d(8, 64, 3, 2), nn.LeakyReLU(0.1, True), nn.Conv2d(64, 128, 3, 2),
       # 56 -> 28
@@ -314,7 +314,8 @@ class resnet(_fasterRCNN):
       # self.oRCNN_top.apply(set_bn_eval)
 
   def _ihead_to_tail(self, pool5, pose_map):
-    pool5_sft = self.iRCNN_SFT([pool5, pose_map])
+    pose_cond = self.cond_net(pose_map)
+    pool5_sft = self.iRCNN_SFT([pool5, pose_cond])
     fc7 = self.iRCNN_top(pool5_sft).mean(3).mean(2)
     return fc7
 
