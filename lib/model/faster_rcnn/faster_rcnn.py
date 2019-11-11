@@ -108,7 +108,7 @@ class _fasterRCNN(nn.Module):
             iroi_pooled_feat = self.RCNN_roi_pool(base_feat, irois.view(-1, 5))
 
         # # feed pooled features to top  model
-        # iroi_pooled_feat = self._ihead_to_tail(iroi_pooled_feat)
+        iroi_pooled_feat = self._ihead_to_tail(iroi_pooled_feat, pose_maps[0])
         #
         # if cfg.POOLING_MODE == 'crop':
         #     # pdb.set_trace()
