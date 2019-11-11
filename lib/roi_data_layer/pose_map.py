@@ -91,7 +91,7 @@ def gen_body_part_box(all_kps, human_wh, part, kp_thr=0.01, area_thr=0):
             conf_avg]
 
 
-def gen_pose_obj_map(hbox, obox, ibox, skeleton):
+def gen_pose_obj_map(hbox, obox, ibox, skeleton, size=224):
     h_xmin, h_ymin, h_xmax, h_ymax = hbox
     o_xmin, o_ymin, o_xmax, o_ymax = obox
     i_xmin, i_ymin, i_xmax, i_ymax = ibox
@@ -102,10 +102,10 @@ def gen_pose_obj_map(hbox, obox, ibox, skeleton):
     skeleton[:, 0] = skeleton[:, 0] - i_xmin
     skeleton[:, 1] = skeleton[:, 1] - i_ymin
 
-    x_ratio = 64.0 / interact_wh[0]
-    y_ratio = 64.0 / interact_wh[1]
+    x_ratio = size * 1.0 / interact_wh[0]
+    y_ratio = size * 1.0 / interact_wh[1]
 
-    pose_obj_map = np.zeros((8, 224, 224))
+    pose_obj_map = np.zeros((8, size, size))
     for i, body_part in enumerate(body_parts):
         box_conf = gen_body_part_box(skeleton, human_wh, body_part)
         if box_conf is not None:
@@ -176,14 +176,14 @@ if __name__ == '__main__':
             continue
 
         all_kps = np.reshape(raw_kps, (len(key_points), 3))
-        pose_map = gen_pose_obj_map(hbox, obox, ibox, all_kps)
+        pose_map = gen_pose_obj_map(hbox, obox, ibox, all_kps, 224)
         im_i0 = cv2.imread(img_path)
         im_i0 = cv2.rectangle(im_i0, (hbox[0], hbox[1]), (hbox[2], hbox[3]), (0, 255, 0), 4)
         im_i0 = cv2.rectangle(im_i0, (obox[0], obox[1]), (obox[2], obox[3]), (0, 0, 255), 4)
         im_i0 = im_i0[ibox[1]:ibox[3]+1, ibox[0]:ibox[2]+1, :]
 
         for i in range(pose_map.shape[0]):
-            im_i = cv2.resize(im_i0, (64, 64))
+            im_i = cv2.resize(im_i0, (224, 224))
             channel = pose_map[i]
             im_i[:,:,0][channel > 0] = im_i[:,:,0][channel > 0] / 2
             im_i[:,:,1][channel > 0] = im_i[:,:,1][channel > 0] / 2
