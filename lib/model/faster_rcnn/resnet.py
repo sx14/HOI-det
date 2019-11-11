@@ -241,8 +241,8 @@ class resnet(_fasterRCNN):
 
     import copy
     self.iRCNN_top = nn.Sequential(resnet.layer4)
-    self.hRCNN_top = nn.Sequential(copy.deepcopy(resnet.layer4))
-    self.oRCNN_top = nn.Sequential(copy.deepcopy(resnet.layer4))
+    # self.hRCNN_top = nn.Sequential(copy.deepcopy(resnet.layer4))
+    # self.oRCNN_top = nn.Sequential(copy.deepcopy(resnet.layer4))
 
     self.iRCNN_cls_score = nn.Sequential(
       nn.Linear(2048, 2048),
@@ -250,17 +250,17 @@ class resnet(_fasterRCNN):
       nn.Dropout(p=0.5),
       nn.Linear(2048, self.n_classes))
 
-    self.hRCNN_cls_score = nn.Sequential(
-      nn.Linear(2048, 2048),
-      nn.LeakyReLU(),
-      nn.Dropout(p=0.5),
-      nn.Linear(2048, self.n_classes))
-
-    self.oRCNN_cls_score = nn.Sequential(
-      nn.Linear(2048, 2048),
-      nn.LeakyReLU(),
-      nn.Dropout(p=0.5),
-      nn.Linear(2048, self.n_classes))
+    # self.hRCNN_cls_score = nn.Sequential(
+    #   nn.Linear(2048, 2048),
+    #   nn.LeakyReLU(),
+    #   nn.Dropout(p=0.5),
+    #   nn.Linear(2048, self.n_classes))
+    #
+    # self.oRCNN_cls_score = nn.Sequential(
+    #   nn.Linear(2048, 2048),
+    #   nn.LeakyReLU(),
+    #   nn.Dropout(p=0.5),
+    #   nn.Linear(2048, self.n_classes))
 
     # Fix blocks
     for p in self.RCNN_base[0].parameters(): p.requires_grad=False
@@ -281,8 +281,8 @@ class resnet(_fasterRCNN):
 
     self.RCNN_base.apply(set_bn_fix)
     self.iRCNN_top.apply(set_bn_fix)
-    self.hRCNN_top.apply(set_bn_fix)
-    self.oRCNN_top.apply(set_bn_fix)
+    # self.hRCNN_top.apply(set_bn_fix)
+    # self.oRCNN_top.apply(set_bn_fix)
 
   def train(self, mode=True):
     # Override train so that the training mode is set as we want
@@ -300,17 +300,17 @@ class resnet(_fasterRCNN):
 
       self.RCNN_base.apply(set_bn_eval)
       self.iRCNN_top.apply(set_bn_eval)
-      self.hRCNN_top.apply(set_bn_eval)
-      self.oRCNN_top.apply(set_bn_eval)
+      # self.hRCNN_top.apply(set_bn_eval)
+      # self.oRCNN_top.apply(set_bn_eval)
 
   def _ihead_to_tail(self, pool5):
     fc7 = self.iRCNN_top(pool5).mean(3).mean(2)
     return fc7
 
-  def _hhead_to_tail(self, pool5):
-    fc7 = self.hRCNN_top(pool5).mean(3).mean(2)
-    return fc7
-
-  def _ohead_to_tail(self, pool5):
-    fc7 = self.oRCNN_top(pool5).mean(3).mean(2)
-    return fc7
+  # def _hhead_to_tail(self, pool5):
+  #   fc7 = self.hRCNN_top(pool5).mean(3).mean(2)
+  #   return fc7
+  #
+  # def _ohead_to_tail(self, pool5):
+  #   fc7 = self.oRCNN_top(pool5).mean(3).mean(2)
+  #   return fc7
