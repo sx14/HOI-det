@@ -91,7 +91,7 @@ def gen_body_part_box(all_kps, human_wh, part, kp_thr=0.01, area_thr=0):
             conf_avg]
 
 
-def gen_pose_obj_map(hbox, obox, ibox, skeleton, size=224):
+def gen_pose_obj_map(hbox, obox, ibox, skeleton, size=225):
     h_xmin, h_ymin, h_xmax, h_ymax = hbox
     o_xmin, o_ymin, o_xmax, o_ymax = obox
     i_xmin, i_ymin, i_xmax, i_ymax = ibox
@@ -176,7 +176,7 @@ if __name__ == '__main__':
             continue
 
         all_kps = np.reshape(raw_kps, (len(key_points), 3))
-        pose_map = gen_pose_obj_map(hbox, obox, ibox, all_kps, 224)
+        pose_map = gen_pose_obj_map(hbox, obox, ibox, all_kps, 225)
         im_i0 = cv2.imread(img_path)
         im_i0 = cv2.rectangle(im_i0, (hbox[0], hbox[1]), (hbox[2], hbox[3]), (0, 255, 0), 4)
         im_i0 = cv2.rectangle(im_i0, (obox[0], obox[1]), (obox[2], obox[3]), (0, 0, 255), 4)
