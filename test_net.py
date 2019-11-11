@@ -251,8 +251,8 @@ if __name__ == '__main__':
   fasterRCNN.eval()
 
   start = time.time()
-  human_thres = 0.8
-  object_thres = 0.3
+  human_thres = 0.4
+  object_thres = 0.4
 
   num_images = len(det_db)
   print('Loaded Photo: {} images.'.format(num_images))
@@ -347,9 +347,6 @@ if __name__ == '__main__':
               fasterRCNN(im_data, im_info, hboxes, oboxes, iboxes, vrb_classes, bin_classes, hoi_masks, spa_maps, num_hois)
 
       hoi_prob = np.zeros((1, num_cand, len(hoi_classes)))
-      # for j in range(num_cand):
-      #     for hoi_id in range(len(hoi_classes)):
-      #         hoi_prob[0, j, hoi_id] = vrb_prob[0, j, hoi2vrb[hoi_id]]
 
       for j in range(num_cand):
           for vrb_id in range(vrb_prob.shape[2]):
