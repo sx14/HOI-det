@@ -72,7 +72,9 @@ def iou(box1, box2):
 def refine_human_box_with_skeleton(box, skeleton, conf_thr=0.01):
     xmin, ymin, xmax, ymax = box
     for i in range(len(skeleton)):
-        pt_x, pt_y, pt_s = skeleton[i]
+        pt_x = skeleton[i, 0]
+        pt_y = skeleton[i, 1]
+        pt_s = skeleton[i, 2]
         if pt_s > conf_thr:
             xmin = min(xmin, pt_x)
             xmax = max(xmax, pt_x)
@@ -374,14 +376,15 @@ class hico2(imdb):
 
                     key_points = raw_hoi[4]
                     if key_points is None or len(key_points) != 51:
-                        key_points = [0] * 51
+                        key_points = [-1] * 51
+                    key_points = np.array(key_points)
+                    key_points = np.reshape(key_points, (3, 17))
 
                     hbox = raw_hoi[2]
                     hbox = refine_human_box_with_skeleton(hbox, key_points)
                     obox = raw_hoi[3]
                     ibox = [min(hbox[0], obox[0]), min(hbox[1], obox[1]),
                             max(hbox[2], obox[2]), max(hbox[3], obox[3])]
-
 
                     image_anno['hboxes'].append(hbox)
                     image_anno['oboxes'].append(obox)
