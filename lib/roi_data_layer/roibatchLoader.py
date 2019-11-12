@@ -87,26 +87,15 @@ class roibatchLoader(data.Dataset):
 
     gt_boxes = np.concatenate((blobs['hboxes'], blobs['oboxes'], blobs['iboxes']))
     gt_boxes = torch.from_numpy(gt_boxes)
-
-    gt_classes = np.tile(blobs['hoi_classes'], (3, 1))
-    gt_classes = torch.from_numpy(gt_classes)
-
-    gt_verbs = np.tile(blobs['vrb_classes'], (3, 1))
-    gt_verbs = torch.from_numpy(gt_verbs)
-
-    gt_binaries = np.tile(blobs['bin_classes'], (3, 1))
-    gt_binaries = torch.from_numpy(gt_binaries)
-
-    gt_hoi_masks = np.tile(blobs['hoi_masks'], (3, 1))
-    gt_hoi_masks = torch.from_numpy(gt_hoi_masks)
-
-    gt_vrb_masks = np.tile(blobs['vrb_masks'], (3, 1))
-    gt_vrb_masks = torch.from_numpy(gt_vrb_masks)
+    gt_classes = torch.from_numpy(blobs['hoi_classes'])
+    gt_verbs = torch.from_numpy(blobs['vrb_classes'])
+    gt_binaries = torch.from_numpy(blobs['bin_classes'])
+    gt_hoi_masks = torch.from_numpy(blobs['hoi_masks'])
+    gt_vrb_masks = torch.from_numpy(blobs['vrb_masks'])
 
     raw_spa_maps = np.zeros((num_hoi, 2, 64, 64))
     for i in range(num_hoi):
         raw_spa_maps[i] = gen_spatial_map(blobs['hboxes'][i], blobs['oboxes'][i])
-    raw_spa_maps = np.tile(raw_spa_maps, (3, 1, 1, 1))
     gt_spa_maps = torch.from_numpy(raw_spa_maps).float()
 
     raw_pose_maps = np.zeros((num_hoi, 8, 224, 224))
@@ -114,9 +103,7 @@ class roibatchLoader(data.Dataset):
         raw_key_points = blobs['key_points'][i]
         key_points = np.array(raw_key_points)
         key_points = np.reshape(key_points, (17, 3))
-        raw_pose_maps[i] = gen_pose_obj_map(blobs['hboxes'][i], blobs['oboxes'][i],
-                                            blobs['iboxes'][i], key_points)
-    raw_pose_maps = np.tile(raw_pose_maps, (3, 1, 1, 1))
+        raw_pose_maps[i] = gen_pose_obj_map(blobs['hboxes'][i], blobs['oboxes'][i], blobs['iboxes'][i], key_points)
     gt_pose_maps = torch.from_numpy(raw_pose_maps).float()
 
     ########################################################
@@ -240,20 +227,23 @@ class roibatchLoader(data.Dataset):
             not_keep[ii + num_hoi * 1] = 1
             not_keep[ii + num_hoi * 2] = 1
 
-    keep = torch.nonzero(not_keep == 0).view(-1)
+    keep3 = torch.nonzero(not_keep == 0).view(-1)
+    keep  = torch.nonzero(not_keep[:num_hoi] == 0).view(-1)
 
-    if keep.numel() != 0:
-        gt_boxes = gt_boxes[keep]
-        gt_classes = gt_classes[keep]
-        gt_verbs = gt_verbs[keep]
-        gt_binaries = gt_binaries[keep]
-        gt_spa_maps = gt_spa_maps[keep]
-        gt_hoi_masks = gt_hoi_masks[keep]
-        gt_vrb_masks = gt_vrb_masks[keep]
-        gt_pose_maps = gt_pose_maps[keep]
+    if keep3.numel() != 0:
+
+        assert keep3.shape[0] == keep.shape[0] * 3
+
+        gt_boxes = gt_boxes[keep3]
+        gt_classes = gt_classes[keep[:num_hoi]]
+        gt_verbs = gt_verbs[keep[:num_hoi]]
+        gt_binaries = gt_binaries[keep[:num_hoi]]
+        gt_spa_maps = gt_spa_maps[keep[:num_hoi]]
+        gt_hoi_masks = gt_hoi_masks[keep[:num_hoi]]
+        gt_vrb_masks = gt_vrb_masks[keep[:num_hoi]]
+        gt_pose_maps = gt_pose_maps[keep[:num_hoi]]
 
         gt_num_boxes = int(gt_boxes.size(0) / 3)
-
         assert gt_num_boxes * 3 == gt_boxes.size(0)
 
         num_boxes = int(min(gt_num_boxes, self.max_num_box))

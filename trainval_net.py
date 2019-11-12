@@ -326,12 +326,15 @@ if __name__ == '__main__':
     loss_bin_temp = 0
     start = time.time()
 
+    ld_time = 0
+
     if epoch % (args.lr_decay_step + 1) == 0:
         adjust_learning_rate(optimizer, args.lr_decay_gamma)
         lr *= args.lr_decay_gamma
 
     data_iter = iter(dataloader)
     for step in range(iters_per_epoch):
+      ld_start = time.time()
       data = next(data_iter)
       im_data.data.resize_(data[0].size()).copy_(data[0])
       im_info.data.resize_(data[1].size()).copy_(data[1])
@@ -346,6 +349,8 @@ if __name__ == '__main__':
       spa_maps.data.resize_(data[10].size()).copy_(data[10])
       pose_maps.data.resize_(data[11].size()).copy_(data[11])
       num_hois.data.resize_(data[12].size()).copy_(data[12])
+      ld_end = time.time()
+      ld_time += (ld_end-ld_start)
 
       if num_hois.data.item() < 2:
           continue
@@ -390,7 +395,7 @@ if __name__ == '__main__':
         print("[session %d][epoch %2d][iter %4d/%4d] loss: %.4f, lr: %.2e" \
                                 % (args.session, epoch, step, iters_per_epoch, loss_temp, lr))
         print("loss_cls: %.4f, loss_bin: %.4f" % (loss_cls, loss_bin))
-        print("\t\t\tfg/bg=(%d/%d), time cost: %f" % (nPos, nNeg, end-start))
+        print("\t\t\tfg/bg=(%d/%d), time cost: %f / %f" % (nPos, nNeg, end-start, ld_time))
 
         if args.use_tfboard:
           info = {
@@ -404,6 +409,7 @@ if __name__ == '__main__':
         loss_cls_temp = 0
         loss_bin_temp = 0
         start = time.time()
+        ld_time = 0
 
     save_name = os.path.join(output_dir, 'ho_spa_rcnn_lf_no_nis_vrb_{}_{}_{}.pth'.format(args.session, epoch, step))
     save_checkpoint({

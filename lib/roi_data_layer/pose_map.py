@@ -177,6 +177,7 @@ if __name__ == '__main__':
 
         all_kps = np.reshape(raw_kps, (len(key_points), 3))
         pose_map = gen_pose_obj_map(hbox, obox, ibox, all_kps, 224)
+
         im_i0 = cv2.imread(img_path)
         im_i0 = cv2.rectangle(im_i0, (hbox[0], hbox[1]), (hbox[2], hbox[3]), (0, 255, 0), 4)
         im_i0 = cv2.rectangle(im_i0, (obox[0], obox[1]), (obox[2], obox[3]), (0, 0, 255), 4)
