@@ -303,10 +303,13 @@ class hico2(imdb):
                 aug_cls_ids = raw_hoi[1]
                 aug_hbox = aug_hboxes[i]
                 aug_obox = aug_oboxes[i]
-                new_hois.append([[0],
+                new_hois.append([0,
                                  aug_cls_ids,
                                  aug_hbox,
                                  aug_obox,
+                                 0,
+                                 0,
+                                 0,
                                  raw_hoi[5]])
         return new_hois
 
@@ -377,7 +380,7 @@ class hico2(imdb):
                     obj_class_name = hoi_classes[0].object_name()
                     obj_class_id = self.obj_class2ind[obj_class_name]
 
-                    raw_key_points = raw_hoi[4]
+                    raw_key_points = raw_hoi[7]
                     if raw_key_points is None or len(raw_key_points) != 51:
                         raw_key_points = [-1] * 51
                     key_points = np.array(raw_key_points)
