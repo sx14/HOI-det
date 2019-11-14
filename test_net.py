@@ -27,6 +27,7 @@ import torchvision.datasets as dset
 from scipy.misc import imread
 from roi_data_layer.roidb import combined_roidb
 from roi_data_layer.roibatchLoader import roibatchLoader, gen_spatial_map
+from roi_data_layer.pose_map import gen_pose_obj_map
 from model.utils.config import cfg, cfg_from_file, cfg_from_list, get_output_dir
 from model.rpn.bbox_transform import clip_boxes
 from model.nms.nms_wrapper import nms
@@ -37,7 +38,8 @@ from model.faster_rcnn.vgg16 import vgg16
 from model.faster_rcnn.resnet import resnet
 from generate_HICO_detection import generate_HICO_detection
 
-from  datasets.hico2 import hico2
+from datasets.hico2 import hico2
+from datasets.hico2 import refine_human_box_with_skeleton
 import pdb
 
 try:
@@ -87,11 +89,10 @@ def parse_args():
                       default=1, type=int)
   parser.add_argument('--checkepoch', dest='checkepoch',
                       help='checkepoch to load network',
-                      default=8, type=int)
+                      default=4, type=int)
   parser.add_argument('--checkpoint', dest='checkpoint',
                       help='checkpoint to load network',
                       default=75265, type=int)
-
 
   args = parser.parse_args()
   return args
@@ -159,7 +160,7 @@ if __name__ == '__main__':
       exit(0)
 
   print('Loading object detections ...')
-  det_path = 'data/hico/Test_Faster_RCNN_R-50-PFN_2x_HICO_DET.pkl'
+  det_path = 'data/hico/Test_Faster_RCNN_R-50-PFN_2x_HICO_DET_with_pose.pkl'
   with open(det_path) as f:
       det_db = pickle.load(f)
 
@@ -167,7 +168,7 @@ if __name__ == '__main__':
   if not os.path.exists(input_dir):
     raise Exception('There is no input directory for loading network from ' + input_dir)
   load_name = os.path.join(input_dir,
-    'ho_spa_rcnn_lf_no_nis_vrb_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
+    'ho_spa_rcnn3_lf_no_nis_vrb_sft_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
 
   hoi_classes, obj_classes, vrb_classes, obj2int, hoi2vrb, vrb2hoi = hico2.load_hoi_classes(cfg.DATA_DIR + '/hico')
 
@@ -270,26 +271,41 @@ if __name__ == '__main__':
           im_in = np.concatenate((im_in, im_in, im_in), axis=2)
       im_in = im_in[:, :, ::-1]     # rgb -> bgr
       im = im_in
+      im_h = im.shape[0]
+      im_w = im.shape[1]
       blobs, im_scales = _get_image_blob(im)
 
-      hboxes_raw = np.zeros((0, 4))
-      oboxes_raw = np.zeros((0, 4))
-      iboxes_raw = np.zeros((0, 4))
-      spa_maps_raw = np.zeros((0, 2, 64, 64))
-      pose_maps_raw = np.zeros((0, 7, 64, 64))
-      obj_classes = []
-      hscores = []
-      oscores = []
-
-      num_cand = 0
+      im_num_cands = 0
       im_results = []
       for human_det in det_db[im_id]:
           if (np.max(human_det[5]) > human_thres) and (human_det[1] == 'Human'):
               # This is a valid human
-              hbox = np.array([human_det[2][0],
-                               human_det[2][1],
-                               human_det[2][2],
-                               human_det[2][3]]).reshape(1, 4)
+              hboxes_raw = np.zeros((0, 4))
+              oboxes_raw = np.zeros((0, 4))
+              iboxes_raw = np.zeros((0, 4))
+              spa_maps_raw = np.zeros((0, 2, 64, 64))
+              pose_maps_raw = np.zeros((0, 8, 224, 224))
+              obj_classes = []
+              hscores = []
+              oscores = []
+              num_cand = 0
+
+              raw_key_points = human_det[6]
+              if raw_key_points is None or len(raw_key_points) != 51:
+                  raw_key_points = [-1] * 51
+              key_points = np.array(raw_key_points)
+              key_points = np.reshape(key_points, (17, 3))
+
+              hbox = [human_det[2][0],
+                      human_det[2][1],
+                      human_det[2][2],
+                      human_det[2][3]]
+              hbox = [max(0, hbox[0]), max(0, hbox[1]),
+                      max(0, hbox[2]), max(0, hbox[3])]
+              hbox = [min(im_w - 1, hbox[0]), min(im_h - 1, hbox[1]),
+                      min(im_w - 1, hbox[2]), min(im_h - 1, hbox[3])]
+              hbox = refine_human_box_with_skeleton(hbox, key_points, [im_h, im_w])
+              hbox = np.array(hbox).reshape(1, 4)
 
               for object_det in det_db[im_id]:
                   if (np.max(object_det[5]) > object_thres) and not (np.all(object_det[2] == human_det[2])):
@@ -306,6 +322,11 @@ if __name__ == '__main__':
                       spa_map_raw = gen_spatial_map(human_det[2], object_det[2])
                       spa_map_raw = spa_map_raw[np.newaxis, : ,: ,:]
                       spa_maps_raw = np.concatenate((spa_maps_raw, spa_map_raw))
+
+                      pose_map_raw = gen_pose_obj_map(hbox[0].tolist(), obox[0].tolist(), ibox[0].tolist(), key_points)
+                      pose_map_raw = pose_map_raw[np.newaxis, :, :, :]
+                      pose_maps_raw = np.concatenate((pose_maps_raw, pose_map_raw))
+
                       hboxes_raw = np.concatenate((hboxes_raw, hbox))
                       oboxes_raw = np.concatenate((oboxes_raw, obox))
                       iboxes_raw = np.concatenate((iboxes_raw, ibox))
@@ -313,57 +334,62 @@ if __name__ == '__main__':
                       hscores.append(human_det[5])
                       oscores.append(object_det[5])
                       num_cand += 1
-      if num_cand == 0:
-          all_results[im_id] = im_results
-          continue
 
-      hboxes_raw = hboxes_raw[np.newaxis, :, :]
-      oboxes_raw = oboxes_raw[np.newaxis, :, :]
-      iboxes_raw = iboxes_raw[np.newaxis, :, :]
-      spa_maps_raw = spa_maps_raw[np.newaxis, :, :, :, :]
+              if num_cand == 0:
+                  continue
 
-      hboxes_t = torch.from_numpy(hboxes_raw * im_scales[0])
-      oboxes_t = torch.from_numpy(oboxes_raw * im_scales[0])
-      iboxes_t = torch.from_numpy(iboxes_raw * im_scales[0])
-      spa_maps_t = torch.from_numpy(spa_maps_raw)
+              hboxes_raw = hboxes_raw[np.newaxis, :, :]
+              oboxes_raw = oboxes_raw[np.newaxis, :, :]
+              iboxes_raw = iboxes_raw[np.newaxis, :, :]
+              spa_maps_raw = spa_maps_raw[np.newaxis, :, :, :, :]
+              pose_maps_raw = pose_maps_raw[np.newaxis, :, :, :, :]
 
-      hboxes.data.resize_(hboxes_t.size()).copy_(hboxes_t)
-      oboxes.data.resize_(oboxes_t.size()).copy_(oboxes_t)
-      iboxes.data.resize_(iboxes_t.size()).copy_(iboxes_t)
-      spa_maps.data.resize_(spa_maps_t.size()).copy_(spa_maps_t)
+              hboxes_t = torch.from_numpy(hboxes_raw * im_scales[0])
+              oboxes_t = torch.from_numpy(oboxes_raw * im_scales[0])
+              iboxes_t = torch.from_numpy(iboxes_raw * im_scales[0])
+              spa_maps_t = torch.from_numpy(spa_maps_raw)
+              pose_maps_t = torch.from_numpy(pose_maps_raw)
 
-      assert len(im_scales) == 1, "Only single-image batch implemented"
-      im_blob = blobs
-      im_info_np = np.array([[im_blob.shape[1], im_blob.shape[2], im_scales[0]]], dtype=np.float32)
+              hboxes.data.resize_(hboxes_t.size()).copy_(hboxes_t)
+              oboxes.data.resize_(oboxes_t.size()).copy_(oboxes_t)
+              iboxes.data.resize_(iboxes_t.size()).copy_(iboxes_t)
+              spa_maps.data.resize_(spa_maps_t.size()).copy_(spa_maps_t)
+              pose_maps.data.resize_(pose_maps_t.size()).copy_(pose_maps_t)
 
-      im_data_pt = torch.from_numpy(im_blob)
-      im_data_pt = im_data_pt.permute(0, 3, 1, 2)
-      im_info_pt = torch.from_numpy(im_info_np)
+              assert len(im_scales) == 1, "Only single-image batch implemented"
+              im_blob = blobs
+              im_info_np = np.array([[im_blob.shape[1], im_blob.shape[2], im_scales[0]]], dtype=np.float32)
 
-      im_data.data.resize_(im_data_pt.size()).copy_(im_data_pt)
-      im_info.data.resize_(im_info_pt.size()).copy_(im_info_pt)
+              im_data_pt = torch.from_numpy(im_blob)
+              im_data_pt = im_data_pt.permute(0, 3, 1, 2)
+              im_info_pt = torch.from_numpy(im_info_np)
 
-      det_tic = time.time()
+              im_data.data.resize_(im_data_pt.size()).copy_(im_data_pt)
+              im_info.data.resize_(im_info_pt.size()).copy_(im_info_pt)
 
-      with torch.no_grad():
-          vrb_prob, bin_prob, RCNN_loss_cls, RCNN_loss_bin = \
-              fasterRCNN(im_data, im_info, hboxes, oboxes, iboxes, vrb_classes, bin_classes, hoi_masks, spa_maps, num_hois)
+              det_tic = time.time()
 
-      hoi_prob = np.zeros((1, num_cand, len(hoi_classes)))
-      for j in range(num_cand):
-          for vrb_id in range(vrb_prob.shape[2]):
-              hoi_prob[0, j, vrb2hoi[vrb_id]] = vrb_prob[0, j, vrb_id]
+              with torch.no_grad():
+                  vrb_prob, bin_prob, RCNN_loss_cls, RCNN_loss_bin = \
+                      fasterRCNN(im_data, im_info, hboxes, oboxes, iboxes,
+                                 vrb_classes, bin_classes, hoi_masks,
+                                 spa_maps, pose_maps, num_hois)
 
-      for j in range(num_cand):
-          temp = []
-          temp.append(hboxes_raw[0, j])  # Human box
-          temp.append(oboxes_raw[0, j])  # Object box
-          temp.append(obj_classes[j])  # Object class
-          temp.append(hoi_prob[0, j].tolist())  # Score (600)
-          temp.append(hscores[j])  # Human score
-          temp.append(oscores[j])  # Object score
-          temp.append(bin_prob.cpu().data.numpy()[0, j].tolist())  # binary score
-          im_results.append(temp)
+              hoi_prob = np.zeros((1, num_cand, len(hoi_classes)))
+              for j in range(num_cand):
+                  for vrb_id in range(vrb_prob.shape[2]):
+                      hoi_prob[0, j, vrb2hoi[vrb_id]] = vrb_prob[0, j, vrb_id]
+
+              for j in range(num_cand):
+                  temp = []
+                  temp.append(hboxes_raw[0, j])  # Human box
+                  temp.append(oboxes_raw[0, j])  # Object box
+                  temp.append(obj_classes[j])  # Object class
+                  temp.append(hoi_prob[0, j].tolist())  # Score (600)
+                  temp.append(hscores[j])  # Human score
+                  temp.append(oscores[j])  # Object score
+                  temp.append(bin_prob.cpu().data.numpy()[0, j].tolist())  # binary score
+                  im_results.append(temp)
 
       all_results[im_id] = im_results
 

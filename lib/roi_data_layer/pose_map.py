@@ -191,5 +191,4 @@ if __name__ == '__main__':
             im_i[:,:,2][channel > 0] = im_i[:,:,2][channel > 0] / 2
             im_i = cv2.resize(im_i, (500, 500))
             cv2.imshow('123', im_i)
-
             cv2.waitKey(0)

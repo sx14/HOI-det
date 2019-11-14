@@ -293,7 +293,7 @@ if __name__ == '__main__':
 
   if args.resume:
     load_name = os.path.join(output_dir,
-      'ho_spa_rcnn_lf_no_nis_vrb_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
+      'ho_spa_rcnn3_lf_no_nis_vrb_sft_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
     print("loading checkpoint %s" % (load_name))
     checkpoint = torch.load(load_name)
     args.session = checkpoint['session']
@@ -359,8 +359,8 @@ if __name__ == '__main__':
       cls_prob, bin_prob, RCNN_loss_cls, RCNN_loss_bin = \
           fasterRCNN(im_data, im_info,
                      hboxes, oboxes, iboxes,
-                     vrb_classes, bin_classes,
-                     vrb_masks, spa_maps, pose_maps, num_hois)
+                     vrb_classes, bin_classes, vrb_masks,
+                     spa_maps, pose_maps, num_hois)
 
       loss = RCNN_loss_cls.mean()
 
@@ -395,7 +395,7 @@ if __name__ == '__main__':
         print("[session %d][epoch %2d][iter %4d/%4d] loss: %.4f, lr: %.2e" \
                                 % (args.session, epoch, step, iters_per_epoch, loss_temp, lr))
         print("loss_cls: %.4f, loss_bin: %.4f" % (loss_cls, loss_bin))
-        print("\t\t\tfg/bg=(%d/%d), time cost: %f / %f" % (nPos, nNeg, end-start, ld_time))
+        print("\t\t\tfg/bg=(%d/%d), time cost: %f" % (nPos, nNeg, end-start))
 
         if args.use_tfboard:
           info = {
@@ -411,7 +411,7 @@ if __name__ == '__main__':
         start = time.time()
         ld_time = 0
 
-    save_name = os.path.join(output_dir, 'ho_spa_rcnn_lf_no_nis_vrb_{}_{}_{}.pth'.format(args.session, epoch, step))
+    save_name = os.path.join(output_dir, 'ho_spa_rcnn3_lf_no_nis_vrb_sft_{}_{}_{}.pth'.format(args.session, epoch, step))
     save_checkpoint({
       'session': args.session,
       'epoch': epoch + 1,

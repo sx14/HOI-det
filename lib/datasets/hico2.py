@@ -70,13 +70,16 @@ def iou(box1, box2):
     return iou
 
 
-def refine_human_box_with_skeleton(box, skeleton, conf_thr=0.01):
+def refine_human_box_with_skeleton(box, skeleton, im_hw, conf_thr=0.01):
+    im_h, im_w = im_hw
     xmin, ymin, xmax, ymax = box
     for i in range(len(skeleton)):
         pt_x = skeleton[i, 0]
         pt_x = max(pt_x, 0)
+        pt_x = min(pt_x, im_w - 1)
         pt_y = skeleton[i, 1]
         pt_y = max(pt_y, 0)
+        pt_y = min(pt_y, im_h - 1)
         pt_s = skeleton[i, 2]
         if pt_s > conf_thr:
             xmin = min(xmin, pt_x)
@@ -303,13 +306,13 @@ class hico2(imdb):
                 aug_cls_ids = raw_hoi[1]
                 aug_hbox = aug_hboxes[i]
                 aug_obox = aug_oboxes[i]
-                new_hois.append([0,
+                new_hois.append([0,             # stub
                                  aug_cls_ids,
                                  aug_hbox,
                                  aug_obox,
-                                 0,
-                                 0,
-                                 0,
+                                 0,             # stub
+                                 0,             # stub
+                                 0,             # stub
                                  raw_hoi[5]])
         return new_hois
 
@@ -386,9 +389,18 @@ class hico2(imdb):
                     key_points = np.array(raw_key_points)
                     key_points = np.reshape(key_points, (17, 3))
 
+                    im_h, im_w = image_hw
                     hbox = raw_hoi[2]
-                    hbox = refine_human_box_with_skeleton(hbox, key_points)
+                    hbox = [max(0, hbox[0]), max(0, hbox[1]),
+                            max(0, hbox[2]), max(0, hbox[3])]
+                    hbox = [min(im_w-1, hbox[0]), min(im_h-1, hbox[1]),
+                            min(im_w-1, hbox[2]), min(im_h-1, hbox[3])]
+                    hbox = refine_human_box_with_skeleton(hbox, key_points, image_hw)
                     obox = raw_hoi[3]
+                    obox = [max(0, obox[0]), max(0, obox[1]),
+                            max(0, obox[2]), max(0, obox[3])]
+                    obox = [min(im_w-1, obox[0]), min(im_h-1, obox[1]),
+                            min(im_w-1, obox[2]), min(im_h-1, obox[3])]
                     ibox = [min(hbox[0], obox[0]), min(hbox[1], obox[1]),
                             max(hbox[2], obox[2]), max(hbox[3], obox[3])]
 
@@ -428,6 +440,15 @@ class hico2(imdb):
                 image_anno['iboxes'] = np.array(image_anno['iboxes'])
                 image_anno['obj_classes'] = np.array(image_anno['obj_classes'])
                 image_anno['key_points'] = np.array(image_anno['key_points'])
+
+                if np.sum(image_anno['hboxes'][:, [0,2]] > image_anno['width']) > 0 or \
+                    np.sum(image_anno['oboxes'][:, [0,2]] > image_anno['width']) > 0 or \
+                        np.sum(image_anno['iboxes'][:, [0,2]] > image_anno['width']) > 0:
+                    print('box(x) out of the image !!!')
+                if np.sum(image_anno['hboxes'][:, [1,3]] > image_anno['height']) > 0 or \
+                    np.sum(image_anno['oboxes'][:, [1,3]] > image_anno['height']) > 0 or \
+                        np.sum(image_anno['iboxes'][:, [1,3]] > image_anno['height']) > 0:
+                    print('box(y) out of the image !!!')
 
                 bin_classes = image_anno['bin_classes']
                 image_anno['bin_classes'] = np.zeros((len(bin_classes), 2))

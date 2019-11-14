@@ -235,13 +235,13 @@ class roibatchLoader(data.Dataset):
         assert keep3.shape[0] == keep.shape[0] * 3
 
         gt_boxes = gt_boxes[keep3]
-        gt_classes = gt_classes[keep[:num_hoi]]
-        gt_verbs = gt_verbs[keep[:num_hoi]]
-        gt_binaries = gt_binaries[keep[:num_hoi]]
-        gt_spa_maps = gt_spa_maps[keep[:num_hoi]]
-        gt_hoi_masks = gt_hoi_masks[keep[:num_hoi]]
-        gt_vrb_masks = gt_vrb_masks[keep[:num_hoi]]
-        gt_pose_maps = gt_pose_maps[keep[:num_hoi]]
+        gt_classes = gt_classes[keep]
+        gt_verbs = gt_verbs[keep]
+        gt_binaries = gt_binaries[keep]
+        gt_spa_maps = gt_spa_maps[keep]
+        gt_hoi_masks = gt_hoi_masks[keep]
+        gt_vrb_masks = gt_vrb_masks[keep]
+        gt_pose_maps = gt_pose_maps[keep]
 
         gt_num_boxes = int(gt_boxes.size(0) / 3)
         assert gt_num_boxes * 3 == gt_boxes.size(0)
@@ -268,7 +268,7 @@ class roibatchLoader(data.Dataset):
         spa_maps_padding = torch.LongTensor(1, 2, 64, 64).zero_()
         hoi_masks_padding = torch.LongTensor(1, gt_classes.size(1)).zero_()
         vrb_masks_padding = torch.LongTensor(1, gt_verbs.size(1)).zero_()
-        pose_maps_padding = torch.LongTensor(1, 7, 64, 64).zero_()
+        pose_maps_padding = torch.LongTensor(1, 8, 64, 64).zero_()
         num_boxes = 0
 
         # permute trim_data to adapt to downstream processing
