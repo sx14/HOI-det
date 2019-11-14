@@ -54,8 +54,6 @@ class _fasterRCNN(nn.Module):
         self.class_agnostic = class_agnostic
 
         # define rpn
-        # self.RCNN_rpn = _RPN(self.dout_base_model)
-        # self.RCNN_proposal_target = _ProposalTargetLayer(self.n_classes)
         self.RCNN_roi_pool = _RoIPooling(cfg.POOLING_SIZE, cfg.POOLING_SIZE, 1.0 / 16.0)
         self.RCNN_roi_align = RoIAlignAvg(cfg.POOLING_SIZE, cfg.POOLING_SIZE, 1.0 / 16.0)
 
@@ -145,8 +143,6 @@ class _fasterRCNN(nn.Module):
         spa_feat = self.spaCNN(spa_maps[0])
         scls_score = self.spa_cls_score(spa_feat)
         scls_prob = F.sigmoid(scls_score)
-        # sbin_score = self.spa_bin_score(spa_feat)
-        # sbin_prob = F.sigmoid(sbin_score)
 
         # compute object classification probability
         icls_score = self.iRCNN_cls_score(iroi_pooled_feat)
@@ -171,7 +167,6 @@ class _fasterRCNN(nn.Module):
             hcls_loss = F.binary_cross_entropy(hcls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
             ocls_loss = F.binary_cross_entropy(ocls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
             RCNN_loss_cls = scls_loss + icls_loss + hcls_loss + ocls_loss
-            # RCNN_loss_cls = scls_loss + icls_loss
 
         cls_prob = cls_prob.view(batch_size, irois.size(1), -1)
         bin_prob = Variable(torch.zeros(batch_size, irois.size(1), 2)).cuda()
