@@ -37,6 +37,10 @@ class imdb(object):
     self.config = {}
 
   @property
+  def obj2vec(self):
+    raise NotImplementedError
+
+  @property
   def name(self):
     return self._name
 

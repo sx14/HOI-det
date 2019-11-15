@@ -198,7 +198,7 @@ if __name__ == '__main__':
   sampler_batch = sampler(train_size, args.batch_size)
 
   dataset = roibatchLoader(roidb, ratio_list, ratio_index, args.batch_size, \
-                           imdb.num_classes, training=True)
+                           imdb.num_classes, imdb.obj2vec, training=True)
 
   dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size,
                             sampler=sampler_batch, num_workers=args.num_workers)
@@ -216,6 +216,7 @@ if __name__ == '__main__':
   hoi_masks = torch.FloatTensor(1)
   vrb_masks = torch.FloatTensor(1)
   spa_maps = torch.FloatTensor(1)
+  obj_vecs = torch.FloatTensor(1)
 
   # ship to cuda
   if args.cuda:
@@ -231,6 +232,7 @@ if __name__ == '__main__':
     hoi_masks = hoi_masks.cuda()
     vrb_masks = vrb_masks.cuda()
     spa_maps = spa_maps.cuda()
+    obj_vecs = obj_vecs.cuda()
 
   # make variable
   im_data = Variable(im_data)
@@ -245,6 +247,7 @@ if __name__ == '__main__':
   hoi_masks = Variable(hoi_masks)
   vrb_masks = Variable(vrb_masks)
   spa_maps = Variable(spa_maps)
+  obj_vecs = Variable(obj_vecs)
 
   if args.cuda:
     cfg.CUDA = True
@@ -341,7 +344,8 @@ if __name__ == '__main__':
       hoi_masks.resize_(data[8].size()).copy_(data[8])
       vrb_masks.resize_(data[9].size()).copy_(data[9])
       spa_maps.data.resize_(data[10].size()).copy_(data[10])
-      num_hois.data.resize_(data[11].size()).copy_(data[11])
+      obj_vecs.data.resize_(data[11].size()).copy_(data[11])
+      num_hois.data.resize_(data[12].size()).copy_(data[12])
 
       if num_hois.data.item() == 0:
           continue

@@ -142,10 +142,20 @@ class hico2(imdb):
         self._class_to_ind = dict(zip(self._classes, xrange(len(self._classes))))
         self._image_ext = '.jpg'
         self._all_image_info = self._load_image_set_info()
+        self._obj2vec = None
         self._image_index = None
         # Default to roidb handler
         # self._roidb_handler = self.selective_search_roidb
         self._roidb_handler = self.gt_roidb
+
+    @property
+    def obj2vec(self):
+        if self._obj2vec is None:
+            obj2vec_path = os.path.join(self._data_path, 'obj2vec.pkl')
+            with open(obj2vec_path) as f:
+                obj2vec = pickle.load(f)
+                self._obj2vec = obj2vec
+        return self._obj2vec
 
     @property
     def roidb(self):

@@ -68,9 +68,18 @@ class _fasterRCNN(nn.Module):
             nn.Dropout(p=0.5),
             nn.Linear(1024, self.n_classes))
 
-    def forward(self, im_data, im_info, hboxes, oboxes, iboxes, hoi_classes, bin_classes, hoi_masks, spa_maps, num_hois):
-        batch_size = im_data.size(0)
+        self.obj_cls_score = nn.Sequential(
+            nn.Linear(300, 512),
+            nn.LeakyReLU(),
+            nn.Linear(512, self.n_classes))
 
+    def forward(self, im_data, im_info,
+                hboxes, oboxes, iboxes,
+                hoi_classes, bin_classes,
+                hoi_masks, spa_maps,
+                obj_vecs, num_hois):
+
+        batch_size = im_data.size(0)
         im_info = im_info.data
         hboxes = hboxes.data
         oboxes = oboxes.data
@@ -146,6 +155,9 @@ class _fasterRCNN(nn.Module):
         scls_score = self.spa_cls_score(spa_feat)
         scls_prob = F.sigmoid(scls_score)
 
+        vcls_score = self.obj_cls_score(obj_vecs)
+        vcls_prob = F.sigmoid(vcls_score)
+
         # compute object classification probability
         icls_score = self.iRCNN_cls_score(iroi_pooled_feat)
         icls_prob = F.sigmoid(icls_score)
@@ -156,7 +168,7 @@ class _fasterRCNN(nn.Module):
         ocls_score = self.oRCNN_cls_score(oroi_pooled_feat)
         ocls_prob = F.sigmoid(ocls_score)
 
-        cls_prob = (icls_prob + hcls_prob + ocls_prob) * scls_prob
+        cls_prob = (icls_prob + hcls_prob + ocls_prob) * scls_prob * vcls_prob
 
         RCNN_loss_cls = 0
         RCNN_loss_bin = 0
@@ -169,7 +181,8 @@ class _fasterRCNN(nn.Module):
             icls_loss = F.binary_cross_entropy(icls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
             hcls_loss = F.binary_cross_entropy(hcls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
             ocls_loss = F.binary_cross_entropy(ocls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
-            RCNN_loss_cls = scls_loss + icls_loss + hcls_loss + ocls_loss
+            vcls_loss = F.binary_cross_entropy(vcls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
+            RCNN_loss_cls = scls_loss + icls_loss + hcls_loss + ocls_loss + vcls_loss
 
         cls_prob = cls_prob.view(batch_size, irois.size(1), -1)
         bin_prob = Variable(torch.zeros(batch_size, irois.size(1), 2)).cuda()
