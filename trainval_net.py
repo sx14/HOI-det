@@ -293,7 +293,7 @@ if __name__ == '__main__':
 
   if args.resume:
     load_name = os.path.join(output_dir,
-      'ho_spa_rcnn3_lf_no_nis_3b_vrb_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
+      'ho_spa_rcnn3_lf_no_nis_3b_vrb_obj_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
     print("loading checkpoint %s" % (load_name))
     checkpoint = torch.load(load_name)
     args.session = checkpoint['session']
@@ -355,7 +355,8 @@ if __name__ == '__main__':
           fasterRCNN(im_data, im_info,
                      hboxes, oboxes, iboxes,
                      vrb_classes, bin_classes,
-                     vrb_masks, spa_maps, num_hois)
+                     vrb_masks, spa_maps,
+                     obj_vecs, num_hois)
 
       # loss = RCNN_loss_cls.mean() + RCNN_loss_bin.mean()
       loss = RCNN_loss_cls.mean()
@@ -409,7 +410,7 @@ if __name__ == '__main__':
         loss_bin_temp = 0
         start = time.time()
 
-    save_name = os.path.join(output_dir, 'ho_spa_rcnn3_lf_no_nis_3b_vrb_{}_{}_{}.pth'.format(args.session, epoch, step))
+    save_name = os.path.join(output_dir, 'ho_spa_rcnn3_lf_no_nis_3b_vrb_obj_{}_{}_{}.pth'.format(args.session, epoch, step))
     save_checkpoint({
       'session': args.session,
       'epoch': epoch + 1,

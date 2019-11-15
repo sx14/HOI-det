@@ -88,6 +88,13 @@ class hoi_class:
 class hico2(imdb):
 
     @staticmethod
+    def load_obj2vec(data_path):
+        obj2vec_path = os.path.join(data_path, 'obj2vec.pkl')
+        with open(obj2vec_path) as f:
+            obj2vec = pickle.load(f)
+        return obj2vec
+
+    @staticmethod
     def load_hoi_classes(data_path):
         hoi_cls_list = []
         obj_cls_list = []

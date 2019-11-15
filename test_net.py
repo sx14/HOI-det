@@ -35,7 +35,7 @@ from model.utils.net_utils import save_net, load_net, vis_detections
 from model.utils.blob import im_list_to_blob
 from model.faster_rcnn.vgg16 import vgg16
 from model.faster_rcnn.resnet import resnet
-from generate_HICO_detection import generate_HICO_detection
+from generate_HICO_detection import generate_HICO_detection, org_obj2hoi
 
 from  datasets.hico2 import hico2
 import pdb
@@ -170,6 +170,10 @@ if __name__ == '__main__':
     'ho_spa_rcnn3_lf_no_nis_3b_vrb_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
 
   hoi_classes, obj_classes, vrb_classes, obj2int, hoi2vrb, vrb2hoi = hico2.load_hoi_classes(cfg.DATA_DIR + '/hico')
+  obj2ind = dict(zip(obj_classes, range(len(obj_classes))))
+
+  obj2vec = hico2.load_obj2vec(cfg.DATA_DIR + '/hico')
+
 
   pascal_classes = ['1'] * len(vrb_classes)
 
@@ -211,6 +215,7 @@ if __name__ == '__main__':
   bin_classes = torch.FloatTensor(1)
   hoi_masks = torch.FloatTensor(1)
   spa_maps = torch.FloatTensor(1)
+  obj_vecs = torch.FloatTensor(1)
 
   # ship to cuda
   if args.cuda > 0:
@@ -225,6 +230,7 @@ if __name__ == '__main__':
     bin_classes = bin_classes.cuda()
     hoi_masks = hoi_masks.cuda()
     spa_maps = spa_maps.cuda()
+    obj_vecs = obj_vecs.cuda()
 
   # make variable
   with torch.no_grad():
@@ -238,6 +244,7 @@ if __name__ == '__main__':
       bin_classes = Variable(bin_classes)
       hoi_masks = Variable(hoi_masks)
       spa_maps = Variable(spa_maps)
+      obj_vecs = Variable(obj_vecs)
 
   if args.cuda > 0:
     cfg.CUDA = True
@@ -271,6 +278,7 @@ if __name__ == '__main__':
       oboxes_raw = np.zeros((0, 4))
       iboxes_raw = np.zeros((0, 4))
       spa_maps_raw = np.zeros((0, 2, 64, 64))
+      obj_vecs_raw = np.zeros((0, 300))
       obj_classes = []
       hscores = []
       oscores = []
@@ -300,6 +308,12 @@ if __name__ == '__main__':
                       spa_map_raw = gen_spatial_map(human_det[2], object_det[2])
                       spa_map_raw = spa_map_raw[np.newaxis, : ,: ,:]
                       spa_maps_raw = np.concatenate((spa_maps_raw, spa_map_raw))
+
+                      # original object id(1 base) --hoi--> our object id(0 base)
+                      obj_class_id = obj2ind[hoi_classes[org_obj2hoi[object_det[4]]].object_name()]
+                      obj_vec_raw = obj2vec[obj_class_id]
+                      obj_vecs_raw = np.concatenate((obj_vecs_raw, obj_vec_raw))
+
                       hboxes_raw = np.concatenate((hboxes_raw, hbox))
                       oboxes_raw = np.concatenate((oboxes_raw, obox))
                       iboxes_raw = np.concatenate((iboxes_raw, ibox))
@@ -315,16 +329,18 @@ if __name__ == '__main__':
       oboxes_raw = oboxes_raw[np.newaxis, :, :]
       iboxes_raw = iboxes_raw[np.newaxis, :, :]
       spa_maps_raw = spa_maps_raw[np.newaxis, :, :, :, :]
-
+      obj_vecs_raw = obj_vecs_raw[np.newaxis, :, :]
       hboxes_t = torch.from_numpy(hboxes_raw * im_scales[0])
       oboxes_t = torch.from_numpy(oboxes_raw * im_scales[0])
       iboxes_t = torch.from_numpy(iboxes_raw * im_scales[0])
       spa_maps_t = torch.from_numpy(spa_maps_raw)
+      obj_vecs_t = torch.from_numpy(obj_vecs_raw)
 
       hboxes.data.resize_(hboxes_t.size()).copy_(hboxes_t)
       oboxes.data.resize_(oboxes_t.size()).copy_(oboxes_t)
       iboxes.data.resize_(iboxes_t.size()).copy_(iboxes_t)
       spa_maps.data.resize_(spa_maps_t.size()).copy_(spa_maps_t)
+      obj_vecs.data.resize_(obj_vecs_t.size()).copy_(obj_vecs_t)
 
       assert len(im_scales) == 1, "Only single-image batch implemented"
       im_blob = blobs
@@ -341,7 +357,11 @@ if __name__ == '__main__':
 
       with torch.no_grad():
           vrb_prob, bin_prob, RCNN_loss_cls, RCNN_loss_bin = \
-              fasterRCNN(im_data, im_info, hboxes, oboxes, iboxes, vrb_classes, bin_classes, hoi_masks, spa_maps, num_hois)
+              fasterRCNN(im_data, im_info,
+                         hboxes, oboxes, iboxes,
+                         vrb_classes, bin_classes,
+                         hoi_masks, spa_maps,
+                         obj2vec, num_hois)
 
       hoi_prob = np.zeros((1, num_cand, len(hoi_classes)))
 
@@ -353,7 +373,7 @@ if __name__ == '__main__':
           temp = []
           temp.append(hboxes_raw[0, j])  # Human box
           temp.append(oboxes_raw[0, j])  # Object box
-          temp.append(obj_classes[j])  # Object class
+          temp.append(obj_classes[j])    # Object class
           temp.append(hoi_prob[0, j].tolist())  # Score (600)
           temp.append(hscores[j])  # Human score
           temp.append(oscores[j])  # Object score
