@@ -408,7 +408,7 @@ if __name__ == '__main__':
         loss_temp = 0
         loss_cls_temp = 0
         loss_bin_temp = 0
-        start = time.time()
+        start = time.time() 
         ld_time = 0
 
     save_name = os.path.join(output_dir, 'ho_spa_rcnn3_lf_no_nis_vrb_sft_{}_{}_{}.pth'.format(args.session, epoch, step))
