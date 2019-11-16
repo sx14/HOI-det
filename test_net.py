@@ -175,7 +175,7 @@ if __name__ == '__main__':
   obj2vec = hico2.load_obj2vec(cfg.DATA_DIR + '/hico')
 
 
-  pascal_classes = ['1'] * len(vrb_classes)
+  pascal_classes = ['1'] * len(vrb_classes) 
 
   # initilize the network here.
   if args.net == 'vgg16':
