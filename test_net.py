@@ -312,6 +312,7 @@ if __name__ == '__main__':
                       # original object id(1 base) --hoi--> our object id(0 base)
                       obj_class_id = obj2ind[hoi_classes[org_obj2hoi[object_det[4]]].object_name()]
                       obj_vec_raw = obj2vec[obj_class_id]
+                      obj_vec_raw = obj_vec_raw[np.newaxis, :]
                       obj_vecs_raw = np.concatenate((obj_vecs_raw, obj_vec_raw))
 
                       hboxes_raw = np.concatenate((hboxes_raw, hbox))
@@ -361,7 +362,7 @@ if __name__ == '__main__':
                          hboxes, oboxes, iboxes,
                          vrb_classes, bin_classes,
                          hoi_masks, spa_maps,
-                         obj2vec, num_hois)
+                         obj_vecs, num_hois)
 
       hoi_prob = np.zeros((1, num_cand, len(hoi_classes)))
 
