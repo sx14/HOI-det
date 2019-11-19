@@ -39,6 +39,6 @@ class ResBlock_SFT(nn.Module):
         fea = F.relu(self.conv0(fea), inplace=True)
         fea = self.sft1((fea, x[1]))
         fea = self.conv1(fea)
-        return x[0] + fea
+        return x[0] + fea, x[1]
 
 
