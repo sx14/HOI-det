@@ -70,16 +70,11 @@ def iou(box1, box2):
     return iou
 
 
-def refine_human_box_with_skeleton(box, skeleton, im_hw, conf_thr=0.01):
-    im_h, im_w = im_hw
+def refine_human_box_with_skeleton(box, skeleton, conf_thr=0.01):
     xmin, ymin, xmax, ymax = box
     for i in range(len(skeleton)):
         pt_x = skeleton[i, 0]
-        pt_x = max(pt_x, 0)
-        pt_x = min(pt_x, im_w - 1)
         pt_y = skeleton[i, 1]
-        pt_y = max(pt_y, 0)
-        pt_y = min(pt_y, im_h - 1)
         pt_s = skeleton[i, 2]
         if pt_s > conf_thr:
             xmin = min(xmin, pt_x)
@@ -163,9 +158,27 @@ class hico2(imdb):
         self._image_ext = '.jpg'
         self._all_image_info = self._load_image_set_info()
         self._image_index = None
+        self._obj2vec = None
         # Default to roidb handler
         # self._roidb_handler = self.selective_search_roidb
         self._roidb_handler = self.gt_roidb
+
+    @staticmethod
+    def load_obj2vec(data_path):
+        obj2vec_path = os.path.join(data_path, 'obj2vec.pkl')
+        with open(obj2vec_path) as f:
+            obj2vec = pickle.load(f)
+        return obj2vec
+
+    @property
+    def obj2vec(self):
+        if self._obj2vec is None:
+            obj2vec_path = os.path.join(self._data_path, 'obj2vec.pkl')
+            with open(obj2vec_path) as f:
+                obj2vec = pickle.load(f)
+                self._obj2vec = obj2vec
+        return self._obj2vec
+
 
     @property
     def roidb(self):
@@ -373,6 +386,7 @@ class hico2(imdb):
                           'flipped': False}
             all_annos[image_name] = image_anno
 
+            im_h, im_w = image_hw
             for pn, hois in enumerate([img_pos_hois, img_neg_hois]):
                 for raw_hoi in hois:
 
@@ -383,19 +397,31 @@ class hico2(imdb):
                     obj_class_name = hoi_classes[0].object_name()
                     obj_class_id = self.obj_class2ind[obj_class_name]
 
+                    # check key points
                     raw_key_points = raw_hoi[7]
                     if raw_key_points is None or len(raw_key_points) != 51:
-                        raw_key_points = [-1] * 51
+                        raw_key_points = [0] * 51
+                    else:
+                        for i in range(17):
+                            pt_x = raw_key_points[i*3+0]
+                            pt_y = raw_key_points[i*3+1]
+                            pt_x = max(0, pt_x)
+                            pt_y = max(0, pt_y)
+                            pt_x = min(pt_x, im_w - 1)
+                            pt_y = min(pt_y, im_h - 1)
+                            raw_key_points[i*3+0] = pt_x
+                            raw_key_points[i*3+1] = pt_y
+
                     key_points = np.array(raw_key_points)
                     key_points = np.reshape(key_points, (17, 3))
 
-                    im_h, im_w = image_hw
+                    # check hbox and obox
                     hbox = raw_hoi[2]
                     hbox = [max(0, hbox[0]), max(0, hbox[1]),
                             max(0, hbox[2]), max(0, hbox[3])]
                     hbox = [min(im_w-1, hbox[0]), min(im_h-1, hbox[1]),
                             min(im_w-1, hbox[2]), min(im_h-1, hbox[3])]
-                    hbox = refine_human_box_with_skeleton(hbox, key_points, image_hw)
+                    hbox = refine_human_box_with_skeleton(hbox, key_points)
                     obox = raw_hoi[3]
                     obox = [max(0, obox[0]), max(0, obox[1]),
                             max(0, obox[2]), max(0, obox[3])]
@@ -440,15 +466,6 @@ class hico2(imdb):
                 image_anno['iboxes'] = np.array(image_anno['iboxes'])
                 image_anno['obj_classes'] = np.array(image_anno['obj_classes'])
                 image_anno['key_points'] = np.array(image_anno['key_points'])
-
-                if np.sum(image_anno['hboxes'][:, [0,2]] > image_anno['width']) > 0 or \
-                    np.sum(image_anno['oboxes'][:, [0,2]] > image_anno['width']) > 0 or \
-                        np.sum(image_anno['iboxes'][:, [0,2]] > image_anno['width']) > 0:
-                    print('box(x) out of the image !!!')
-                if np.sum(image_anno['hboxes'][:, [1,3]] > image_anno['height']) > 0 or \
-                    np.sum(image_anno['oboxes'][:, [1,3]] > image_anno['height']) > 0 or \
-                        np.sum(image_anno['iboxes'][:, [1,3]] > image_anno['height']) > 0:
-                    print('box(y) out of the image !!!')
 
                 bin_classes = image_anno['bin_classes']
                 image_anno['bin_classes'] = np.zeros((len(bin_classes), 2))

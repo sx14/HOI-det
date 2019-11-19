@@ -49,6 +49,9 @@ def get_minibatch(roidb, num_classes):
   hoi_masks = roidb[0]['hoi_masks']
   vrb_masks = roidb[0]['vrb_masks']
   key_points = roidb[0]['key_points']
+  for i in range(17):
+    key_points[:, i*3+0] = key_points[:, i*3+0] * im_scales[0]
+    key_points[:, i*3+1] = key_points[:, i*3+1] * im_scales[0]
 
   blobs['hboxes'] = hboxes
   blobs['oboxes'] = oboxes

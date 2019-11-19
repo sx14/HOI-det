@@ -296,10 +296,8 @@ if __name__ == '__main__':
               key_points = np.array(raw_key_points)
               key_points = np.reshape(key_points, (17, 3))
 
-              hbox = [human_det[2][0],
-                      human_det[2][1],
-                      human_det[2][2],
-                      human_det[2][3]]
+              hbox = [human_det[2][0], human_det[2][1],
+                      human_det[2][2], human_det[2][3]]
               hbox = [max(0, hbox[0]), max(0, hbox[1]),
                       max(0, hbox[2]), max(0, hbox[3])]
               hbox = [min(im_w - 1, hbox[0]), min(im_h - 1, hbox[1]),
@@ -310,20 +308,29 @@ if __name__ == '__main__':
               for object_det in det_db[im_id]:
                   if (np.max(object_det[5]) > object_thres) and not (np.all(object_det[2] == human_det[2])):
                       # This is a valid object
-                      obox = np.array([object_det[2][0],
-                                       object_det[2][1],
-                                       object_det[2][2],
-                                       object_det[2][3]]).reshape(1, 4)
+                      obox = [object_det[2][0], object_det[2][1],
+                              object_det[2][2], object_det[2][3]]
+                      obox = [max(0, obox[0]), max(0, obox[1]),
+                              max(0, obox[2]), max(0, obox[3])]
+                      obox = [min(im_w - 1, obox[0]), min(im_h - 1, obox[1]),
+                              min(im_w - 1, obox[2]), min(im_h - 1, obox[3])]
+                      obox = np.array(obox).reshape(1, 4)
 
                       ibox = np.array([min(hbox[0, 0], obox[0, 0]),
                                        min(hbox[0, 1], obox[0, 1]),
                                        max(hbox[0, 2], obox[0, 2]),
                                        max(hbox[0, 3], obox[0, 3])]).reshape(1, 4)
-                      spa_map_raw = gen_spatial_map(human_det[2], object_det[2])
+
+                      hbox = hbox * im_scales[0]
+                      obox = obox * im_scales[0]
+                      ibox = ibox * im_scales[0]
+                      key_points[:, 0:2] = key_points[:, 0:2] * im_scales[0]
+
+                      spa_map_raw = gen_spatial_map(hbox[0], obox[0])
                       spa_map_raw = spa_map_raw[np.newaxis, : ,: ,:]
                       spa_maps_raw = np.concatenate((spa_maps_raw, spa_map_raw))
 
-                      pose_map_raw = gen_pose_obj_map(hbox[0].tolist(), obox[0].tolist(), ibox[0].tolist(), key_points)
+                      pose_map_raw = gen_pose_obj_map(hbox[0], obox[0], ibox[0], key_points)
                       pose_map_raw = pose_map_raw[np.newaxis, :, :, :]
                       pose_maps_raw = np.concatenate((pose_maps_raw, pose_map_raw))
 
@@ -344,9 +351,9 @@ if __name__ == '__main__':
               spa_maps_raw = spa_maps_raw[np.newaxis, :, :, :, :]
               pose_maps_raw = pose_maps_raw[np.newaxis, :, :, :, :]
 
-              hboxes_t = torch.from_numpy(hboxes_raw * im_scales[0])
-              oboxes_t = torch.from_numpy(oboxes_raw * im_scales[0])
-              iboxes_t = torch.from_numpy(iboxes_raw * im_scales[0])
+              hboxes_t = torch.from_numpy(hboxes_raw)
+              oboxes_t = torch.from_numpy(oboxes_raw)
+              iboxes_t = torch.from_numpy(iboxes_raw)
               spa_maps_t = torch.from_numpy(spa_maps_raw)
               pose_maps_t = torch.from_numpy(pose_maps_raw)
 
@@ -382,8 +389,8 @@ if __name__ == '__main__':
 
               for j in range(num_cand):
                   temp = []
-                  temp.append(hboxes_raw[0, j])  # Human box
-                  temp.append(oboxes_raw[0, j])  # Object box
+                  temp.append(hboxes_raw[0, j] / im_scales[0])  # Human box
+                  temp.append(oboxes_raw[0, j] / im_scales[0])  # Object box
                   temp.append(obj_classes[j])  # Object class
                   temp.append(hoi_prob[0, j].tolist())  # Score (600)
                   temp.append(hscores[j])  # Human score
