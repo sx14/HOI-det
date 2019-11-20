@@ -304,6 +304,7 @@ if __name__ == '__main__':
                       min(im_w - 1, hbox[2]), min(im_h - 1, hbox[3])]
               hbox = refine_human_box_with_skeleton(hbox, key_points, [im_h, im_w])
               hbox = np.array(hbox).reshape(1, 4)
+              hbox = hbox * im_scales[0]
 
               for object_det in det_db[im_id]:
                   if (np.max(object_det[5]) > object_thres) and not (np.all(object_det[2] == human_det[2])):
@@ -320,8 +321,6 @@ if __name__ == '__main__':
                                        min(hbox[0, 1], obox[0, 1]),
                                        max(hbox[0, 2], obox[0, 2]),
                                        max(hbox[0, 3], obox[0, 3])]).reshape(1, 4)
-
-                      hbox = hbox * im_scales[0]
                       obox = obox * im_scales[0]
                       ibox = ibox * im_scales[0]
                       key_points[:, 0:2] = key_points[:, 0:2] * im_scales[0]
