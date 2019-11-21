@@ -221,7 +221,7 @@ def resnet152(pretrained=False):
 class resnet(_fasterRCNN):
   def __init__(self, classes, num_layers=101, pretrained=False, class_agnostic=False):
     self.model_path = 'data/pretrained_model/resnet101_caffe.pth'
-    self.weight_path = 'data/pretrained_model/faster_rcnn_1_10_14657.pth'
+    self.weight_path = 'data/pretrained_model/faster_rcnn_coco.pth'
     self.dout_base_model = 1024
     self.pretrained = pretrained
     self.class_agnostic = class_agnostic
