@@ -253,10 +253,7 @@ class resnet(_fasterRCNN):
       nn.Conv2d(512, 1024, 1, 1))
 
     import copy
-    self.iRCNN_SFT = nn.Sequential(ResBlock_SFT(),
-                                   ResBlock_SFT(),
-                                   ResBlock_SFT(),
-                                   ResBlock_SFT())
+    self.iRCNN_SFT = ResBlock_SFT()
     self.iRCNN_top = nn.Sequential(resnet.layer4)
     self.hRCNN_top = nn.Sequential(copy.deepcopy(resnet.layer4))
     self.oRCNN_top = nn.Sequential(copy.deepcopy(resnet.layer4))

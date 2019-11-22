@@ -65,7 +65,7 @@ def get_body_part_alpha(part):
     return all_body_part_alpha[part]
 
 
-def gen_body_part_box(all_kps, human_wh, part, kp_thr=0.01, area_thr=0):
+def gen_body_part_box(all_kps, human_wh, part, kp_thr=0.01):
     part_kps = get_body_part_kps(part, all_kps)
     xmin = 9999
     ymin = 9999
@@ -76,7 +76,7 @@ def gen_body_part_box(all_kps, human_wh, part, kp_thr=0.01, area_thr=0):
     for i in range(len(part_kps)):
         conf = part_kps[i, 2]
         if conf < kp_thr:
-            return None
+            continue
         conf_sum += conf
         conf_cnt += 1
         xmin = min(xmin, part_kps[i, 0])
@@ -84,7 +84,7 @@ def gen_body_part_box(all_kps, human_wh, part, kp_thr=0.01, area_thr=0):
         xmax = max(xmax, part_kps[i, 0])
         ymax = max(ymax, part_kps[i, 1])
     conf_avg = conf_sum / conf_cnt
-    if (ymax - ymin + 1) * (xmax - xmin + 1) < area_thr:
+    if conf_cnt == 0:
         return None
     return [xmin - get_body_part_alpha(part) * human_wh[0],
             ymin - get_body_part_alpha(part) * human_wh[1],
@@ -94,6 +94,8 @@ def gen_body_part_box(all_kps, human_wh, part, kp_thr=0.01, area_thr=0):
 
 
 def gen_pose_obj_map(hbox, obox, ibox, skeleton, size=224):
+    skeleton_tmp = skeleton.copy()
+
     h_xmin, h_ymin, h_xmax, h_ymax = hbox
     o_xmin, o_ymin, o_xmax, o_ymax = obox
     i_xmin, i_ymin, i_xmax, i_ymax = ibox
@@ -101,22 +103,23 @@ def gen_pose_obj_map(hbox, obox, ibox, skeleton, size=224):
     human_wh = [h_xmax - h_xmin + 1, h_ymax - h_ymin + 1]
     interact_wh = [i_xmax - i_xmin + 1, i_ymax - i_ymin + 1]
 
-    skeleton[:, 0] = skeleton[:, 0] - i_xmin
-    skeleton[:, 1] = skeleton[:, 1] - i_ymin
-
     x_ratio = size * 1.0 / interact_wh[0]
     y_ratio = size * 1.0 / interact_wh[1]
 
     pose_obj_map = np.zeros((8, size, size))
-    for i, body_part in enumerate(body_parts):
-        box_conf = gen_body_part_box(skeleton, human_wh, body_part)
-        if box_conf is not None:
-            xmin, ymin, xmax, ymax, conf = box_conf
-            xmin = int(xmin * x_ratio)
-            ymin = int(ymin * y_ratio)
-            xmax = int(xmax * x_ratio)
-            ymax = int(ymax * y_ratio)
-            pose_obj_map[i, ymin:ymax+1, xmin:xmax+1] = conf
+    if skeleton.sum() > 0:
+        skeleton_tmp[:, 0] = skeleton_tmp[:, 0] - i_xmin
+        skeleton_tmp[:, 1] = skeleton_tmp[:, 1] - i_ymin
+
+        for i, body_part in enumerate(body_parts):
+            box_conf = gen_body_part_box(skeleton_tmp, human_wh, body_part)
+            if box_conf is not None:
+                xmin, ymin, xmax, ymax, conf = box_conf
+                xmin = int(xmin * x_ratio)
+                ymin = int(ymin * y_ratio)
+                xmax = int(xmax * x_ratio)
+                ymax = int(ymax * y_ratio)
+                pose_obj_map[i, ymin:ymax+1, xmin:xmax+1] = conf
 
     o_xmin = int((o_xmin - i_xmin) * x_ratio)
     o_ymin = int((o_ymin - i_ymin) * y_ratio)
@@ -129,6 +132,7 @@ def gen_pose_obj_map(hbox, obox, ibox, skeleton, size=224):
     h_xmax = int((h_xmax - i_xmin) * x_ratio)
     h_ymax = int((h_ymax - i_ymin) * y_ratio)
     pose_obj_map[7, h_ymin:h_ymax+1, h_xmin:h_xmax+1] = 1
+
     return pose_obj_map
 
 
