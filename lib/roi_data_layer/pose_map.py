@@ -76,7 +76,7 @@ def gen_body_part_box(all_kps, human_wh, part, kp_thr=0.01):
     for i in range(len(part_kps)):
         conf = part_kps[i, 2]
         if conf < kp_thr:
-            continue
+            return None
         conf_sum += conf
         conf_cnt += 1
         xmin = min(xmin, part_kps[i, 0])
@@ -84,8 +84,7 @@ def gen_body_part_box(all_kps, human_wh, part, kp_thr=0.01):
         xmax = max(xmax, part_kps[i, 0])
         ymax = max(ymax, part_kps[i, 1])
     conf_avg = conf_sum / conf_cnt
-    if conf_cnt == 0:
-        return None
+
     return [xmin - get_body_part_alpha(part) * human_wh[0],
             ymin - get_body_part_alpha(part) * human_wh[1],
             xmax + get_body_part_alpha(part) * human_wh[0],
