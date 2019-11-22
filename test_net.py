@@ -305,6 +305,7 @@ if __name__ == '__main__':
               hbox = refine_human_box_with_skeleton(hbox, key_points, [im_h, im_w])
               hbox = np.array(hbox).reshape(1, 4)
               hbox = hbox * im_scales[0]
+              key_points[:, 0:2] = key_points[:, 0:2] * im_scales[0]
 
               for object_det in det_db[im_id]:
                   if (np.max(object_det[5]) > object_thres) and not (np.all(object_det[2] == human_det[2])):
@@ -316,14 +317,13 @@ if __name__ == '__main__':
                       obox = [min(im_w - 1, obox[0]), min(im_h - 1, obox[1]),
                               min(im_w - 1, obox[2]), min(im_h - 1, obox[3])]
                       obox = np.array(obox).reshape(1, 4)
+                      obox = obox * im_scales[0]
 
                       ibox = np.array([min(hbox[0, 0], obox[0, 0]),
                                        min(hbox[0, 1], obox[0, 1]),
                                        max(hbox[0, 2], obox[0, 2]),
                                        max(hbox[0, 3], obox[0, 3])]).reshape(1, 4)
-                      obox = obox * im_scales[0]
                       ibox = ibox * im_scales[0]
-                      key_points[:, 0:2] = key_points[:, 0:2] * im_scales[0]
 
                       spa_map_raw = gen_spatial_map(hbox[0], obox[0])
                       spa_map_raw = spa_map_raw[np.newaxis, : ,: ,:]
