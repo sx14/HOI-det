@@ -63,6 +63,9 @@ def get_minibatch(roidb, num_classes):
     dtype=np.float32)
   blobs['key_points'] = key_points
   blobs['img_id'] = roidb[0]['img_id']
+  for i in range(17):
+    key_points[:, i*3+0] = key_points[:, i*3+0] * im_scales[0]
+    key_points[:, i*3+1] = key_points[:, i*3+1] * im_scales[0]
 
   return blobs
 
