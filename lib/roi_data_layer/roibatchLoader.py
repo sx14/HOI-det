@@ -22,9 +22,9 @@ import pdb
 
 
 class roibatchLoader(data.Dataset):
-  def __init__(self, roidb, ratio_list, ratio_index, batch_size, num_classes, training=True, normalize=None):
+  def __init__(self, roidb, ratio_list, ratio_image_ids, batch_size, imdb, training=True, normalize=None):
     self._roidb = roidb
-    self._num_classes = num_classes
+    self._num_classes = imdb.num_classes
     # we make the height of image consistent to trim_height, trim_width
     self.trim_height = cfg.TRAIN.TRIM_HEIGHT
     self.trim_width = cfg.TRAIN.TRIM_WIDTH
@@ -32,13 +32,14 @@ class roibatchLoader(data.Dataset):
     self.training = training
     self.normalize = normalize
     self.ratio_list = ratio_list
-    self.ratio_index = ratio_index
+    self.ratio_image_ids = ratio_image_ids
     self.batch_size = batch_size
     self.data_size = len(self.ratio_list)
+    self.imdb = imdb
 
     # given the ratio_list, we want to make the ratio same for each batch.
     self.ratio_list_batch = torch.Tensor(self.data_size).zero_()
-    num_batch = int(np.ceil(len(ratio_index) / batch_size))
+    num_batch = int(np.ceil(len(ratio_image_ids) / batch_size))
     for i in range(num_batch):
         left_idx = i*batch_size
         right_idx = min((i+1)*batch_size-1, self.data_size-1)
@@ -56,16 +57,16 @@ class roibatchLoader(data.Dataset):
         self.ratio_list_batch[left_idx:(right_idx+1)] = torch.tensor(target_ratio.astype(np.float64)) # trainset ratio list ,each batch is same number
 
   def __getitem__(self, index):
-    if self.training:
-        index_ratio = int(self.ratio_index[index])
-    else:
-        index_ratio = index
+    image_id = self.ratio_image_ids[index]
+    image_paths = [self.imdb.image_path_from_index(image_id)]
 
     # get the anchor index for current sample index
     # here we set the anchor index to the last one
     # sample in this group
-    minibatch_db = [self._roidb[index_ratio]]
-    blobs = get_minibatch(minibatch_db, self._num_classes)
+
+    # minibatch_db = [self._roidb[index_ratio]]
+    minibatch_db = self._roidb[image_id]
+    blobs = get_minibatch(minibatch_db, image_paths)
     data = torch.from_numpy(blobs['data'])
     im_info = torch.from_numpy(blobs['im_info'])
     # we need to random shuffle the bounding box.
@@ -118,7 +119,7 @@ class roibatchLoader(data.Dataset):
     # if the image need to crop, crop to the target size.
     ratio = self.ratio_list_batch[index]
 
-    if self._roidb[index_ratio]['need_crop']:
+    if self._roidb[image_id]['need_crop']:
         if ratio < 1:
             # this means that data_width << data_height, we need to crop the
             # data_height

@@ -65,25 +65,27 @@ def rank_roidb_ratio(roidb):
     ratio_small = 0.5 # smallest ratio to preserve.    
     
     ratio_list = []
-    for i in range(len(roidb)):
-      width = roidb[i]['width']
-      height = roidb[i]['height']
+    image_ids = sorted(roidb.keys())
+    for i in image_ids:
+      width = roidb[i]['width_height'][0]
+      height = roidb[i]['width_height'][1]
       ratio = width / float(height)
 
       if ratio > ratio_large:
-        roidb[i]['need_crop'] = 1
+        roidb[i]['need_crop'][0] = 1
         ratio = ratio_large
       elif ratio < ratio_small:
-        roidb[i]['need_crop'] = 1
-        ratio = ratio_small        
+        roidb[i]['need_crop'][0] = 1
+        ratio = ratio_small
       else:
-        roidb[i]['need_crop'] = 0
+        roidb[i]['need_crop'][0] = 0
 
       ratio_list.append(ratio)
 
     ratio_list = np.array(ratio_list)
     ratio_index = np.argsort(ratio_list)
-    return ratio_list[ratio_index], ratio_index
+    ratio_image_ids = [image_ids[i] for i in ratio_index]
+    return ratio_list[ratio_index], ratio_image_ids
 
 
 def filter_roidb(roidb):
@@ -99,23 +101,21 @@ def filter_roidb(roidb):
     print('after filtering, there are %d images...' % (len(roidb)))
     return roidb
 
-def combined_roidb(imdb_names, training=True):
+def combined_roidb(imdb_name, training=True):
   """
   Combine multiple roidbs
   """
 
   def get_training_roidb(imdb):
     """Returns a roidb (Region of Interest database) for use in training."""
-    if cfg.TRAIN.USE_FLIPPED:
-      print('Appending horizontally-flipped training examples...')
-      imdb.append_flipped_images()
-      print('done')
+    # if cfg.TRAIN.USE_FLIPPED:
+    #   print('Appending horizontally-flipped training examples...')
+    #   imdb.append_flipped_images()
+    #   print('done')
 
-    print('Preparing training data...')
-
-    prepare_roidb(imdb)
-    #ratio_index = rank_roidb_ratio(imdb)
-    print('done')
+    # print('Preparing training data...')
+    # prepare_roidb(imdb)
+    # print('done')
 
     return imdb.roidb
   
@@ -127,20 +127,12 @@ def combined_roidb(imdb_names, training=True):
     roidb = get_training_roidb(imdb)
     return roidb
 
-  roidbs = [get_roidb(s) for s in imdb_names.split('+')]
-  roidb = roidbs[0]
+  roidb = get_roidb(imdb_name)
+  imdb = get_imdb(imdb_name)
 
-  if len(roidbs) > 1:
-    for r in roidbs[1:]:
-      roidb.extend(r)
-    tmp = get_imdb(imdb_names.split('+')[1])
-    imdb = datasets.imdb.imdb(imdb_names, tmp.classes)
-  else:
-    imdb = get_imdb(imdb_names)
+  # if training:
+  #   roidb = filter_roidb(roidb)
 
-  if training:
-    roidb = filter_roidb(roidb)
+  ratio_list, ratio_image_ids = rank_roidb_ratio(roidb)
 
-  ratio_list, ratio_index = rank_roidb_ratio(roidb)
-
-  return imdb, roidb, ratio_list, ratio_index
+  return imdb, roidb, ratio_list, ratio_image_ids

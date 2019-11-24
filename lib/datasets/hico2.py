@@ -11,6 +11,7 @@ import xml.dom.minidom as minidom
 
 import os
 import math
+import h5py
 # import PIL
 import numpy as np
 import scipy.sparse
@@ -174,13 +175,16 @@ class hico2(imdb):
         #   gt_overlaps
         #   gt_classes
         #   flipped
-        if self._roidb is not None and self._image_index is not None:
+        # if self._roidb is not None and self._image_index is not None:
+        #     return self._roidb
+        if self._roidb is not None:
             return self._roidb
 
         roidb_dict = self.roidb_handler()
-        self._image_index = sorted(roidb_dict.keys())
-        self._roidb = [roidb_dict[image_id] for image_id in self._image_index]
-        return self._roidb
+        # self._image_index = sorted(roidb_dict.keys())
+        # self._roidb = [roidb_dict[image_id] for image_id in self._image_index]
+        # return self._roidb
+        return roidb_dict
 
     def image_path_at(self, i):
         """
@@ -220,19 +224,26 @@ class hico2(imdb):
     def _get_default_path(self):
         return os.path.join(cfg.DATA_DIR, 'hico')
 
+    # def gt_roidb(self):
+    #     cache_file = os.path.join(self.cache_path, self.name + '_gt_roidb.pkl')
+    #     if os.path.exists(cache_file):
+    #         with open(cache_file, 'rb') as fid:
+    #             gt_roidb_dict = pickle.load(fid)
+    #         print('{} gt roidb loaded from {}'.format(self.name, cache_file))
+    #         return gt_roidb_dict
+    #
+    #     gt_roidb_dict = self._load_all_annotations()
+    #
+    #     with open(cache_file, 'wb') as fid:
+    #         pickle.dump(gt_roidb_dict, fid, pickle.HIGHEST_PROTOCOL)
+    #     print('wrote gt roidb to {}'.format(cache_file))
+    #     return gt_roidb_dict
+
     def gt_roidb(self):
         cache_file = os.path.join(self.cache_path, self.name + '_gt_roidb.pkl')
-        if os.path.exists(cache_file):
-            with open(cache_file, 'rb') as fid:
-                gt_roidb_dict = pickle.load(fid)
-            print('{} gt roidb loaded from {}'.format(self.name, cache_file))
-            return gt_roidb_dict
-
-        gt_roidb_dict = self._load_all_annotations()
-
-        with open(cache_file, 'wb') as fid:
-            pickle.dump(gt_roidb_dict, fid, pickle.HIGHEST_PROTOCOL)
-        print('wrote gt roidb to {}'.format(cache_file))
+        if not os.path.exists(cache_file):
+            self._load_all_annotations_h5(cache_file)
+        gt_roidb_dict = h5py.File(cache_file, 'r')
         return gt_roidb_dict
 
     @staticmethod
@@ -315,6 +326,169 @@ class hico2(imdb):
                                  0,             # stub
                                  raw_hoi[5]])
         return new_hois
+
+    def _load_all_annotations_h5(self, save_path):
+        all_annos = h5py.File(save_path, 'w')
+
+        print('Loading annotations ...')
+        anno_ng_db = pickle.load(open(os.path.join(self._data_path, '%s_NG_HICO_with_pose.pkl' % self._image_set)))
+        anno_gt_tmp = pickle.load(open(os.path.join(self._data_path, '%s_GT_HICO_with_pose.pkl' % self._image_set)))
+
+        print('Processing annotations ...')
+        anno_gt_db = {}
+        for hoi_ins_gt in anno_gt_tmp:
+            image_id = hoi_ins_gt[0]
+            if image_id in anno_gt_db:
+                anno_gt_db[image_id].append(hoi_ins_gt)
+            else:
+                anno_gt_db[image_id] = [hoi_ins_gt]
+
+        image_id_template = 'HICO_train2015_%s'
+        for image_id, img_pos_hois in anno_gt_db.items():
+
+            if len(img_pos_hois) == 0:
+                continue
+
+            image_name = image_id_template % str(image_id).zfill(8)
+            all_annos.create_group(image_name)
+            image_anno = all_annos[image_name]
+
+            # augment positive instances
+            image_hw = [self._all_image_info[image_name][1],
+                        self._all_image_info[image_name][0]]
+            img_pos_hois = self.augment_hoi_instances(img_pos_hois, image_hw)
+
+            # select negative instances
+            if image_id in anno_ng_db and len(anno_ng_db[image_id]) > 0:
+                img_neg_hois0 = anno_ng_db[image_id]
+                if len(img_neg_hois0) > (len(img_pos_hois * 4)):
+                    inds = random.sample(range(len(img_neg_hois0)), len(img_pos_hois) * 4)
+                else:
+                    inds = []
+                    for i in range(int(4 * len(img_pos_hois) / len(img_neg_hois0))):
+                        inds += range(len(img_neg_hois0))
+                    for i in range(4 * len(img_pos_hois) - len(inds)):
+                        inds.append(i)
+                img_neg_hois = [img_neg_hois0[ind] for ind in inds]
+                assert len(img_neg_hois) == (len(img_pos_hois) * 4)
+            else:
+                img_neg_hois = []
+
+            # boxes: x1, y1, x2, y2
+            raw_image_anno = {'hboxes': [],
+                          'oboxes': [],
+                          'iboxes': [],
+                          'hoi_classes': [],
+                          'obj_classes': [],
+                          'vrb_classes': [],
+                          'bin_classes': [],
+                          'hoi_masks': [],
+                          'vrb_masks': [],
+                          'key_points': [],
+                          'width_height': [self._all_image_info[image_name][0],
+                                           self._all_image_info[image_name][1]],
+                          'need_crop': [0]}
+
+            for pn, hois in enumerate([img_pos_hois, img_neg_hois]):
+                for raw_hoi in hois:
+
+                    hoi_class_ids = raw_hoi[1]
+                    if isinstance(hoi_class_ids, int):
+                        hoi_class_ids = [hoi_class_ids]
+                    hoi_classes = [self.hoi_classes[class_id] for class_id in hoi_class_ids]
+                    obj_class_name = hoi_classes[0].object_name()
+                    obj_class_id = self.obj_class2ind[obj_class_name]
+
+                    raw_key_points = raw_hoi[7]
+                    if raw_key_points is None or len(raw_key_points) != 51:
+                        raw_key_points = [-1] * 51
+                    key_points = np.array(raw_key_points)
+                    key_points = np.reshape(key_points, (17, 3))
+
+                    im_h, im_w = image_hw
+
+                    hbox = raw_hoi[2]
+                    hbox = [max(0, hbox[0]), max(0, hbox[1]),
+                            max(0, hbox[2]), max(0, hbox[3])]
+                    hbox = [min(im_w-1, hbox[0]), min(im_h-1, hbox[1]),
+                            min(im_w-1, hbox[2]), min(im_h-1, hbox[3])]
+                    hbox = refine_human_box_with_skeleton(hbox, key_points, image_hw)
+
+                    obox = raw_hoi[3]
+                    obox = [max(0, obox[0]), max(0, obox[1]),
+                            max(0, obox[2]), max(0, obox[3])]
+                    obox = [min(im_w-1, obox[0]), min(im_h-1, obox[1]),
+                            min(im_w-1, obox[2]), min(im_h-1, obox[3])]
+                    ibox = [min(hbox[0], obox[0]), min(hbox[1], obox[1]),
+                            max(hbox[2], obox[2]), max(hbox[3], obox[3])]
+
+                    raw_image_anno['hboxes'].append(hbox)
+                    raw_image_anno['oboxes'].append(obox)
+                    raw_image_anno['iboxes'].append(ibox)
+                    raw_image_anno['hoi_classes'].append(hoi_class_ids)
+                    raw_image_anno['vrb_classes'].append([self.hoi2vrb[hoi_id] for hoi_id in hoi_class_ids])
+                    raw_image_anno['obj_classes'].append(obj_class_id)
+                    raw_image_anno['key_points'].append(raw_key_points)
+                    raw_image_anno['hoi_masks'].append(self.obj2int[obj_class_name])
+                    raw_image_anno['vrb_masks'].append([self.hoi2vrb[hoi]
+                                                    for hoi in range(self.obj2int[obj_class_name][0],
+                                                                     self.obj2int[obj_class_name][1]+1)])
+                    if pn == 0:
+                        # positive - 0
+                        raw_image_anno['bin_classes'].append(0)
+                    else:
+                        # negative - 1
+                        raw_image_anno['bin_classes'].append(1)
+
+            # list -> np.array
+            image_anno['width_height'] = np.array(raw_image_anno['width_height']).astype(np.int)
+            image_anno['need_crop'] = np.array(raw_image_anno['need_crop']).astype(np.int)
+            if len(raw_image_anno['hboxes']) == 0:
+                image_anno['hboxes'] = np.zeros((0, 4)).astype(np.int)
+                image_anno['oboxes'] = np.zeros((0, 4)).astype(np.int)
+                image_anno['iboxes'] = np.zeros((0, 4)).astype(np.int)
+                image_anno['obj_classes'] = np.zeros(0).astype(np.int)
+                image_anno['bin_classes'] = np.zeros(0, 2).astype(np.int)
+                image_anno['hoi_classes'] = np.zeros((0, len(self.hoi_classes))).astype(np.int)
+                image_anno['vrb_classes'] = np.zeros((0, len(self.vrb_classes))).astype(np.int)
+                image_anno['hoi_masks'] = np.ones((0, len(self.hoi_classes))).astype(np.int)
+                image_anno['vrb_masks'] = np.ones((0, len(self.vrb_classes))).astype(np.int)
+                image_anno['key_points'] = np.zeros((0, 51)).astype(np.float)
+            else:
+                image_anno['hboxes'] = np.array(raw_image_anno['hboxes']).astype(np.int)
+                image_anno['oboxes'] = np.array(raw_image_anno['oboxes']).astype(np.int)
+                image_anno['iboxes'] = np.array(raw_image_anno['iboxes']).astype(np.int)
+                image_anno['obj_classes'] = np.array(raw_image_anno['obj_classes']).astype(np.int)
+                image_anno['key_points'] = np.array(raw_image_anno['key_points']).astype(np.float)
+
+                bin_classes = raw_image_anno['bin_classes']
+                image_anno['bin_classes'] = np.zeros((len(bin_classes), 2)).astype(np.int)
+                for i, ins_class in enumerate(bin_classes):
+                    image_anno['bin_classes'][i, ins_class] = 1
+
+                hoi_classes = raw_image_anno['hoi_classes']
+                image_anno['hoi_classes'] = np.zeros((len(hoi_classes), len(self.hoi_classes))).astype(np.int)
+                for i, ins_classes in enumerate(hoi_classes):
+                    for cls in ins_classes:
+                        image_anno['hoi_classes'][i, cls] = 1
+
+                hoi_intervals = raw_image_anno['hoi_masks']
+                image_anno['hoi_masks'] = np.zeros((len(hoi_intervals), len(self.hoi_classes))).astype(np.int)
+                for i, ins_interval in enumerate(hoi_intervals):
+                    image_anno['hoi_masks'][i, ins_interval[0]:ins_interval[1]+1] = 1
+
+                vrb_classes = raw_image_anno['vrb_classes']
+                image_anno['vrb_classes'] = np.zeros((len(vrb_classes), len(self.vrb_classes))).astype(np.int)
+                for i, ins_verbs in enumerate(vrb_classes):
+                    for vrb_id in ins_verbs:
+                        image_anno['vrb_classes'][i, vrb_id] = 1
+
+                vrb_masks = raw_image_anno['vrb_masks']
+                image_anno['vrb_masks'] = np.zeros((len(vrb_masks), len(self.vrb_classes))).astype(np.int)
+                for i, ins_verbs in enumerate(vrb_masks):
+                    for vrb_id in ins_verbs:
+                        image_anno['vrb_masks'][i, vrb_id] = 1
+        all_annos.close()
 
     def _load_all_annotations(self):
         all_annos = {}
@@ -477,8 +651,8 @@ class hico2(imdb):
                 for i, ins_verbs in enumerate(vrb_masks):
                     for vrb_id in ins_verbs:
                         image_anno['vrb_masks'][i, vrb_id] = 1
-
         return all_annos
+
 
     def append_flipped_images(self):
         import copy

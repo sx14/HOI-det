@@ -186,7 +186,7 @@ if __name__ == '__main__':
   # -- Note: Use validation set and disable the flipped to enable faster loading.
   cfg.TRAIN.USE_FLIPPED = True
   cfg.USE_GPU_NMS = args.cuda
-  imdb, roidb, ratio_list, ratio_index = combined_roidb(args.imdb_name)
+  imdb, roidb, ratio_list, ratio_image_ids = combined_roidb(args.imdb_name)
   train_size = len(roidb)
 
   print('{:d} roidb entries'.format(len(roidb)))
@@ -197,8 +197,8 @@ if __name__ == '__main__':
 
   sampler_batch = sampler(train_size, args.batch_size)
 
-  dataset = roibatchLoader(roidb, ratio_list, ratio_index, args.batch_size, \
-                           imdb.num_classes, training=True)
+  dataset = roibatchLoader(roidb, ratio_list, ratio_image_ids, args.batch_size, \
+                           imdb, training=True)
 
   dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size,
                             sampler=sampler_batch, num_workers=args.num_workers)

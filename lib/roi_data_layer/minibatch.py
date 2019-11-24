@@ -21,7 +21,7 @@ from random import randint
 
 
 
-def get_minibatch(roidb, num_classes):
+def get_minibatch(roidb, im_paths):
   """Given a roidb, construct a minibatch sampled from it."""
   num_images = len(roidb)
   # Sample random scales to use for each image in this batch
@@ -32,7 +32,7 @@ def get_minibatch(roidb, num_classes):
     format(num_images, cfg.TRAIN.BATCH_SIZE)
 
   # Get the input image blob, formatted for caffe
-  im_blob, im_scales = _get_image_blob(roidb, random_scale_inds)
+  im_blob, im_scales = _get_image_blob(roidb, random_scale_inds, im_paths)
 
   blobs = {'data': im_blob}
 
@@ -69,17 +69,18 @@ def get_minibatch(roidb, num_classes):
 
   return blobs
 
-def _get_image_blob(roidb, scale_inds):
+def _get_image_blob(roidb, scale_inds, image_paths):
   """Builds an input blob from the images in the roidb at the specified
   scales.
   """
+  assert len(roidb) == len(image_paths)
+
   num_images = len(roidb)
 
   processed_ims = []
   im_scales = []
   for i in range(num_images):
-    #im = cv2.imread(roidb[i]['image'])
-    im = imread(roidb[i]['image'])
+    im = imread(image_paths[i])
 
     if len(im.shape) == 2:
       im = im[:,:,np.newaxis]
