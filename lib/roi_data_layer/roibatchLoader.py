@@ -65,7 +65,7 @@ class roibatchLoader(data.Dataset):
     # sample in this group
 
     # minibatch_db = [self._roidb[index_ratio]]
-    minibatch_db = self._roidb[image_id]
+    minibatch_db = [self._roidb[image_id]]
     blobs = get_minibatch(minibatch_db, image_paths)
     data = torch.from_numpy(blobs['data'])
     im_info = torch.from_numpy(blobs['im_info'])

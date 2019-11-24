@@ -243,7 +243,7 @@ class hico2(imdb):
         cache_file = os.path.join(self.cache_path, self.name + '_gt_roidb.pkl')
         if not os.path.exists(cache_file):
             self._load_all_annotations_h5(cache_file)
-        gt_roidb_dict = h5py.File(cache_file, 'r')
+        gt_roidb_dict = h5py.File(cache_file, 'w')
         return gt_roidb_dict
 
     @staticmethod

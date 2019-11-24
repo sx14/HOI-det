@@ -23,6 +23,8 @@ from random import randint
 
 def get_minibatch(roidb, im_paths):
   """Given a roidb, construct a minibatch sampled from it."""
+  assert len(roidb) == len(im_paths)
+
   num_images = len(roidb)
   # Sample random scales to use for each image in this batch
   random_scale_inds = npr.randint(0, high=len(cfg.TRAIN.SCALES),
