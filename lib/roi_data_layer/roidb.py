@@ -60,6 +60,7 @@ def prepare_roidb(imdb):
 
 
 def rank_roidb_ratio(roidb):
+    print('Ranking roidb ratio ...')
     # rank roidb based on the ratio between width and height.
     ratio_large = 2 # largest ratio to preserve.
     ratio_small = 0.5 # smallest ratio to preserve.    

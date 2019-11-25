@@ -21,22 +21,25 @@ key_points = ["nose",
               "left_knee", "right_knee",
               "left_ankle", "right_ankle"]
 
+kp2ind = dict(zip(key_points, range(len(key_points))))
+
+all_part_kps = {
+    'left_leg': ['left_ankle'],
+    'right_leg': ['right_ankle'],
+    'left_hand': ['left_hand', 'left_wrist', 'left_elbow'],
+    'right_hand': ['right_hand', 'right_wrist', 'right_elbow'],
+    'hip': ['left_hip', 'right_hip', 'left_knee', 'right_knee'],
+    'head': ['nose', 'left_eye', 'right_eye', 'left_ear', 'right_ear'],
+}
+
 
 def est_hand(wrist, elbow):
+    # estimate hand position with wrist and elbow
     return wrist - 0.5 * (wrist - elbow)
 
 
 def get_body_part_kps(part, all_kps):
-    all_part_kps = {
-        'left_leg':  ['left_ankle'],
-        'right_leg': ['right_ankle'],
-        'left_hand':    ['left_hand', 'left_wrist', 'left_elbow'],
-        'right_hand':   ['right_hand', 'right_wrist', 'right_elbow'],
-        'hip':  ['left_hip', 'right_hip', 'left_knee', 'right_knee'],
-        'head': ['nose', 'left_eye', 'right_eye', 'left_ear', 'right_ear'],
-    }
 
-    kp2ind = dict(zip(key_points, range(len(key_points))))
     part_kps = np.zeros((len(all_part_kps[part]), 3))
     for i, kp_name in enumerate(all_part_kps[part]):
         if kp_name == 'left_hand':
@@ -66,6 +69,30 @@ def get_body_part_alpha(part):
 
 
 def gen_body_part_box(all_kps, human_wh, part, kp_thr=0.01, area_thr=0):
+    part_kps = get_body_part_kps(part, all_kps)
+    pt_xs = part_kps[:, 0]
+    pt_ys = part_kps[:, 1]
+    confs = part_kps[:, 2]
+
+    if np.sum(confs < kp_thr) > 0:
+        return None
+    else:
+        xmin = pt_xs.min()
+        ymin = pt_ys.min()
+        xmax = pt_xs.max()
+        ymax = pt_ys.max()
+        conf_avg = confs.sum() / len(confs)
+        if (ymax - ymin + 1) * (xmax - xmin + 1) < area_thr:
+            return None
+        else:
+            return [xmin - get_body_part_alpha(part) * human_wh[0],
+                    ymin - get_body_part_alpha(part) * human_wh[1],
+                    xmax + get_body_part_alpha(part) * human_wh[0],
+                    ymax + get_body_part_alpha(part) * human_wh[1],
+                    conf_avg]
+
+
+def gen_body_part_box1(all_kps, human_wh, part, kp_thr=0.01, area_thr=0):
     part_kps = get_body_part_kps(part, all_kps)
     xmin = 9999
     ymin = 9999
