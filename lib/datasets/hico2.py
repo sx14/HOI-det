@@ -161,6 +161,7 @@ class hico2(imdb):
 
         self._class_to_ind = dict(zip(self._classes, xrange(len(self._classes))))
         self._image_ext = '.jpg'
+        self._depth_ext = '.npy'
         self._all_image_info = self._load_image_set_info()
         self._image_index = None
         # Default to roidb handler
@@ -182,17 +183,17 @@ class hico2(imdb):
         self._roidb = [roidb_dict[image_id] for image_id in self._image_index]
         return self._roidb
 
-    def image_path_at(self, i):
-        """
-        Return the absolute path to image i in the image sequence.
-        """
-        return self.image_path_from_index(self._image_index[i])
-
     def image_id_at(self, i):
         """
         Return the absolute path to image i in the image sequence.
         """
         return i
+
+    def image_path_at(self, i):
+        """
+        Return the absolute path to image i in the image sequence.
+        """
+        return self.image_path_from_index(self._image_index[i])
 
     def image_path_from_index(self, index):
         """
@@ -203,6 +204,22 @@ class hico2(imdb):
         assert os.path.exists(image_path), \
             'Path does not exist: {}'.format(image_path)
         return image_path
+
+    def depth_path_at(self, i):
+        """
+        Return the absolute path to image i in the image sequence.
+        """
+        return self.depth_path_from_index(self._image_index[i])
+
+    def depth_path_from_index(self, index):
+        """
+        Construct an image path from the image's "index" identifier.
+        """
+        depth_path = os.path.join(self._data_path, 'depths', self._image_set + '2015',
+                                  index + self._depth_ext)
+        assert os.path.exists(depth_path), \
+            'Path does not exist: {}'.format(depth_path)
+        return depth_path
 
     def _load_image_set_info(self):
         print('Loading image set info ...')

@@ -90,6 +90,9 @@ class imdb(object):
   def image_path_at(self, i):
     raise NotImplementedError
 
+  def depth_path_at(self, i):
+    raise NotImplementedError
+
   def image_id_at(self, i):
     raise NotImplementedError
 

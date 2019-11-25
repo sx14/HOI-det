@@ -205,6 +205,7 @@ if __name__ == '__main__':
 
   # initilize the tensor holder here.
   im_data = torch.FloatTensor(1)
+  dp_data = torch.FloatTensor(1)
   im_info = torch.FloatTensor(1)
   num_hois = torch.LongTensor(1)
   hboxes = torch.FloatTensor(1)
@@ -221,6 +222,7 @@ if __name__ == '__main__':
   # ship to cuda
   if args.cuda:
     im_data = im_data.cuda()
+    dp_data = dp_data.cuda()
     im_info = im_info.cuda()
     num_hois = num_hois.cuda()
     hboxes = hboxes.cuda()
@@ -236,6 +238,7 @@ if __name__ == '__main__':
 
   # make variable
   im_data = Variable(im_data)
+  dp_data = Variable(dp_data)
   im_info = Variable(im_info)
   num_hois = Variable(num_hois)
   hboxes = Variable(hboxes)
@@ -337,18 +340,19 @@ if __name__ == '__main__':
       ld_start = time.time()
       data = next(data_iter)
       im_data.data.resize_(data[0].size()).copy_(data[0])
-      im_info.data.resize_(data[1].size()).copy_(data[1])
-      hboxes.data.resize_(data[2].size()).copy_(data[2])
-      oboxes.data.resize_(data[3].size()).copy_(data[3])
-      iboxes.data.resize_(data[4].size()).copy_(data[4])
-      hoi_classes.resize_(data[5].size()).copy_(data[5])
-      vrb_classes.resize_(data[6].size()).copy_(data[6])
-      bin_classes.resize_(data[7].size()).copy_(data[7])
-      hoi_masks.resize_(data[8].size()).copy_(data[8])
-      vrb_masks.resize_(data[9].size()).copy_(data[9])
-      spa_maps.data.resize_(data[10].size()).copy_(data[10])
-      pose_maps.data.resize_(data[11].size()).copy_(data[11])
-      num_hois.data.resize_(data[12].size()).copy_(data[12])
+      dp_data.data.resize_(data[1].size()).copy_(data[1])
+      im_info.data.resize_(data[2].size()).copy_(data[2])
+      hboxes.data.resize_(data[3].size()).copy_(data[3])
+      oboxes.data.resize_(data[4].size()).copy_(data[4])
+      iboxes.data.resize_(data[5].size()).copy_(data[5])
+      hoi_classes.resize_(data[6].size()).copy_(data[6])
+      vrb_classes.resize_(data[7].size()).copy_(data[7])
+      bin_classes.resize_(data[8].size()).copy_(data[8])
+      hoi_masks.resize_(data[9].size()).copy_(data[9])
+      vrb_masks.resize_(data[10].size()).copy_(data[10])
+      spa_maps.data.resize_(data[11].size()).copy_(data[11])
+      pose_maps.data.resize_(data[12].size()).copy_(data[12])
+      num_hois.data.resize_(data[13].size()).copy_(data[13])
       ld_end = time.time()
       ld_time += (ld_end-ld_start)
 
@@ -357,7 +361,7 @@ if __name__ == '__main__':
 
       fasterRCNN.zero_grad()
       cls_prob, bin_prob, RCNN_loss_cls, RCNN_loss_bin = \
-          fasterRCNN(im_data, im_info,
+          fasterRCNN(im_data, dp_data, im_info,
                      hboxes, oboxes, iboxes,
                      vrb_classes, bin_classes, vrb_masks,
                      spa_maps, pose_maps, num_hois)

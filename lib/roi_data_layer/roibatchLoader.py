@@ -66,10 +66,11 @@ class roibatchLoader(data.Dataset):
     # sample in this group
     minibatch_db = [self._roidb[index_ratio]]
     blobs = get_minibatch(minibatch_db, self._num_classes)
-    data = torch.from_numpy(blobs['data'])
+    im_data = torch.from_numpy(blobs['image'])
+    dp_data = torch.from_numpy(blobs['depth'])
     im_info = torch.from_numpy(blobs['im_info'])
     # we need to random shuffle the bounding box.
-    data_height, data_width = data.size(1), data.size(2)
+    data_height, data_width = im_data.size(1), im_data.size(2)
 
     hoi_inds = np.array(range(len(blobs['hboxes'])))
     np.random.shuffle(hoi_inds)
@@ -145,7 +146,8 @@ class roibatchLoader(data.Dataset):
                     else:
                         y_s = np.random.choice(range(min_y, min_y+y_s_add))
             # crop the image
-            data = data[:, y_s:(y_s + trim_size), :, :]
+            im_data = im_data[:, y_s:(y_s + trim_size), :, :]
+            dp_data = dp_data[:, y_s:(y_s + trim_size), :, :]
 
             # shift y coordiante of gt_boxes
             gt_boxes[:, 1] = gt_boxes[:, 1] - float(y_s)
@@ -181,7 +183,8 @@ class roibatchLoader(data.Dataset):
                     else:
                         x_s = np.random.choice(range(min_x, min_x+x_s_add))
             # crop the image
-            data = data[:, :, x_s:(x_s + trim_size), :]
+            im_data = im_data[:, :, x_s:(x_s + trim_size), :]
+            dp_data = dp_data[:, :, x_s:(x_s + trim_size), :]
 
             # shift x coordiante of gt_boxes
             gt_boxes[:, 0] = gt_boxes[:, 0] - float(x_s)
@@ -195,24 +198,35 @@ class roibatchLoader(data.Dataset):
         # this means that data_width < data_height
         trim_size = int(np.floor(data_width / ratio))
 
-        padding_data = torch.FloatTensor(int(np.ceil(data_width / ratio)), \
+        padding_im_data = torch.FloatTensor(int(np.ceil(data_width / ratio)), \
                                          data_width, 3).zero_()
 
-        padding_data[:data_height, :, :] = data[0]
+        padding_im_data[:data_height, :, :] = im_data[0]
+
+        padding_dp_data = torch.FloatTensor(int(np.ceil(data_width / ratio)), \
+                                            data_width, 3).zero_()
+
+        padding_dp_data[:data_height, :, :] = dp_data[0]
         # update im_info
-        im_info[0, 0] = padding_data.size(0)
+        im_info[0, 0] = padding_im_data.size(0)
         # print("height %d %d \n" %(index, anchor_idx))
     elif ratio > 1:
         # this means that data_width > data_height
         # if the image need to crop.
-        padding_data = torch.FloatTensor(data_height, \
+        padding_im_data = torch.FloatTensor(data_height, \
                                          int(np.ceil(data_height * ratio)), 3).zero_()
-        padding_data[:, :data_width, :] = data[0]
-        im_info[0, 1] = padding_data.size(1)
+        padding_im_data[:, :data_width, :] = im_data[0]
+
+        padding_dp_data = torch.FloatTensor(data_height, \
+                                            int(np.ceil(data_height * ratio)), 3).zero_()
+        padding_dp_data[:, :data_width, :] = im_data[0]
+
+        im_info[0, 1] = padding_im_data.size(1)
     else:
         trim_size = min(data_height, data_width)
-        padding_data = torch.FloatTensor(trim_size, trim_size, 3).zero_()
-        padding_data = data[0][:trim_size, :trim_size, :]
+        padding_im_data = torch.FloatTensor(trim_size, trim_size, 3).zero_()
+        padding_im_data = im_data[0][:trim_size, :trim_size, :]
+        padding_dp_data = dp_data[0][:trim_size, :trim_size, :]
         # gt_boxes.clamp_(0, trim_size)
         gt_boxes[:, :4].clamp_(0, trim_size)
         im_info[0, 0] = trim_size
@@ -272,10 +286,11 @@ class roibatchLoader(data.Dataset):
         num_boxes = 0
 
         # permute trim_data to adapt to downstream processing
-    padding_data = padding_data.permute(2, 0, 1).contiguous()
+    padding_im_data = padding_im_data.permute(2, 0, 1).contiguous()
+    padding_dp_data = padding_dp_data.permute(2, 0, 1).contiguous()
     im_info = im_info.view(3)
 
-    return padding_data, im_info, \
+    return padding_im_data, padding_dp_data, im_info, \
            hboxes_padding, oboxes_padding, iboxes_padding, \
            hoi_classes_padding, vrb_classes_padding, bin_classes_padding, \
            hoi_masks_padding, vrb_masks_padding, \

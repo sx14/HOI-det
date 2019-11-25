@@ -10,6 +10,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import pickle
 import numpy as np
 import numpy.random as npr
 from scipy.misc import imread
@@ -32,9 +33,10 @@ def get_minibatch(roidb, num_classes):
     format(num_images, cfg.TRAIN.BATCH_SIZE)
 
   # Get the input image blob, formatted for caffe
-  im_blob, im_scales = _get_image_blob(roidb, random_scale_inds)
+  im_blob, dp_blob, im_scales = _get_image_blob(roidb, random_scale_inds)
 
-  blobs = {'data': im_blob}
+  blobs = {'image': im_blob,
+           'depth': dp_blob}
 
   assert len(im_scales) == 1, "Single batch only"
   assert len(roidb) == 1, "Single batch only"
@@ -77,9 +79,14 @@ def _get_image_blob(roidb, scale_inds):
 
   processed_ims = []
   im_scales = []
+
+  processed_dps = []
+
   for i in range(num_images):
     #im = cv2.imread(roidb[i]['image'])
     im = imread(roidb[i]['image'])
+    dp = pickle.load(roidb[i]['image'])
+    dp = np.concatenate((dp, dp[:,:,0]), axis=2)
 
     if len(im.shape) == 2:
       im = im[:,:,np.newaxis]
@@ -90,13 +97,18 @@ def _get_image_blob(roidb, scale_inds):
 
     if roidb[i]['flipped']:
       im = im[:, ::-1, :]
+      dp = dp[:, ::-1, :]
     target_size = cfg.TRAIN.SCALES[scale_inds[i]]
     im, im_scale = prep_im_for_blob(im, cfg.PIXEL_MEANS, target_size,
                     cfg.TRAIN.MAX_SIZE)
+    dp, de_scale = prep_im_for_blob(dp, cfg.DEPTH_MEANS, target_size,
+                    cfg.TRAIN.MAX_SIZE)
     im_scales.append(im_scale)
     processed_ims.append(im)
+    processed_dps.append(dp)
 
   # Create a blob to hold the input images
-  blob = im_list_to_blob(processed_ims)
+  im_blob = im_list_to_blob(processed_ims)
+  dp_blob = im_list_to_blob(processed_dps)
 
-  return blob, im_scales
+  return im_blob, dp_blob, im_scales

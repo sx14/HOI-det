@@ -32,7 +32,6 @@ def conv3x3(in_planes, out_planes, stride=1):
            padding=1, bias=False)
 
 
-
 class GlobalCond:
     def __init__(self, in_channel):
         self.cond_base = nn.Sequential(
@@ -53,6 +52,41 @@ class GlobalCond:
             nn.Conv2d(512, 256, 1, 1), nn.LeakyReLU(0.1, True),
             nn.Conv2d(256, 256, 1, 1), nn.LeakyReLU(0.1, True),
             nn.Conv2d(256, 1024, 1, 1))
+
+        # init layers
+        for layer in [self.cond_base,
+                      self.cond_layer1,
+                      self.cond_layer2,
+                      self.cond_layer3]:
+          for m in layer:
+            if isinstance(m, nn.Conv2d):
+              n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+              m.weight.data.normal_(0, math.sqrt(2. / n))
+
+
+class ROICond(nn.Module):
+  def __init__(self, in_channel=8):
+    super(ROICond, self).__init__()
+    self.cond_net = nn.Sequential(
+      # 224 -> 56
+      nn.Conv2d(in_channel, 64, 3, 4), nn.LeakyReLU(0.1, True),
+      # 56 -> 14
+      nn.Conv2d(64, 128, 3, 4), nn.LeakyReLU(0.1, True),
+      # 14 -> 14
+      nn.Conv2d(128, 256, 1), nn.LeakyReLU(0.1, True),
+      # 14 -> 7
+      nn.Conv2d(256, 512, 1, 2), nn.LeakyReLU(0.1, True),
+      # 7 -> 7
+      nn.Conv2d(512, 1024, 1, 1))
+
+    for m in self.cond_net:
+      if isinstance(m, nn.Conv2d):
+        n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+        m.weight.data.normal_(0, math.sqrt(2. / n))
+
+  def forward(self, input):
+    return self.cond_net(input)
+
 
 
 class BasicBlock(nn.Module):
@@ -276,17 +310,7 @@ class resnet(_fasterRCNN):
     self.sft_layer2 = ResBlock_SFT()
     self.sft_layer3 = ResBlock_SFT()
 
-    self.cond_net = nn.Sequential(
-      # 224 -> 56
-      nn.Conv2d(8, 64, 3, 4), nn.LeakyReLU(0.1, True),
-      # 56 -> 14
-      nn.Conv2d(64, 128, 3, 4), nn.LeakyReLU(0.1, True),
-      # 14 -> 14
-      nn.Conv2d(128, 256, 1), nn.LeakyReLU(0.1, True),
-      # 14 -> 7
-      nn.Conv2d(256, 512, 1, 2), nn.LeakyReLU(0.1, True),
-      # 7 -> 7
-      nn.Conv2d(512, 1024, 1, 1))
+    self.cond_net = ROICond()
 
     import copy
     self.iRCNN_SFT = ResBlock_SFT()
@@ -316,13 +340,13 @@ class resnet(_fasterRCNN):
     for p in self.RCNN_base[0].parameters(): p.requires_grad=False
     for p in self.RCNN_base[1].parameters(): p.requires_grad=False
 
-    assert (0 <= cfg.RESNET.FIXED_BLOCKS < 4)
-    if cfg.RESNET.FIXED_BLOCKS >= 3:
-      for p in self.RCNN_base[6].parameters(): p.requires_grad=False
-    if cfg.RESNET.FIXED_BLOCKS >= 2:
-      for p in self.RCNN_base[5].parameters(): p.requires_grad=False
-    if cfg.RESNET.FIXED_BLOCKS >= 1:
-      for p in self.RCNN_base[4].parameters(): p.requires_grad=False
+    # assert (0 <= cfg.RESNET.FIXED_BLOCKS < 4)
+    # if cfg.RESNET.FIXED_BLOCKS >= 3:
+    #   for p in self.RCNN_base[6].parameters(): p.requires_grad=False
+    # if cfg.RESNET.FIXED_BLOCKS >= 2:
+    #   for p in self.RCNN_base[5].parameters(): p.requires_grad=False
+    # if cfg.RESNET.FIXED_BLOCKS >= 1:
+    #   for p in self.RCNN_base[4].parameters(): p.requires_grad=False
 
     def set_bn_fix(m):
       classname = m.__class__.__name__
