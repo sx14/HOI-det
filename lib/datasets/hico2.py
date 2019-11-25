@@ -28,6 +28,7 @@ from .imdb import imdb
 from .imdb import ROOT_DIR
 from . import ds_utils
 from .voc_eval import voc_eval
+from tqdm import tqdm
 
 # TODO: make fast_rcnn irrelevant
 # >>>> obsolete, because it depends on sth outside of this project
@@ -344,7 +345,7 @@ class hico2(imdb):
                 anno_gt_db[image_id] = [hoi_ins_gt]
 
         image_id_template = 'HICO_train2015_%s'
-        for image_id, img_pos_hois in anno_gt_db.items():
+        for image_id, img_pos_hois in tqdm(anno_gt_db.items()):
 
             if len(img_pos_hois) == 0:
                 continue
