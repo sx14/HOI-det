@@ -32,6 +32,29 @@ def conv3x3(in_planes, out_planes, stride=1):
            padding=1, bias=False)
 
 
+
+class GlobalCond:
+    def __init__(self, in_channel):
+        self.cond_base = nn.Sequential(
+          nn.Conv2d(in_channel, 64, kernel_size=7, stride=2, padding=3), nn.LeakyReLU(0.1, True),
+          nn.MaxPool2d(kernel_size=3, stride=2, padding=0, ceil_mode=True))
+
+        self.cond_layer1 = nn.Sequential(
+            nn.Conv2d(64, 64, 1, 1), nn.LeakyReLU(0.1, True),
+            nn.Conv2d(64, 64, 1, 1), nn.LeakyReLU(0.1, True),
+            nn.Conv2d(64, 256, 1, 1))
+
+        self.cond_layer2 = nn.Sequential(
+            nn.Conv2d(256, 128, 1, 1), nn.LeakyReLU(0.1, True),
+            nn.Conv2d(128, 128, 1, 1), nn.LeakyReLU(0.1, True),
+            nn.Conv2d(128, 512, 1, 1))
+
+        self.cond_layer3 = nn.Sequential(
+            nn.Conv2d(512, 256, 1, 1), nn.LeakyReLU(0.1, True),
+            nn.Conv2d(256, 256, 1, 1), nn.LeakyReLU(0.1, True),
+            nn.Conv2d(256, 1024, 1, 1))
+
+
 class BasicBlock(nn.Module):
   expansion = 1
 
@@ -237,8 +260,21 @@ class resnet(_fasterRCNN):
       resnet.load_state_dict({k:v for k,v in state_dict.items() if k in resnet.state_dict()})
 
     # Build resnet.
-    self.RCNN_base = nn.Sequential(resnet.conv1, resnet.bn1,resnet.relu,
-      resnet.maxpool,resnet.layer1,resnet.layer2,resnet.layer3)
+    self.RCNN_base = nn.Sequential(resnet.conv1, resnet.bn1,resnet.relu,resnet.maxpool)
+    self.RCNN_layer1 = resnet.layer1
+    self.RCNN_layer2 = resnet.layer2
+    self.RCNN_layer3 = resnet.layer3
+
+    cond_net = GlobalCond(2)
+    self.cond_base = cond_net.cond_base
+    self.cond_layer1 = cond_net.cond_layer1
+    self.cond_layer2 = cond_net.cond_layer2
+    self.cond_layer3 = cond_net.cond_layer3
+
+    self.sft_base = ResBlock_SFT()
+    self.sft_layer1 = ResBlock_SFT()
+    self.sft_layer2 = ResBlock_SFT()
+    self.sft_layer3 = ResBlock_SFT()
 
     self.cond_net = nn.Sequential(
       # 224 -> 56

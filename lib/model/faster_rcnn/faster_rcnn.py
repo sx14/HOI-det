@@ -66,7 +66,7 @@ class _fasterRCNN(nn.Module):
             nn.Dropout(p=0.5),
             nn.Linear(1024, self.n_classes))
 
-    def forward(self, im_data, im_info, hboxes, oboxes, iboxes, hoi_classes, bin_classes, hoi_masks, spa_maps, pose_maps, num_hois):
+    def forward(self, im_data, de_data, im_info, hboxes, oboxes, iboxes, hoi_classes, bin_classes, hoi_masks, spa_maps, pose_maps, num_hois):
         batch_size = im_data.size(0)
 
         im_info = im_info.data
@@ -77,6 +77,20 @@ class _fasterRCNN(nn.Module):
 
         # feed image data to base model to obtain base feature map
         base_feat = self.RCNN_base(im_data)
+        base_cond = self.cond_base(de_data)
+        base_feat = self.sft_base([base_feat, base_cond])
+
+        layer1_feat = self.RCNN_layer1(base_feat)
+        layer1_cond = self.cond_layer1(base_cond)
+        layer1_feat = self.sft_layer1([layer1_feat, layer1_cond])
+
+        layer2_feat = self.RCNN_layer2(layer1_feat)
+        layer2_cond = self.cond_layer2(layer1_cond)
+        layer2_feat = self.sft_layer2([layer2_feat, layer2_cond])
+
+        layer3_feat = self.RCNN_layer3(layer2_feat)
+        layer3_cond = self.cond_layer3(layer2_cond)
+        base_feat = self.sft_layer3([layer3_feat, layer3_cond])
 
         hrois = Variable(torch.zeros(hboxes.shape[0], hboxes.shape[1], hboxes.shape[2] + 1))
         orois = Variable(torch.zeros(oboxes.shape[0], oboxes.shape[1], oboxes.shape[2] + 1))
