@@ -64,7 +64,7 @@ def get_minibatch(roidb, im_paths):
     [[im_blob.shape[1], im_blob.shape[2], im_scales[0]]],
     dtype=np.float32)
   blobs['key_points'] = key_points
-  blobs['img_id'] = roidb[0]['img_id']
+  # blobs['img_id'] = roidb[0]['img_id']
   for i in range(17):
     key_points[:, i*3+0] = key_points[:, i*3+0] * im_scales[0]
     key_points[:, i*3+1] = key_points[:, i*3+1] * im_scales[0]
@@ -91,7 +91,7 @@ def _get_image_blob(roidb, scale_inds, image_paths):
     # rgb -> bgr
     im = im[:,:,::-1]
 
-    if roidb[i]['flipped']:
+    if roidb[i]['flipped'][0] == 1:
       im = im[:, ::-1, :]
     target_size = cfg.TRAIN.SCALES[scale_inds[i]]
     im, im_scale = prep_im_for_blob(im, cfg.PIXEL_MEANS, target_size,

@@ -243,7 +243,7 @@ class hico2(imdb):
         cache_file = os.path.join(self.cache_path, self.name + '_gt_roidb.pkl')
         if not os.path.exists(cache_file):
             self._load_all_annotations_h5(cache_file)
-        gt_roidb_dict = h5py.File(cache_file, 'w')
+        gt_roidb_dict = h5py.File(cache_file, 'r+')
         return gt_roidb_dict
 
     @staticmethod
@@ -387,6 +387,7 @@ class hico2(imdb):
                           'key_points': [],
                           'width_height': [self._all_image_info[image_name][0],
                                            self._all_image_info[image_name][1]],
+                          'flipped': [0],
                           'need_crop': [0]}
 
             for pn, hois in enumerate([img_pos_hois, img_neg_hois]):
@@ -443,6 +444,7 @@ class hico2(imdb):
             # list -> np.array
             image_anno['width_height'] = np.array(raw_image_anno['width_height']).astype(np.int)
             image_anno['need_crop'] = np.array(raw_image_anno['need_crop']).astype(np.int)
+            image_anno['flipped'] = np.array(raw_image_anno['flipped']).astype(np.int)
             if len(raw_image_anno['hboxes']) == 0:
                 image_anno['hboxes'] = np.zeros((0, 4)).astype(np.int)
                 image_anno['oboxes'] = np.zeros((0, 4)).astype(np.int)
