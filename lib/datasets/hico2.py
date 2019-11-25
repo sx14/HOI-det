@@ -163,7 +163,8 @@ class hico2(imdb):
 
         self._class_to_ind = dict(zip(self._classes, xrange(len(self._classes))))
         self._image_ext = '.jpg'
-        self._all_image_info = self._load_image_set_info()
+        # self._all_image_info = self._load_image_set_info()
+        self._all_image_info = None
         self._image_index = None
         # Default to roidb handler
         # self._roidb_handler = self.selective_search_roidb
@@ -245,6 +246,7 @@ class hico2(imdb):
         if not os.path.exists(cache_file):
             self._load_all_annotations_h5(cache_file)
         gt_roidb_dict = h5py.File(cache_file, 'r+')
+        print('{} gt roidb loaded from {}'.format(self.name, cache_file))
         return gt_roidb_dict
 
     @staticmethod
@@ -331,6 +333,8 @@ class hico2(imdb):
     def _load_all_annotations_h5(self, save_path):
         all_annos = h5py.File(save_path, 'w')
 
+        all_image_info = self._load_image_set_info()
+
         print('Loading annotations ...')
         anno_ng_db = pickle.load(open(os.path.join(self._data_path, '%s_NG_HICO_with_pose.pkl' % self._image_set)))
         anno_gt_tmp = pickle.load(open(os.path.join(self._data_path, '%s_GT_HICO_with_pose.pkl' % self._image_set)))
@@ -355,8 +359,8 @@ class hico2(imdb):
             image_anno = all_annos[image_name]
 
             # augment positive instances
-            image_hw = [self._all_image_info[image_name][1],
-                        self._all_image_info[image_name][0]]
+            image_hw = [all_image_info[image_name][1],
+                        all_image_info[image_name][0]]
             img_pos_hois = self.augment_hoi_instances(img_pos_hois, image_hw)
 
             # select negative instances
@@ -386,8 +390,8 @@ class hico2(imdb):
                           'hoi_masks': [],
                           'vrb_masks': [],
                           'key_points': [],
-                          'width_height': [self._all_image_info[image_name][0],
-                                           self._all_image_info[image_name][1]],
+                          'width_height': [all_image_info[image_name][0],
+                                           all_image_info[image_name][1]],
                           'flipped': [0],
                           'need_crop': [0]}
 
@@ -496,6 +500,8 @@ class hico2(imdb):
     def _load_all_annotations(self):
         all_annos = {}
 
+        all_image_info = self._load_image_set_info()
+
         print('Loading annotations ...')
         anno_ng_db = pickle.load(open(os.path.join(self._data_path, '%s_NG_HICO_with_pose.pkl' % self._image_set)))
         anno_gt_tmp = pickle.load(open(os.path.join(self._data_path, '%s_GT_HICO_with_pose.pkl' % self._image_set)))
@@ -514,8 +520,8 @@ class hico2(imdb):
             image_name = image_id_template % str(image_id).zfill(8)
 
             # augment positive instances
-            image_hw = [self._all_image_info[image_name][1],
-                        self._all_image_info[image_name][0]]
+            image_hw = [all_image_info[image_name][1],
+                        all_image_info[image_name][0]]
             img_pos_hois = self.augment_hoi_instances(img_pos_hois, image_hw)
 
             # select negative instances
@@ -545,8 +551,8 @@ class hico2(imdb):
                           'hoi_masks': [],
                           'vrb_masks': [],
                           'key_points': [],
-                          'width': self._all_image_info[image_name][0],
-                          'height': self._all_image_info[image_name][1],
+                          'width': all_image_info[image_name][0],
+                          'height': all_image_info[image_name][1],
                           'flipped': False}
             all_annos[image_name] = image_anno
 
@@ -655,7 +661,6 @@ class hico2(imdb):
                     for vrb_id in ins_verbs:
                         image_anno['vrb_masks'][i, vrb_id] = 1
         return all_annos
-
 
     def append_flipped_images(self):
         import copy

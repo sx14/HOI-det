@@ -42,15 +42,15 @@ def get_minibatch(roidb, im_paths):
   assert len(roidb) == 1, "Single batch only"
 
   # boxes: (x1, y1, x2, y2)
-  hboxes = roidb[0]['hboxes'] * im_scales[0]
-  oboxes = roidb[0]['oboxes'] * im_scales[0]
-  iboxes = roidb[0]['iboxes'] * im_scales[0]
-  hoi_classes = roidb[0]['hoi_classes']
-  vrb_classes = roidb[0]['vrb_classes']
-  bin_classes = roidb[0]['bin_classes']
-  hoi_masks = roidb[0]['hoi_masks']
-  vrb_masks = roidb[0]['vrb_masks']
-  key_points = roidb[0]['key_points']
+  hboxes = roidb[0]['hboxes'].value * im_scales[0]
+  oboxes = roidb[0]['oboxes'].value * im_scales[0]
+  iboxes = roidb[0]['iboxes'].value * im_scales[0]
+  hoi_classes = roidb[0]['hoi_classes'].value
+  vrb_classes = roidb[0]['vrb_classes'].value
+  bin_classes = roidb[0]['bin_classes'].value
+  hoi_masks = roidb[0]['hoi_masks'].value
+  vrb_masks = roidb[0]['vrb_masks'].value
+  key_points = roidb[0]['key_points'].value
 
   blobs['hboxes'] = hboxes
   blobs['oboxes'] = oboxes
