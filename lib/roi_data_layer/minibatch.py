@@ -85,7 +85,7 @@ def _get_image_blob(roidb, scale_inds):
   for i in range(num_images):
     #im = cv2.imread(roidb[i]['image'])
     im = imread(roidb[i]['image'])
-    dp = pickle.load(roidb[i]['image'])
+    dp = np.load(roidb[i]['depth'])
     dp = np.concatenate((dp, dp[:,:,0]), axis=2)
 
     if len(im.shape) == 2:

@@ -44,12 +44,12 @@ class GlobalCond:
             nn.Conv2d(64, 256, 1, 1))
 
         self.cond_layer2 = nn.Sequential(
-            nn.Conv2d(256, 128, 1, 1), nn.LeakyReLU(0.1, True),
+            nn.Conv2d(256, 128, 1, 2), nn.LeakyReLU(0.1, True),
             nn.Conv2d(128, 128, 1, 1), nn.LeakyReLU(0.1, True),
             nn.Conv2d(128, 512, 1, 1))
 
         self.cond_layer3 = nn.Sequential(
-            nn.Conv2d(512, 256, 1, 1), nn.LeakyReLU(0.1, True),
+            nn.Conv2d(512, 256, 1, 2), nn.LeakyReLU(0.1, True),
             nn.Conv2d(256, 256, 1, 1), nn.LeakyReLU(0.1, True),
             nn.Conv2d(256, 1024, 1, 1))
 
@@ -299,7 +299,7 @@ class resnet(_fasterRCNN):
     self.RCNN_layer2 = resnet.layer2
     self.RCNN_layer3 = resnet.layer3
 
-    cond_net = GlobalCond(2)
+    cond_net = GlobalCond(7)
     self.cond_base = cond_net.cond_base
     self.cond_layer1 = cond_net.cond_layer1
     self.cond_layer2 = cond_net.cond_layer2
