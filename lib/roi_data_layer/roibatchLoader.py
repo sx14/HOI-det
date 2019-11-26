@@ -219,7 +219,7 @@ class roibatchLoader(data.Dataset):
 
         padding_dp_data = torch.FloatTensor(data_height, \
                                             int(np.ceil(data_height * ratio)), dp_data.shape[-1]).zero_()
-        padding_dp_data[:, :data_width, :] = im_data[0]
+        padding_dp_data[:, :data_width, :] = dp_data[0]
 
         im_info[0, 1] = padding_im_data.size(1)
     else:

@@ -11,12 +11,12 @@ import torch.nn.functional as F
 
 
 class SFTLayer(nn.Module):
-    def __init__(self):
+    def __init__(self, channel=1024):
         super(SFTLayer, self).__init__()
-        self.SFT_scale_conv0 = nn.Conv2d(1024, 1024, 1)
-        self.SFT_scale_conv1 = nn.Conv2d(1024, 1024, 1)
-        self.SFT_shift_conv0 = nn.Conv2d(1024, 1024, 1)
-        self.SFT_shift_conv1 = nn.Conv2d(1024, 1024, 1)
+        self.SFT_scale_conv0 = nn.Conv2d(channel, channel, 1)
+        self.SFT_scale_conv1 = nn.Conv2d(channel, channel, 1)
+        self.SFT_shift_conv0 = nn.Conv2d(channel, channel, 1)
+        self.SFT_shift_conv1 = nn.Conv2d(channel, channel, 1)
 
     def forward(self, x):
         # x[0]: fea; x[1]: cond
@@ -26,12 +26,12 @@ class SFTLayer(nn.Module):
 
 
 class ResBlock_SFT(nn.Module):
-    def __init__(self):
+    def __init__(self, channel=1024):
         super(ResBlock_SFT, self).__init__()
         self.sft0 = SFTLayer()
-        self.conv0 = nn.Conv2d(1024, 1024, 3, 1, 1)
+        self.conv0 = nn.Conv2d(channel, channel, 3, 1, 1)
         self.sft1 = SFTLayer()
-        self.conv1 = nn.Conv2d(1024, 1024, 3, 1, 1)
+        self.conv1 = nn.Conv2d(channel, channel, 3, 1, 1)
 
     def forward(self, x):
         # x[0]: fea; x[1]: cond

@@ -305,10 +305,10 @@ class resnet(_fasterRCNN):
     self.cond_layer2 = cond_net.cond_layer2
     self.cond_layer3 = cond_net.cond_layer3
 
-    self.sft_base = ResBlock_SFT()
-    self.sft_layer1 = ResBlock_SFT()
-    self.sft_layer2 = ResBlock_SFT()
-    self.sft_layer3 = ResBlock_SFT()
+    self.sft_base = ResBlock_SFT(64)
+    self.sft_layer1 = ResBlock_SFT(256)
+    self.sft_layer2 = ResBlock_SFT(512)
+    self.sft_layer3 = ResBlock_SFT(1024)
 
     self.cond_net = ROICond()
 
