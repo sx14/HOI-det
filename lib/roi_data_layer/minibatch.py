@@ -108,7 +108,7 @@ def _get_image_blob(roidb, scale_inds):
     processed_dps.append(dp)
 
   # Create a blob to hold the input images
-  im_blob = im_list_to_blob(processed_ims)
-  dp_blob = im_list_to_blob(processed_dps)
+  im_blob = im_list_to_blob(processed_ims, 3)
+  dp_blob = im_list_to_blob(processed_dps, 7)
 
   return im_blob, dp_blob, im_scales
