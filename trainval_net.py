@@ -43,8 +43,8 @@ def parse_args():
                       help='training dataset',
                       default='hico_full', type=str)
   parser.add_argument('--net', dest='net',
-                      help='vgg16, res101',
-                      default='res101', type=str)
+                      help='vgg16, res101, res50',
+                      default='res50', type=str)
   parser.add_argument('--start_epoch', dest='start_epoch',
                       help='starting epoch',
                       default=1, type=int)
