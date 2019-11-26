@@ -28,9 +28,9 @@ class SFTLayer(nn.Module):
 class ResBlock_SFT(nn.Module):
     def __init__(self, channel=1024):
         super(ResBlock_SFT, self).__init__()
-        self.sft0 = SFTLayer()
+        self.sft0 = SFTLayer(channel)
         self.conv0 = nn.Conv2d(channel, channel, 3, 1, 1)
-        self.sft1 = SFTLayer()
+        self.sft1 = SFTLayer(channel)
         self.conv1 = nn.Conv2d(channel, channel, 3, 1, 1)
 
     def forward(self, x):
