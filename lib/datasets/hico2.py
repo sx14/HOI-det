@@ -365,18 +365,19 @@ class hico2(imdb):
             img_pos_hois = self.augment_hoi_instances(img_pos_hois, image_hw)
 
             # select negative instances
+            negative_ratio = 4
             if image_id in anno_ng_db and len(anno_ng_db[image_id]) > 0:
                 img_neg_hois0 = anno_ng_db[image_id]
-                if len(img_neg_hois0) > (len(img_pos_hois * 4)):
-                    inds = random.sample(range(len(img_neg_hois0)), len(img_pos_hois) * 4)
+                if len(img_neg_hois0) > (len(img_pos_hois) * negative_ratio):
+                    inds = random.sample(range(len(img_neg_hois0)), len(img_pos_hois) * negative_ratio)
                 else:
                     inds = []
-                    for i in range(int(4 * len(img_pos_hois) / len(img_neg_hois0))):
+                    for i in range(int(negative_ratio * len(img_pos_hois) / len(img_neg_hois0))):
                         inds += range(len(img_neg_hois0))
-                    for i in range(4 * len(img_pos_hois) - len(inds)):
+                    for i in range(negative_ratio * len(img_pos_hois) - len(inds)):
                         inds.append(i)
                 img_neg_hois = [img_neg_hois0[ind] for ind in inds]
-                assert len(img_neg_hois) == (len(img_pos_hois) * 4)
+                assert len(img_neg_hois) == (len(img_pos_hois) * negative_ratio)
             else:
                 img_neg_hois = []
 
