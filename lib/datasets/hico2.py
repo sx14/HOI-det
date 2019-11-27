@@ -211,6 +211,7 @@ class hico2(imdb):
             'Path does not exist: {}'.format(image_path)
         return image_path
 
+    @property
     def num_images(self):
         image_dir = os.path.join(self._data_path, 'images', self._image_set + '2015')
         return len(os.listdir(image_dir))
@@ -683,12 +684,13 @@ class hico2(imdb):
             self.roidb.create_group(image_name+'$')
             new_entry = self.roidb[image_name+'$']
 
-            width = org_entry['width_height'][0]
+            box_types = ['hboxes', 'oboxes', 'iboxes']
             for key in org_entry.keys():
-                new_entry[key] = org_entry[key].value.copy()
+                if key not in box_types:
+                    new_entry[key] = org_entry[key].value.copy()
 
             new_entry['flipped'][0] = 1
-            box_types = ['hboxes', 'oboxes', 'iboxes']
+            width = org_entry['width_height'][0]
             for box_type in box_types:
                 boxes = org_entry[box_type].value.copy()
                 oldx1 = boxes[:, 0].copy()
