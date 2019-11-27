@@ -180,12 +180,12 @@ class hico2(imdb):
         #     return self._roidb
         if self._roidb is not None:
             return self._roidb
-
-        roidb_dict = self.roidb_handler()
+        else:
+            self._roidb = self.roidb_handler()
         # self._image_index = sorted(roidb_dict.keys())
         # self._roidb = [roidb_dict[image_id] for image_id in self._image_index]
         # return self._roidb
-        return roidb_dict
+        return self._roidb
 
     def image_path_at(self, i):
         """
