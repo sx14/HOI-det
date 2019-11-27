@@ -251,9 +251,7 @@ class hico2(imdb):
         cache_file = os.path.join(self.cache_path, self.name + '_gt_roidb.pkl')
         if not os.path.exists(cache_file):
             self._load_all_annotations_h5(cache_file)
-            gt_roidb_dict = h5py.File(cache_file, 'r+')
-        else:
-            gt_roidb_dict = h5py.File(cache_file, 'r')
+        gt_roidb_dict = h5py.File(cache_file, 'r+')
         print('{} gt roidb loaded from {}'.format(self.name, cache_file))
         return gt_roidb_dict
 
@@ -676,6 +674,7 @@ class hico2(imdb):
         return all_annos
 
     def append_flipped_images(self):
+        print('Appending horizontally-flipped training examples...')
         if len(self.roidb.keys()) > self.num_images:
             return
 
@@ -699,6 +698,7 @@ class hico2(imdb):
                 boxes[:, 2] = width - oldx1 - 1
                 assert (boxes[:, 2] >= boxes[:, 0]).all()
                 new_entry[box_type] = boxes
+        print('done')
 
     def _get_widths(self):
         mat_anno_db = sio.loadmat(os.path.join(self._data_path, 'anno_bbox_%s.mat' % self._version))
