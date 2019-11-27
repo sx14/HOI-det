@@ -153,7 +153,7 @@ class hico2(imdb):
         self._version = version
         self._image_set = image_set
         self._data_path = self._get_default_path()
-
+        self._image_num = self._num_of_images()
         self.hoi_classes, self.obj_classes, self.vrb_classes, self.obj2int, self.hoi2vrb, _ = self.load_hoi_classes(self._data_path)
         # self._classes = [hoi_class.hoi_name() for hoi_class in self.hoi_classes]
         self._classes = self.vrb_classes
@@ -212,6 +212,10 @@ class hico2(imdb):
             'Path does not exist: {}'.format(image_path)
         return image_path
 
+    def _num_of_images(self):
+        image_dir = os.path.join(self._data_path, 'images', self._image_set + '2015')
+        return len(os.listdir(image_dir))
+
     def _load_image_set_info(self):
         print('Loading image set info ...')
         all_image_info = {}
@@ -247,7 +251,9 @@ class hico2(imdb):
         cache_file = os.path.join(self.cache_path, self.name + '_gt_roidb.pkl')
         if not os.path.exists(cache_file):
             self._load_all_annotations_h5(cache_file)
-        gt_roidb_dict = h5py.File(cache_file, 'r+')
+            gt_roidb_dict = h5py.File(cache_file, 'r+')
+        else:
+            gt_roidb_dict = h5py.File(cache_file, 'r')
         print('{} gt roidb loaded from {}'.format(self.name, cache_file))
         return gt_roidb_dict
 
@@ -383,19 +389,19 @@ class hico2(imdb):
 
             # boxes: x1, y1, x2, y2
             raw_image_anno = {'hboxes': [],
-                          'oboxes': [],
-                          'iboxes': [],
-                          'hoi_classes': [],
-                          'obj_classes': [],
-                          'vrb_classes': [],
-                          'bin_classes': [],
-                          'hoi_masks': [],
-                          'vrb_masks': [],
-                          'key_points': [],
-                          'width_height': [all_image_info[image_name][0],
-                                           all_image_info[image_name][1]],
-                          'flipped': [0],
-                          'need_crop': [0]}
+                              'oboxes': [],
+                              'iboxes': [],
+                              'hoi_classes': [],
+                              'obj_classes': [],
+                              'vrb_classes': [],
+                              'bin_classes': [],
+                              'hoi_masks': [],
+                              'vrb_masks': [],
+                              'key_points': [],
+                              'width_height': [all_image_info[image_name][0],
+                                               all_image_info[image_name][1]],
+                              'flipped': [0],
+                              'need_crop': [0]}
 
             for pn, hois in enumerate([img_pos_hois, img_neg_hois]):
                 for raw_hoi in hois:
@@ -670,11 +676,14 @@ class hico2(imdb):
         return all_annos
 
     def append_flipped_images(self):
+        if len(self.roidb.keys()) > self.num_images:
+            return
 
         for image_name in tqdm(self.roidb):
+            org_entry = self.roidb[image_name]
             self.roidb.create_group(image_name+'$')
             new_entry = self.roidb[image_name+'$']
-            org_entry = self.roidb[image_name]
+
             width = org_entry['width_height'][0]
             for key in org_entry.keys():
                 new_entry[key] = org_entry[key].value.copy()
