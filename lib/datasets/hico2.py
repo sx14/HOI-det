@@ -471,32 +471,37 @@ class hico2(imdb):
                 image_anno['key_points'] = np.array(raw_image_anno['key_points']).astype(np.float)
 
                 bin_classes = raw_image_anno['bin_classes']
-                image_anno['bin_classes'] = np.zeros((len(bin_classes), 2)).astype(np.int)
+                bin_classes_np = np.zeros((len(bin_classes), 2)).astype(np.int)
                 for i, ins_class in enumerate(bin_classes):
-                    image_anno['bin_classes'][i, ins_class] = 1
+                    bin_classes_np[i, ins_class] = 1
+                image_anno['bin_classes'] = bin_classes_np
 
                 hoi_classes = raw_image_anno['hoi_classes']
-                image_anno['hoi_classes'] = np.zeros((len(hoi_classes), len(self.hoi_classes))).astype(np.int)
+                hoi_classes_np = np.zeros((len(hoi_classes), len(self.hoi_classes))).astype(np.int)
                 for i, ins_classes in enumerate(hoi_classes):
                     for cls in ins_classes:
-                        image_anno['hoi_classes'][i, cls] = 1
+                        hoi_classes_np[i, cls] = 1
+                image_anno['hoi_classes'] = hoi_classes_np
 
                 hoi_intervals = raw_image_anno['hoi_masks']
-                image_anno['hoi_masks'] = np.zeros((len(hoi_intervals), len(self.hoi_classes))).astype(np.int)
+                hoi_intervals_np = np.zeros((len(hoi_intervals), len(self.hoi_classes))).astype(np.int)
                 for i, ins_interval in enumerate(hoi_intervals):
-                    image_anno['hoi_masks'][i, ins_interval[0]:ins_interval[1]+1] = 1
+                    hoi_intervals_np[i, ins_interval[0]:ins_interval[1]+1] = 1
+                image_anno['hoi_masks'] = hoi_intervals_np
 
                 vrb_classes = raw_image_anno['vrb_classes']
-                image_anno['vrb_classes'] = np.zeros((len(vrb_classes), len(self.vrb_classes))).astype(np.int)
+                vrb_classes_np = np.zeros((len(vrb_classes), len(self.vrb_classes))).astype(np.int)
                 for i, ins_verbs in enumerate(vrb_classes):
                     for vrb_id in ins_verbs:
-                        image_anno['vrb_classes'][i, vrb_id] = 1
+                        vrb_classes_np[i, vrb_id] = 1
+                image_anno['vrb_classes'] = vrb_classes_np
 
                 vrb_masks = raw_image_anno['vrb_masks']
-                image_anno['vrb_masks'] = np.zeros((len(vrb_masks), len(self.vrb_classes))).astype(np.int)
+                vrb_masks_np = np.zeros((len(vrb_masks), len(self.vrb_classes))).astype(np.int)
                 for i, ins_verbs in enumerate(vrb_masks):
                     for vrb_id in ins_verbs:
-                        image_anno['vrb_masks'][i, vrb_id] = 1
+                        vrb_masks_np[i, vrb_id] = 1
+                image_anno['vrb_masks'] = vrb_masks_np
         all_annos.close()
 
     def _load_all_annotations(self):
