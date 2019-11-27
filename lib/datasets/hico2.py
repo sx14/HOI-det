@@ -204,6 +204,8 @@ class hico2(imdb):
         """
         Construct an image path from the image's "index" identifier.
         """
+        if index.endswith('$'):
+            index = index[:-1]
         image_path = os.path.join(self._data_path, 'images', self._image_set + '2015',
                                   index + self._image_ext)
         assert os.path.exists(image_path), \
@@ -332,7 +334,6 @@ class hico2(imdb):
 
     def _load_all_annotations_h5(self, save_path):
         all_annos = h5py.File(save_path, 'w')
-
         all_image_info = self._load_image_set_info()
 
         print('Loading annotations ...')
@@ -663,25 +664,25 @@ class hico2(imdb):
         return all_annos
 
     def append_flipped_images(self):
-        import copy
-        num_images = len(self.roidb)
-        widths = [self.roidb[i]['width'] for i in range(num_images)]
-        for i in range(num_images):
-            new_entry = copy.deepcopy(self.roidb[i])
-            new_entry['flipped'] = True
 
+        for image_name in tqdm(self.roidb):
+            self.roidb.create_group(image_name+'$')
+            new_entry = self.roidb[image_name+'$']
+            org_entry = self.roidb[image_name]
+            width = org_entry['width_height'][0]
+            for key in org_entry.keys():
+                new_entry[key] = org_entry[key].value.copy()
+
+            new_entry['flipped'][0] = 1
             box_types = ['hboxes', 'oboxes', 'iboxes']
             for box_type in box_types:
-                boxes = self.roidb[i][box_type].copy()
+                boxes = org_entry[box_type].value.copy()
                 oldx1 = boxes[:, 0].copy()
                 oldx2 = boxes[:, 2].copy()
-                boxes[:, 0] = widths[i] - oldx2 - 1
-                boxes[:, 2] = widths[i] - oldx1 - 1
+                boxes[:, 0] = width - oldx2 - 1
+                boxes[:, 2] = width - oldx1 - 1
                 assert (boxes[:, 2] >= boxes[:, 0]).all()
                 new_entry[box_type] = boxes
-
-            self.roidb.append(new_entry)
-        self._image_index = self._image_index * 2
 
     def _get_widths(self):
         mat_anno_db = sio.loadmat(os.path.join(self._data_path, 'anno_bbox_%s.mat' % self._version))
