@@ -153,7 +153,6 @@ class hico2(imdb):
         self._version = version
         self._image_set = image_set
         self._data_path = self._get_default_path()
-        self._image_num = self._num_of_images()
         self.hoi_classes, self.obj_classes, self.vrb_classes, self.obj2int, self.hoi2vrb, _ = self.load_hoi_classes(self._data_path)
         # self._classes = [hoi_class.hoi_name() for hoi_class in self.hoi_classes]
         self._classes = self.vrb_classes
@@ -212,7 +211,7 @@ class hico2(imdb):
             'Path does not exist: {}'.format(image_path)
         return image_path
 
-    def _num_of_images(self):
+    def num_images(self):
         image_dir = os.path.join(self._data_path, 'images', self._image_set + '2015')
         return len(os.listdir(image_dir))
 
