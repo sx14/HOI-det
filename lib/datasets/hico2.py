@@ -365,7 +365,7 @@ class hico2(imdb):
             img_pos_hois = self.augment_hoi_instances(img_pos_hois, image_hw)
 
             # select negative instances
-            negative_ratio = 4
+            negative_ratio = 1
             if image_id in anno_ng_db and len(anno_ng_db[image_id]) > 0:
                 img_neg_hois0 = anno_ng_db[image_id]
                 if len(img_neg_hois0) > (len(img_pos_hois) * negative_ratio):
