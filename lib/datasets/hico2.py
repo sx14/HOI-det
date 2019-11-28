@@ -189,7 +189,7 @@ class hico2(imdb):
         """
         return i
 
-    def image_path_at(self, i):
+    def image_path_at(self, i):  
         """
         Return the absolute path to image i in the image sequence.
         """
