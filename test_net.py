@@ -138,7 +138,7 @@ def _get_image_blob(im, dp):
 
   # Create a blob to hold the input images
   im_blob = im_list_to_blob(processed_ims, 3)
-  dp_blob = im_list_to_blob(processed_dps, 7)
+  dp_blob = im_list_to_blob(processed_dps, 2)
 
   return im_blob, dp_blob, im_scales
 
@@ -275,7 +275,7 @@ if __name__ == '__main__':
 
   all_results = {}
   image_path_template = 'data/hico/images/test2015/HICO_test2015_%s.jpg'
-  human_path_template = 'data/hico/humans/test2015/HICO_test2015_%s.npy'
+  human_path_template = 'data/hico/depths/test2015/HICO_test2015_%s.npy'
   for i, im_id in enumerate(det_db):
       print('test [%d/%d]' % (i + 1, num_images))
       im_file = image_path_template % str(im_id).zfill(8)

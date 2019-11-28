@@ -82,6 +82,7 @@ def _get_image_blob(roidb, scale_inds):
   processed_dps = []
 
   for i in range(num_images):
+
     im = imread(roidb[i]['image'])
     dp = np.load(roidb[i]['depth'])
 
@@ -107,6 +108,6 @@ def _get_image_blob(roidb, scale_inds):
 
   # Create a blob to hold the input images
   im_blob = im_list_to_blob(processed_ims, 3)
-  dp_blob = im_list_to_blob(processed_dps, 7)
+  dp_blob = im_list_to_blob(processed_dps, 2)
 
   return im_blob, dp_blob, im_scales

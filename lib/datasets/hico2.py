@@ -189,7 +189,7 @@ class hico2(imdb):
         """
         return i
 
-    def image_path_at(self, i):  
+    def image_path_at(self, i):
         """
         Return the absolute path to image i in the image sequence.
         """
@@ -215,7 +215,7 @@ class hico2(imdb):
         """
         Construct an image path from the image's "index" identifier.
         """
-        depth_path = os.path.join(self._data_path, 'humans', self._image_set + '2015',
+        depth_path = os.path.join(self._data_path, 'depths', self._image_set + '2015',
                                   index + self._depth_ext)
         assert os.path.exists(depth_path), \
             'Path does not exist: {}'.format(depth_path)

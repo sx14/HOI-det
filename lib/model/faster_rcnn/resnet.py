@@ -299,7 +299,7 @@ class resnet(_fasterRCNN):
     self.RCNN_layer2 = resnet.layer2
     self.RCNN_layer3 = resnet.layer3
 
-    cond_net = GlobalCond(7)
+    cond_net = GlobalCond(2)
     self.cond_base = cond_net.cond_base
     self.cond_layer1 = cond_net.cond_layer1
     self.cond_layer2 = cond_net.cond_layer2
