@@ -98,7 +98,8 @@ def parse_args():
   return args
 
 
-def _get_image_blob(im):
+
+def _get_image_blob(im, dp):
   """Converts an image into a network input.
   Arguments:
     im (ndarray): a color image in BGR order
@@ -110,12 +111,16 @@ def _get_image_blob(im):
   im_orig = im.astype(np.float32, copy=True)
   im_orig -= cfg.PIXEL_MEANS
 
+  dp_orig = dp.astype(np.float32, copy=True)
+  dp_orig -= cfg.DEPTH_MEANS
+
   im_shape = im_orig.shape
   im_size_min = np.min(im_shape[0:2])
   im_size_max = np.max(im_shape[0:2])
 
+  im_scales = []
   processed_ims = []
-  im_scale_factors = []
+  processed_dps = []
 
   for target_size in cfg.TEST.SCALES:
     im_scale = float(target_size) / float(im_size_min)
@@ -124,13 +129,18 @@ def _get_image_blob(im):
       im_scale = float(cfg.TEST.MAX_SIZE) / float(im_size_max)
     im = cv2.resize(im_orig, None, None, fx=im_scale, fy=im_scale,
             interpolation=cv2.INTER_LINEAR)
-    im_scale_factors.append(im_scale)
+    dp = cv2.resize(dp_orig, None, None, fx=im_scale, fy=im_scale,
+            interpolation=cv2.INTER_LINEAR)
+
+    im_scales.append(im_scale)
     processed_ims.append(im)
+    processed_dps.append(dp)
 
   # Create a blob to hold the input images
-  blob = im_list_to_blob(processed_ims)
+  im_blob = im_list_to_blob(processed_ims, 3)
+  dp_blob = im_list_to_blob(processed_ims, 7)
 
-  return blob, np.array(im_scale_factors)
+  return im_blob, dp_blob, im_scales
 
 
 if __name__ == '__main__':
@@ -203,6 +213,7 @@ if __name__ == '__main__':
 
   # initilize the tensor holder here.
   im_data = torch.FloatTensor(1)
+  dp_data = torch.FloatTensor(1)
   im_info = torch.FloatTensor(1)
   num_hois = torch.LongTensor(1)
   hboxes = torch.FloatTensor(1)
@@ -218,6 +229,7 @@ if __name__ == '__main__':
   # ship to cuda
   if args.cuda > 0:
     im_data = im_data.cuda()
+    dp_data = dp_data.cuda()
     im_info = im_info.cuda()
     num_hois = num_hois.cuda()
     hboxes = hboxes.cuda()
@@ -233,6 +245,7 @@ if __name__ == '__main__':
   # make variable
   with torch.no_grad():
       im_data = Variable(im_data)
+      dp_data = Variable(dp_data)
       im_info = Variable(im_info)
       num_hois = Variable(num_hois)
       hboxes = Variable(hboxes)
@@ -262,6 +275,7 @@ if __name__ == '__main__':
 
   all_results = {}
   image_path_template = 'data/hico/images/test2015/HICO_test2015_%s.jpg'
+  human_path_template = 'data/hico/humans/test2015/HICO_test2015_%s.npy'
   for i, im_id in enumerate(det_db):
       print('test [%d/%d]' % (i + 1, num_images))
       im_file = image_path_template % str(im_id).zfill(8)
@@ -270,10 +284,14 @@ if __name__ == '__main__':
           im_in = im_in[:, :, np.newaxis]
           im_in = np.concatenate((im_in, im_in, im_in), axis=2)
       im_in = im_in[:, :, ::-1]     # rgb -> bgr
-      im = im_in
-      im_h = im.shape[0]
-      im_w = im.shape[1]
-      blobs, im_scales = _get_image_blob(im)
+
+      dp_file = human_path_template % str(im_id).zfill(8)
+      dp_in = np.load(dp_file)
+
+      im_blobs, dp_blobs, im_scales = _get_image_blob(im_in, dp_in)
+
+      im_h = im_in.shape[0]
+      im_w = im_in.shape[1]
 
       im_num_cands = 0
       im_results = []
@@ -357,21 +375,25 @@ if __name__ == '__main__':
               pose_maps.data.resize_(pose_maps_t.size()).copy_(pose_maps_t)
 
               assert len(im_scales) == 1, "Only single-image batch implemented"
-              im_blob = blobs
-              im_info_np = np.array([[im_blob.shape[1], im_blob.shape[2], im_scales[0]]], dtype=np.float32)
-
-              im_data_pt = torch.from_numpy(im_blob)
-              im_data_pt = im_data_pt.permute(0, 3, 1, 2)
+              im_info_np = np.array([[im_blobs.shape[1], im_blobs.shape[2], im_scales[0]]], dtype=np.float32)
               im_info_pt = torch.from_numpy(im_info_np)
 
+              im_data_pt = torch.from_numpy(im_blobs)
+              im_data_pt = im_data_pt.permute(0, 3, 1, 2)
+
+              dp_data_pt = torch.from_numpy(dp_blobs)
+              dp_data_pt = dp_data_pt.permute(0, 3, 1, 2)
+
               im_data.data.resize_(im_data_pt.size()).copy_(im_data_pt)
+              dp_data.data.resize_(dp_data_pt.size()).copy_(dp_data_pt)
               im_info.data.resize_(im_info_pt.size()).copy_(im_info_pt)
 
               det_tic = time.time()
 
               with torch.no_grad():
                   vrb_prob, bin_prob, RCNN_loss_cls, RCNN_loss_bin = \
-                      fasterRCNN(im_data, im_info, hboxes, oboxes, iboxes,
+                      fasterRCNN(im_data, dp_data, im_info,
+                                 hboxes, oboxes, iboxes,
                                  vrb_classes, bin_classes, hoi_masks,
                                  spa_maps, pose_maps, num_hois)
 

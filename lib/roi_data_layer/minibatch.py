@@ -77,13 +77,11 @@ def _get_image_blob(roidb, scale_inds):
   """
   num_images = len(roidb)
 
-  processed_ims = []
   im_scales = []
-
+  processed_ims = []
   processed_dps = []
 
   for i in range(num_images):
-    #im = cv2.imread(roidb[i]['image'])
     im = imread(roidb[i]['image'])
     dp = np.load(roidb[i]['depth'])
 
@@ -102,6 +100,7 @@ def _get_image_blob(roidb, scale_inds):
                     cfg.TRAIN.MAX_SIZE)
     dp, de_scale = prep_im_for_blob(dp, cfg.DEPTH_MEANS, target_size,
                     cfg.TRAIN.MAX_SIZE)
+
     im_scales.append(im_scale)
     processed_ims.append(im)
     processed_dps.append(dp)
