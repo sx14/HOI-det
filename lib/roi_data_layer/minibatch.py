@@ -99,8 +99,11 @@ def _get_image_blob(roidb, scale_inds):
     target_size = cfg.TRAIN.SCALES[scale_inds[i]]
     im, im_scale = prep_im_for_blob(im, cfg.PIXEL_MEANS, target_size,
                     cfg.TRAIN.MAX_SIZE)
-    dp, de_scale = prep_im_for_blob(dp, cfg.DEPTH_MEANS, target_size,
+    dp, dp_scale = prep_im_for_blob(dp, cfg.DEPTH_MEANS, target_size,
                     cfg.TRAIN.MAX_SIZE)
+    if len(dp.shape) == 2:
+      dp = dp[:, :, np.newaxis]
+    assert im_scale == dp_scale
 
     im_scales.append(im_scale)
     processed_ims.append(im)
@@ -108,6 +111,6 @@ def _get_image_blob(roidb, scale_inds):
 
   # Create a blob to hold the input images
   im_blob = im_list_to_blob(processed_ims, 3)
-  dp_blob = im_list_to_blob(processed_dps, 2)
+  dp_blob = im_list_to_blob(processed_dps, 1)
 
   return im_blob, dp_blob, im_scales
