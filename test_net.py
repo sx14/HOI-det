@@ -138,7 +138,7 @@ def _get_image_blob(im, dp):
 
   # Create a blob to hold the input images
   im_blob = im_list_to_blob(processed_ims, 3)
-  dp_blob = im_list_to_blob(processed_ims, 7)
+  dp_blob = im_list_to_blob(processed_dps, 7)
 
   return im_blob, dp_blob, im_scales
 
@@ -178,7 +178,7 @@ if __name__ == '__main__':
   if not os.path.exists(input_dir):
     raise Exception('There is no input directory for loading network from ' + input_dir)
   load_name = os.path.join(input_dir,
-    'ho_spa_rcnn3_lf_no_nis_vrb_sft_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
+    'ho_spa_rcnn3_lf_no_nis_vrb_sft_glb_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
 
   hoi_classes, obj_classes, vrb_classes, obj2int, hoi2vrb, vrb2hoi = hico2.load_hoi_classes(cfg.DATA_DIR + '/hico')
 
