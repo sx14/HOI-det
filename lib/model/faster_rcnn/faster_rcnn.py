@@ -23,17 +23,17 @@ class SpaConv(nn.Module):
         super(SpaConv, self).__init__()
         # (batch,224,224,8)->(batch,220,220,64)
         self.conv1 = nn.Conv2d(in_channels=8, out_channels=64, kernel_size=5)
-        # (batch,220,220,64)->(batch,110,110,64)
-        self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
-        # (batch,110,110,64)->(batch,55,55,32)
+        # (batch,220,220,64)->(batch,55,55,64)
+        self.pool1 = nn.MaxPool2d(kernel_size=4, stride=4)
+        # (batch,55,55,64)->(batch,51,51,32)
         self.conv2 = nn.Conv2d(in_channels=64, out_channels=32, kernel_size=5)
-        # (batch,55,55,32)->(batch,13,13,32)
-        self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
+        # (batch,51,51,32)->(batch,12,12,32)
+        self.pool2 = nn.MaxPool2d(kernel_size=4, stride=4)
 
         self.hidden = nn.Sequential(
             nn.LeakyReLU(),
             nn.Dropout(p=0.5),
-            nn.Linear(5408, 1024))
+            nn.Linear(4608, 1024))
 
     def forward(self, spa_map):
         conv1 = self.conv1(spa_map)
@@ -154,7 +154,7 @@ class _fasterRCNN(nn.Module):
         # feed pooled features to top  model
         oroi_pooled_feat = self._ohead_to_tail(oroi_pooled_feat)
 
-        spa_feat = self.spaCNN(dp_data[0])
+        spa_feat = self.spaCNN(pose_maps[0])
         scls_score = self.spa_cls_score(spa_feat)
         scls_prob = F.sigmoid(scls_score)
 
