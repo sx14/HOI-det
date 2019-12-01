@@ -56,6 +56,10 @@ class imdb(object):
   def roidb_handler(self):
     return self._roidb_handler
 
+  @property
+  def obj2vec(self):
+    raise NotImplementedError
+
   @roidb_handler.setter
   def roidb_handler(self, val):
     self._roidb_handler = val
