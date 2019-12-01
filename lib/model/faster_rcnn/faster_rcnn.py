@@ -21,13 +21,13 @@ from model.utils.net_utils import _smooth_l1_loss, _crop_pool_layer, _affine_gri
 class SpaConv(nn.Module):
     def __init__(self):
         super(SpaConv, self).__init__()
-        # (batch,64,64,2)->(batch,60,60,64)
-        self.conv1 = nn.Conv2d(in_channels=2, out_channels=64, kernel_size=5)
-        # (batch,60,60,64)->(batch,30,30,64)
+        # (batch,224,224,8)->(batch,220,220,64)
+        self.conv1 = nn.Conv2d(in_channels=8, out_channels=64, kernel_size=5)
+        # (batch,220,220,64)->(batch,110,110,64)
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
-        # (batch,30,30,64)->(batch,26,26,32)
+        # (batch,110,110,64)->(batch,55,55,32)
         self.conv2 = nn.Conv2d(in_channels=64, out_channels=32, kernel_size=5)
-        # (batch,26,26,32)->(batch,13,13,32)
+        # (batch,55,55,32)->(batch,13,13,32)
         self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
 
         self.hidden = nn.Sequential(
@@ -66,7 +66,7 @@ class _fasterRCNN(nn.Module):
             nn.Dropout(p=0.5),
             nn.Linear(1024, self.n_classes))
 
-    def forward(self, im_data, de_data, im_info, hboxes, oboxes, iboxes, hoi_classes, bin_classes, hoi_masks, spa_maps, pose_maps, num_hois):
+    def forward(self, im_data, dp_data, im_info, hboxes, oboxes, iboxes, hoi_classes, bin_classes, hoi_masks, spa_maps, pose_maps, num_hois):
         batch_size = im_data.size(0)
 
         im_info = im_info.data
@@ -77,7 +77,7 @@ class _fasterRCNN(nn.Module):
 
         # feed image data to base model to obtain base feature map
         base_feat = self.RCNN_base(im_data)
-        base_cond = self.cond_base(de_data)
+        base_cond = self.cond_base(dp_data)
         base_feat = self.sft_base([base_feat, base_cond])
 
         layer1_feat = self.RCNN_layer1(base_feat)
@@ -154,7 +154,7 @@ class _fasterRCNN(nn.Module):
         # feed pooled features to top  model
         oroi_pooled_feat = self._ohead_to_tail(oroi_pooled_feat)
 
-        spa_feat = self.spaCNN(spa_maps[0])
+        spa_feat = self.spaCNN(dp_data[0])
         scls_score = self.spa_cls_score(spa_feat)
         scls_prob = F.sigmoid(scls_score)
 
