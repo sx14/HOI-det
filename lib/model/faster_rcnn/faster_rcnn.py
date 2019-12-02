@@ -44,6 +44,22 @@ class SpaConv(nn.Module):
         return self.hidden(pool_feat)
 
 
+class BinNet(nn.Module):
+    def __init__(self):
+        super(BinNet, self).__init__()
+        self.classifier = nn.Sequential(
+            nn.Linear(2048 * 3 + 1024 + 300, 4096),
+            nn.LeakyReLU(),
+            nn.Dropout(p=0.5),
+            nn.Linear(4096, 2048),
+            nn.LeakyReLU(),
+            nn.Dropout(p=0.5),
+            nn.Linear(4096, 2))
+
+    def forward(self, input):
+        return self.classifier(input)
+
+
 class _fasterRCNN(nn.Module):
     """ faster RCNN """
 
@@ -62,6 +78,7 @@ class _fasterRCNN(nn.Module):
         self.grid_size = cfg.POOLING_SIZE * 2 if cfg.CROP_RESIZE_WITH_MAX_POOL else cfg.POOLING_SIZE
         self.RCNN_roi_crop = _RoICrop()
         self.spaCNN = SpaConv()
+        self.binNet = BinNet()
 
         self.spa_cls_score = nn.Sequential(
             nn.LeakyReLU(),
@@ -150,23 +167,42 @@ class _fasterRCNN(nn.Module):
 
         # feed pooled features to top  model
         oroi_pooled_feat = self._ohead_to_tail(oroi_pooled_feat)
-
         spa_feat = self.spaCNN(spa_maps[0])
+
+        bin_feat = torch.cat((hroi_pooled_feat, oroi_pooled_feat, iroi_pooled_feat, spa_feat, obj_vecs[0]), 1)
+        bin_score = self.binNet(bin_feat)
+        bin_prob = F.sigmoid(bin_score)
+
         scls_score = self.spa_cls_score(spa_feat)
         scls_prob = F.sigmoid(scls_score)
+        scls_prob[:, 9] = scls_prob[:, 9] * bin_prob[:, 0]
+        scls_prob[:, :9] = scls_prob[:, :9] * bin_prob[:, 1]
+        scls_prob[:, 10:] = scls_prob[:, 10:] * bin_prob[:, 1]
 
         vcls_score = self.obj_cls_score(obj_vecs[0])
         vcls_prob = F.sigmoid(vcls_score)
+        vcls_prob[:, 9] = vcls_prob[:, 9] * bin_prob[:, 0]
+        vcls_prob[:, :9] = vcls_prob[:, :9] * bin_prob[:, 1]
+        vcls_prob[:, 10:] = vcls_prob[:, 10:] * bin_prob[:, 1]
 
         # compute object classification probability
         icls_score = self.iRCNN_cls_score(iroi_pooled_feat)
         icls_prob = F.sigmoid(icls_score)
+        icls_prob[:, 9] = icls_prob[:, 9] * bin_prob[:, 0]
+        icls_prob[:, :9] = icls_prob[:, :9] * bin_prob[:, 1]
+        icls_prob[:, 10:] = icls_prob[:, 10:] * bin_prob[:, 1]
 
         hcls_score = self.hRCNN_cls_score(hroi_pooled_feat)
         hcls_prob = F.sigmoid(hcls_score)
+        hcls_prob[:, 9] = hcls_prob[:, 9] * bin_prob[:, 0]
+        hcls_prob[:, :9] = hcls_prob[:, :9] * bin_prob[:, 1]
+        hcls_prob[:, 10:] = hcls_prob[:, 10:] * bin_prob[:, 1]
 
         ocls_score = self.oRCNN_cls_score(oroi_pooled_feat)
         ocls_prob = F.sigmoid(ocls_score)
+        ocls_prob[:, 9] = ocls_prob[:, 9] * bin_prob[:, 0]
+        ocls_prob[:, :9] = ocls_prob[:, :9] * bin_prob[:, 1]
+        ocls_prob[:, 10:] = ocls_prob[:, 10:] * bin_prob[:, 1]
 
         cls_prob = (icls_prob + hcls_prob + ocls_prob) * scls_prob * vcls_prob
 
@@ -201,7 +237,7 @@ class _fasterRCNN(nn.Module):
                 m.weight.data.normal_(mean, stddev)
                 m.bias.data.zero_()
 
-        new_modules = [self.iRCNN_cls_score, self.hRCNN_cls_score, self.oRCNN_cls_score]
+        new_modules = [self.iRCNN_cls_score, self.hRCNN_cls_score, self.oRCNN_cls_score, self.binNet]
         for module in new_modules:
             if isinstance(module, collections.Iterable):
                 for layer in module:
