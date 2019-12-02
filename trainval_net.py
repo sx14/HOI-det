@@ -358,17 +358,17 @@ if __name__ == '__main__':
                      vrb_masks, spa_maps,
                      obj_vecs, num_hois)
 
-      # loss = RCNN_loss_cls.mean() + RCNN_loss_bin.mean()
-      loss = RCNN_loss_cls.mean()
+      loss = RCNN_loss_cls.mean() + RCNN_loss_bin.mean()
+      # loss = RCNN_loss_cls.mean()
 
       if args.mGPUs:
           loss_cls = RCNN_loss_cls.mean().item()
-          # loss_bin = RCNN_loss_bin.mean().item()
-          loss_bin = 0
+          loss_bin = RCNN_loss_bin.mean().item()
+          # loss_bin = 0
       else:
           loss_cls = RCNN_loss_cls.item()
-          # loss_bin = RCNN_loss_bin.item()
-          loss_bin = 0
+          loss_bin = RCNN_loss_bin.item()
+          # loss_bin = 0
 
       loss_temp += loss.item()
       loss_bin_temp += loss_bin
