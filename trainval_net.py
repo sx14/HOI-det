@@ -355,8 +355,8 @@ if __name__ == '__main__':
       vrb_masks.resize_(data[10].size()).copy_(data[10])
       spa_maps.data.resize_(data[11].size()).copy_(data[11])
       pose_maps.data.resize_(data[12].size()).copy_(data[12])
-      obj_vecs.data.resize_(data[13].size()).copy_(data[11])
-      num_hois.data.resize_(data[14].size()).copy_(data[13])
+      obj_vecs.data.resize_(data[13].size()).copy_(data[13])
+      num_hois.data.resize_(data[14].size()).copy_(data[14])
       ld_end = time.time()
       ld_time += (ld_end-ld_start)
 

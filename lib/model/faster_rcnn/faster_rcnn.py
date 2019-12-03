@@ -168,7 +168,7 @@ class _fasterRCNN(nn.Module):
         scls_score = self.spa_cls_score(spa_feat)
         scls_prob = F.sigmoid(scls_score)
 
-        vcls_score = self.obj_cls_score(obj_vecs)
+        vcls_score = self.obj_cls_score(obj_vecs[0])
         vcls_prob = F.sigmoid(vcls_score)
 
         # compute object classification probability
