@@ -192,7 +192,7 @@ class _fasterRCNN(nn.Module):
         ocls_score = self.oRCNN_cls_score(oroi_pooled_feat)
         ocls_prob = F.sigmoid(ocls_score)
 
-        cls_prob = (icls_prob + hcls_prob + ocls_prob) * scls_prob * vcls_prob * bin_mask
+        cls_prob = (icls_prob + hcls_prob + ocls_prob) * scls_prob * vcls_prob
 
         RCNN_loss_cls = 0
         RCNN_loss_bin = 0
@@ -210,7 +210,7 @@ class _fasterRCNN(nn.Module):
             RCNN_loss_bin = bin_loss
 
         cls_prob = cls_prob.view(batch_size, irois.size(1), -1)
-        bin_prob = Variable(torch.zeros(batch_size, irois.size(1), 2)).cuda()
+        bin_prob = bin_prob.view(batch_size, irois.size(1), -1)
 
         return cls_prob, bin_prob, RCNN_loss_cls, RCNN_loss_bin
 

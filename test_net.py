@@ -390,7 +390,7 @@ if __name__ == '__main__':
   with open(output_path, 'wb') as f:
       pickle.dump(all_results, f)
 
-  generate_HICO_detection(output_path, 'output/results', 1.0, 0.0)
+  generate_HICO_detection(output_path, 'output/results', 0.9, 0.1)
 
   os.chdir('benchmark')
   os.system('matlab -nodesktop -nosplash -r "Generate_detection ' + '../output/results/' + '/;quit;"')
