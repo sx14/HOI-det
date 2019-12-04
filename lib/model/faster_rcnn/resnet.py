@@ -310,12 +310,18 @@ class resnet(_fasterRCNN):
     self.sft_layer2 = ResBlock_SFT(512)
     self.sft_layer3 = ResBlock_SFT(1024)
 
-    self.cond_net = ROICond()
+    self.icond_net = ROICond()
+    self.hcond_net = ROICond()
+    self.ocond_net = ROICond()
 
     import copy
     self.iRCNN_SFT = ResBlock_SFT()
     self.iRCNN_top = nn.Sequential(resnet.layer4)
+
+    self.hRCNN_SFT = ResBlock_SFT()
     self.hRCNN_top = nn.Sequential(copy.deepcopy(resnet.layer4))
+
+    self.oRCNN_SFT = ResBlock_SFT()
     self.oRCNN_top = nn.Sequential(copy.deepcopy(resnet.layer4))
 
     self.iRCNN_cls_score = nn.Sequential(
@@ -356,7 +362,7 @@ class resnet(_fasterRCNN):
     self.RCNN_base.apply(set_bn_fix)
     self.RCNN_layer1.apply(set_bn_fix)
     self.RCNN_layer2.apply(set_bn_fix)
-    self.cond_layer3.apply(set_bn_fix)
+    self.RCNN_layer3.apply(set_bn_fix)
     self.iRCNN_top.apply(set_bn_fix)
     self.hRCNN_top.apply(set_bn_fix)
     self.oRCNN_top.apply(set_bn_fix)
@@ -384,15 +390,19 @@ class resnet(_fasterRCNN):
       self.oRCNN_top.apply(set_bn_eval)
 
   def _ihead_to_tail(self, pool5, pose_map):
-    pose_cond = self.cond_net(pose_map)
+    pose_cond = self.icond_net(pose_map)
     pool5 = self.iRCNN_SFT([pool5, pose_cond])
     fc7 = self.iRCNN_top(pool5).mean(3).mean(2)
     return fc7
 
-  def _hhead_to_tail(self, pool5):
+  def _hhead_to_tail(self, pool5, pose_map):
+    pose_cond = self.hcond_net(pose_map)
+    pool5 = self.hRCNN_SFT([pool5, pose_cond])
     fc7 = self.hRCNN_top(pool5).mean(3).mean(2)
     return fc7
 
-  def _ohead_to_tail(self, pool5):
+  def _ohead_to_tail(self, pool5, pose_map):
+    pose_cond = self.ocond_net(pose_map)
+    pool5 = self.oRCNN_SFT([pool5, pose_cond])
     fc7 = self.oRCNN_top(pool5).mean(3).mean(2)
     return fc7

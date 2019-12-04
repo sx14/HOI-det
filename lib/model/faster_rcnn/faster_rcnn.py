@@ -116,11 +116,12 @@ class _fasterRCNN(nn.Module):
                 iroi_pooled_feat = F.max_pool2d(iroi_pooled_feat, 2, 2)
         elif cfg.POOLING_MODE == 'align':
             iroi_pooled_feat = self.RCNN_roi_align(base_feat, irois.view(-1, 5))
+            iroi_pooled_cond = self.RCNN_roi_align(layer3_cond, irois.view(-1, 5))
         elif cfg.POOLING_MODE == 'pool':
             iroi_pooled_feat = self.RCNN_roi_pool(base_feat, irois.view(-1, 5))
 
         # # feed pooled features to top  model
-        iroi_pooled_feat = self._ihead_to_tail(iroi_pooled_feat, pose_maps[0])
+        iroi_pooled_feat = self._ihead_to_tail(iroi_pooled_feat, iroi_pooled_cond)
 
         if cfg.POOLING_MODE == 'crop':
             # pdb.set_trace()
@@ -132,11 +133,12 @@ class _fasterRCNN(nn.Module):
                 hroi_pooled_feat = F.max_pool2d(hroi_pooled_feat, 2, 2)
         elif cfg.POOLING_MODE == 'align':
             hroi_pooled_feat = self.RCNN_roi_align(base_feat, hrois.view(-1, 5))
+            hroi_pooled_cond = self.RCNN_roi_align(layer3_cond, hrois.view(-1, 5))
         elif cfg.POOLING_MODE == 'pool':
             hroi_pooled_feat = self.RCNN_roi_pool(base_feat, hrois.view(-1, 5))
 
         # feed pooled features to top  model
-        hroi_pooled_feat = self._hhead_to_tail(hroi_pooled_feat)
+        hroi_pooled_feat = self._hhead_to_tail(hroi_pooled_feat, hroi_pooled_cond)
 
         if cfg.POOLING_MODE == 'crop':
             # pdb.set_trace()
@@ -148,11 +150,12 @@ class _fasterRCNN(nn.Module):
                 oroi_pooled_feat = F.max_pool2d(oroi_pooled_feat, 2, 2)
         elif cfg.POOLING_MODE == 'align':
             oroi_pooled_feat = self.RCNN_roi_align(base_feat, orois.view(-1, 5))
+            oroi_pooled_cond = self.RCNN_roi_align(layer3_cond, orois.view(-1, 5))
         elif cfg.POOLING_MODE == 'pool':
             oroi_pooled_feat = self.RCNN_roi_pool(base_feat, orois.view(-1, 5))
 
         # feed pooled features to top  model
-        oroi_pooled_feat = self._ohead_to_tail(oroi_pooled_feat)
+        oroi_pooled_feat = self._ohead_to_tail(oroi_pooled_feat, oroi_pooled_cond)
 
         spa_feat = self.spaCNN(spa_maps[0])
         scls_score = self.spa_cls_score(spa_feat)

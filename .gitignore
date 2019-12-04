@@ -2,6 +2,7 @@ data/*
 models/
 output/
 logs/
+*.mat
 
 # READ THIS BEFORE YOU REFACTOR ME
 #
