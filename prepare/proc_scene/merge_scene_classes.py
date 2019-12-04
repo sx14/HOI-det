@@ -23,7 +23,7 @@ for obj, ratio in obj_ratios_sorted:
     else:
         group = obj2group[obj]
     for sim_obj_ind in range(len(sims)):
-        if sims[sim_obj_ind] > 0.3 and \
+        if sims[sim_obj_ind] > 0.2 and \
                 obj2group[obj_names[sim_obj_ind]] is None:
             group.append(obj_names[sim_obj_ind])
             obj2group[obj_names[sim_obj_ind]] = group
