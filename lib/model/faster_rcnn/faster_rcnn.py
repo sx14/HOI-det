@@ -228,10 +228,9 @@ class _fasterRCNN(nn.Module):
 
         new_modules = [self.iRCNN_cls_score, self.hRCNN_cls_score, self.oRCNN_cls_score, self.binNet]
         for module in new_modules:
-            if isinstance(module, collections.Iterable):
-                for layer in module:
-                    if hasattr(layer, 'weight'):
-                        normal_init(layer, 0, 0.01, cfg.TRAIN.TRUNCATED)
+            for layer in module:
+                if hasattr(layer, 'weight'):
+                    normal_init(layer, 0, 0.01, cfg.TRAIN.TRUNCATED)
 
         # print('Updating weights with model pretrained on COCO ...')
         # coco_checkpoint = torch.load(self.weight_path)
