@@ -2,6 +2,7 @@ import os
 from global_config import DS_ROOT
 import cv2
 import numpy as np
+from tqdm import tqdm
 
 cate_pix_cnt_path = 'hico_scene_pixel_ratio.npy'
 cate_img_cnt_path = 'hico_scene_image_ratio.npy'
@@ -9,17 +10,12 @@ if not os.path.exists(cate_pix_cnt_path) or not os.path.exists(cate_img_cnt_path
     cate_pix_cnt = np.zeros(151)
     cate_img_cnt = np.zeros(151)
     hico_scene_root = os.path.join(DS_ROOT, 'scene', 'labels', 'train2015')
-    for image_id in os.listdir(hico_scene_root):
+    for image_id in tqdm(os.listdir(hico_scene_root)):
         image_path = os.path.join(hico_scene_root, image_id)
         label = cv2.imread(image_path)
 
         curr_img_cnt = np.zeros(151)
         curr_pix_cnt = np.zeros(151)
-        for r in range(label.shape[0]):
-            for c in range(label.shape[1]):
-                cate_id = label[r, c]
-                curr_pix_cnt[cate_id] += 1
-                curr_img_cnt[cate_id] = 1
 
         for cate in range(151):
             cate_mask = label == cate
