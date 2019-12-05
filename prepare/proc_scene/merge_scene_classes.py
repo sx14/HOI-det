@@ -39,3 +39,6 @@ for i in range(len(group_list)):
 print('==========')
 print('group num: %d' % len(group_list))
 print('class num: %d' % sum([len(group) for group in group_list]))
+
+
+
