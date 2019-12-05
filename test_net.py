@@ -131,6 +131,8 @@ def _get_image_blob(im, dp):
             interpolation=cv2.INTER_LINEAR)
     dp = cv2.resize(dp_orig, None, None, fx=im_scale, fy=im_scale,
             interpolation=cv2.INTER_LINEAR)
+    if len(dp.shape) == 2:
+      dp = dp[:, :, np.newaxis]
 
     im_scales.append(im_scale)
     processed_ims.append(im)
@@ -138,7 +140,7 @@ def _get_image_blob(im, dp):
 
   # Create a blob to hold the input images
   im_blob = im_list_to_blob(processed_ims, 3)
-  dp_blob = im_list_to_blob(processed_dps, 2)
+  dp_blob = im_list_to_blob(processed_dps, 1)
 
   return im_blob, dp_blob, im_scales
 
