@@ -245,7 +245,7 @@ if __name__ == '__main__':
     hoi_masks = hoi_masks.cuda()
     spa_maps = spa_maps.cuda()
     pose_maps = pose_maps.cuda()
-    obj_vecs = Variable(obj_vecs)
+    obj_vecs = obj_vecs.cuda()
 
   # make variable
   with torch.no_grad():
@@ -262,6 +262,7 @@ if __name__ == '__main__':
       hoi_masks = Variable(hoi_masks)
       spa_maps = Variable(spa_maps)
       pose_maps = Variable(pose_maps)
+      obj_vecs = Variable(obj_vecs)
 
   if args.cuda > 0:
     cfg.CUDA = True
@@ -410,7 +411,8 @@ if __name__ == '__main__':
                       fasterRCNN(im_data, dp_data, im_info,
                                  hboxes, oboxes, iboxes,
                                  vrb_classes, bin_classes, hoi_masks,
-                                 obj_vecs, spa_maps, pose_maps, num_hois)
+                                 spa_maps, pose_maps,
+                                 obj_vecs, num_hois)
 
               hoi_prob = np.zeros((1, num_cand, len(hoi_classes)))
               for j in range(num_cand):
