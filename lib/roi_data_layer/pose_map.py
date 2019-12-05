@@ -91,7 +91,7 @@ def gen_body_part_box(all_kps, human_wh, part, kp_thr=0.01, area_thr=0):
             conf_avg]
 
 
-def gen_pose_obj_map(hbox, obox, ibox, skeleton, size=224):
+def gen_pose_obj_map(hbox, obox, ibox, skeleton, size=7):
     h_xmin, h_ymin, h_xmax, h_ymax = hbox
     o_xmin, o_ymin, o_xmax, o_ymax = obox
     i_xmin, i_ymin, i_xmax, i_ymax = ibox
@@ -105,28 +105,28 @@ def gen_pose_obj_map(hbox, obox, ibox, skeleton, size=224):
     x_ratio = size * 1.0 / interact_wh[0]
     y_ratio = size * 1.0 / interact_wh[1]
 
-    pose_obj_map = np.zeros((8, size, size))
-    for i, body_part in enumerate(body_parts):
-        box_conf = gen_body_part_box(skeleton, human_wh, body_part)
-        if box_conf is not None:
-            xmin, ymin, xmax, ymax, conf = box_conf
-            xmin = int(xmin * x_ratio)
-            ymin = int(ymin * y_ratio)
-            xmax = int(xmax * x_ratio)
-            ymax = int(ymax * y_ratio)
-            pose_obj_map[i, ymin:ymax+1, xmin:xmax+1] = conf
+    pose_obj_map = np.zeros((2, size, size))
+    # for i, body_part in enumerate(body_parts):
+    #     box_conf = gen_body_part_box(skeleton, human_wh, body_part)
+    #     if box_conf is not None:
+    #         xmin, ymin, xmax, ymax, conf = box_conf
+    #         xmin = int(xmin * x_ratio)
+    #         ymin = int(ymin * y_ratio)
+    #         xmax = int(xmax * x_ratio)
+    #         ymax = int(ymax * y_ratio)
+    #         pose_obj_map[i, ymin:ymax+1, xmin:xmax+1] = conf
 
     o_xmin = int((o_xmin - i_xmin) * x_ratio)
     o_ymin = int((o_ymin - i_ymin) * y_ratio)
     o_xmax = int((o_xmax - i_xmin) * x_ratio)
     o_ymax = int((o_ymax - i_ymin) * y_ratio)
-    pose_obj_map[6, o_ymin:o_ymax+1, o_xmin:o_xmax+1] = 1
+    pose_obj_map[0, o_ymin:o_ymax+1, o_xmin:o_xmax+1] = 1
 
     h_xmin = int((h_xmin - i_xmin) * x_ratio)
     h_ymin = int((h_ymin - i_ymin) * y_ratio)
     h_xmax = int((h_xmax - i_xmin) * x_ratio)
     h_ymax = int((h_ymax - i_ymin) * y_ratio)
-    pose_obj_map[7, h_ymin:h_ymax+1, h_xmin:h_xmax+1] = 1
+    pose_obj_map[1, h_ymin:h_ymax+1, h_xmin:h_xmax+1] = 1
     return pose_obj_map
 
 
