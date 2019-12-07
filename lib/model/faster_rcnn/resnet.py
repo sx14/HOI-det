@@ -65,19 +65,19 @@ class GlobalCond:
 
 
 class ROICond(nn.Module):
-  def __init__(self, in_channel=1024):
+  def __init__(self, in_channel=1024, out_channel=1024):
     super(ROICond, self).__init__()
     self.cond_net = nn.Sequential(
       # 224 -> 56
-      nn.Conv2d(in_channel, in_channel, 3, 1), nn.LeakyReLU(0.1, True),
+      nn.Conv2d(in_channel, in_channel, 1), nn.LeakyReLU(0.1, True),
       # 56 -> 14
-      nn.Conv2d(in_channel, in_channel * 2, 3, 1), nn.LeakyReLU(0.1, True),
+      nn.Conv2d(in_channel, in_channel * 2, 1), nn.LeakyReLU(0.1, True),
       # 14 -> 14
       nn.Conv2d(in_channel * 2, in_channel * 2, 1), nn.LeakyReLU(0.1, True),
       # 14 -> 7
-      nn.Conv2d(in_channel * 2, in_channel, 1, 1), nn.LeakyReLU(0.1, True),
+      nn.Conv2d(in_channel * 2, out_channel, 1), nn.LeakyReLU(0.1, True),
       # 7 -> 7
-      nn.Conv2d(in_channel, in_channel, 1, 1))
+      nn.Conv2d(out_channel, out_channel, 1))
 
     for m in self.cond_net:
       if isinstance(m, nn.Conv2d):
@@ -315,13 +315,13 @@ class resnet(_fasterRCNN):
     self.ocond_net = ROICond(1024)
 
     import copy
-    self.iRCNN_SFT = ResBlock_SFT()
+    self.iRCNN_SFT = ResBlock_SFT(1024)
     self.iRCNN_top = nn.Sequential(resnet.layer4)
 
-    self.hRCNN_SFT = ResBlock_SFT()
+    self.hRCNN_SFT = ResBlock_SFT(1024)
     self.hRCNN_top = nn.Sequential(copy.deepcopy(resnet.layer4))
 
-    self.oRCNN_SFT = ResBlock_SFT()
+    self.oRCNN_SFT = ResBlock_SFT(1024)
     self.oRCNN_top = nn.Sequential(copy.deepcopy(resnet.layer4))
 
     self.iRCNN_cls_score = nn.Sequential(

@@ -76,12 +76,12 @@ class _fasterRCNN(nn.Module):
         num_hois = num_hois.data
 
         # feed image data to base model to obtain base feature map
-        base_feat = self.RCNN_base(im_data)
-        base_cond = self.cond_base(de_data)
-        base_feat = self.sft_base([base_feat, base_cond])
+        base_feat0 = self.RCNN_base(im_data)
+        base_cond0 = self.cond_base(de_data)
+        base_feat0 = self.sft_base([base_feat0, base_cond0])
 
-        layer1_feat = self.RCNN_layer1(base_feat)
-        layer1_cond = self.cond_layer1(base_cond)
+        layer1_feat = self.RCNN_layer1(base_feat0)
+        layer1_cond = self.cond_layer1(base_cond0)
         layer1_feat = self.sft_layer1([layer1_feat, layer1_cond])
 
         layer2_feat = self.RCNN_layer2(layer1_feat)
@@ -121,7 +121,7 @@ class _fasterRCNN(nn.Module):
             iroi_pooled_feat = self.RCNN_roi_pool(base_feat, irois.view(-1, 5))
 
         # # feed pooled features to top  model
-        iroi_pooled_cond = torch.cat([iroi_pooled_cond, pose_maps], dim=1)
+        iroi_pooled_cond = torch.cat([iroi_pooled_cond, pose_maps[0]], dim=1)
         iroi_pooled_feat = self._ihead_to_tail(iroi_pooled_feat, iroi_pooled_cond)
 
         if cfg.POOLING_MODE == 'crop':
