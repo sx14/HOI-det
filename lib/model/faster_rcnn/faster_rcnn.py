@@ -32,8 +32,7 @@ class SpaConv(nn.Module):
 
         self.hidden = nn.Sequential(
             nn.LeakyReLU(),
-            nn.Dropout(p=0.5),
-            nn.Linear(5408, 1024))
+            nn.Dropout(p=0.5))
 
     def forward(self, spa_map):
         conv1 = self.conv1(spa_map)
@@ -62,6 +61,7 @@ class _fasterRCNN(nn.Module):
         self.spaCNN = SpaConv()
 
         self.spa_cls_score = nn.Sequential(
+            nn.Linear(5408, 1024),
             nn.LeakyReLU(),
             nn.Dropout(p=0.5),
             nn.Linear(1024, self.n_classes))
@@ -121,7 +121,7 @@ class _fasterRCNN(nn.Module):
             iroi_pooled_feat = self.RCNN_roi_pool(base_feat, irois.view(-1, 5))
 
         # # feed pooled features to top  model
-        # iroi_pooled_cond = torch.cat((iroi_pooled_cond, pose_maps[0]), dim=3)
+        iroi_pooled_cond = torch.cat([iroi_pooled_cond, pose_maps], dim=1)
         iroi_pooled_feat = self._ihead_to_tail(iroi_pooled_feat, iroi_pooled_cond)
 
         if cfg.POOLING_MODE == 'crop':
