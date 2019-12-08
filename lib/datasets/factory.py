@@ -13,6 +13,7 @@ from __future__ import print_function
 __sets = {}
 from datasets.hico import hico
 from datasets.hico2 import hico2
+from datasets.hico2_bin import hico2_bin
 import numpy as np
 
 # Set up hico_<year>_<split>
@@ -20,6 +21,11 @@ for version in ['full', 'mini']:
   for split in ['train', 'test']:
     name = 'hico2_{}_{}'.format(version, split)
     __sets[name] = (lambda split=split, version=version: hico2(split, version))
+
+for version in ['full', 'mini']:
+  for split in ['train', 'test']:
+    name = 'hico2_bin_{}_{}'.format(version, split)
+    __sets[name] = (lambda split=split, version=version: hico2_bin(split, version))
 
 
 def get_imdb(name):

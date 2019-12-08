@@ -85,7 +85,7 @@ class hoi_class:
         return self._verb_name + ' ' + self._object_name
 
 
-class hico2(imdb):
+class hico2_bin(imdb):
 
     @staticmethod
     def load_obj2vec(data_path):

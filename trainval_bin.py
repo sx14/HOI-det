@@ -25,7 +25,7 @@ import torchvision.transforms as transforms
 from torch.utils.data.sampler import Sampler
 
 from roi_data_layer.roidb import combined_roidb
-from roi_data_layer.roibatchLoader import roibatchLoader
+from roi_data_layer.roibatchLoader_bin import roibatchLoader
 from model.utils.config import cfg, cfg_from_file, cfg_from_list, get_output_dir
 from model.utils.net_utils import weights_normal_init, save_net, load_net, \
       adjust_learning_rate, save_checkpoint, clip_gradient
@@ -160,9 +160,9 @@ if __name__ == '__main__':
       args.imdbval_name = "hico2_mini_test"
       args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '75']
   elif args.dataset == "hico_full":
-      args.imdb_name = "hico2_full_train"
-      args.imdbval_name = "hico_full_test"
-      args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '75']
+      args.imdb_name = "hico2_bin_full_train"
+      args.imdbval_name = "hico2_bin_full_test"
+      args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '200']
   else:
       print('Only support HICO-DET dataset now.')
 
