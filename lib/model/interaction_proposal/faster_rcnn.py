@@ -117,7 +117,7 @@ class _fasterRCNN(nn.Module):
         if self.training:
             # classification loss
             bin_classes = bin_classes[0, :, 0:1]
-            bin_weights = bin_classes + 1
+            bin_weights = bin_classes * 3 + 1
             RCNN_loss_cls = F.binary_cross_entropy(cls_prob, bin_classes, weight=bin_weights)
 
         cls_prob = cls_prob.view(batch_size, irois.size(1), -1)
