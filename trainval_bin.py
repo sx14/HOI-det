@@ -292,7 +292,7 @@ if __name__ == '__main__':
 
   if args.resume:
     load_name = os.path.join(output_dir,
-      'ho_spa_rcnn3_lf_no_nis_3b_vrb_obj_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
+      'ho_spa_rcnn_bin_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
     print("loading checkpoint %s" % (load_name))
     checkpoint = torch.load(load_name)
     args.session = checkpoint['session']
@@ -337,14 +337,10 @@ if __name__ == '__main__':
       hboxes.data.resize_(data[2].size()).copy_(data[2])
       oboxes.data.resize_(data[3].size()).copy_(data[3])
       iboxes.data.resize_(data[4].size()).copy_(data[4])
-      hoi_classes.resize_(data[5].size()).copy_(data[5])
-      vrb_classes.resize_(data[6].size()).copy_(data[6])
-      bin_classes.resize_(data[7].size()).copy_(data[7])
-      hoi_masks.resize_(data[8].size()).copy_(data[8])
-      vrb_masks.resize_(data[9].size()).copy_(data[9])
-      spa_maps.data.resize_(data[10].size()).copy_(data[10])
-      obj_vecs.data.resize_(data[11].size()).copy_(data[11])
-      num_hois.data.resize_(data[12].size()).copy_(data[12])
+      bin_classes.resize_(data[5].size()).copy_(data[5])
+      spa_maps.data.resize_(data[6].size()).copy_(data[6])
+      obj_vecs.data.resize_(data[7].size()).copy_(data[7])
+      num_hois.data.resize_(data[8].size()).copy_(data[8])
 
       if num_hois.data.item() == 0:
           continue
@@ -409,7 +405,7 @@ if __name__ == '__main__':
         loss_bin_temp = 0
         start = time.time()
 
-    save_name = os.path.join(output_dir, 'ho_spa_rcnn3_lf_no_nis_3b_vrb_obj_{}_{}_{}.pth'.format(args.session, epoch, step))
+    save_name = os.path.join(output_dir, 'ho_spa_rcnn_bin_{}_{}_{}.pth'.format(args.session, epoch, step))
     save_checkpoint({
       'session': args.session,
       'epoch': epoch + 1,
