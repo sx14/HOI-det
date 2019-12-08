@@ -109,15 +109,15 @@ class _fasterRCNN(nn.Module):
 
         feat = torch.cat([spa_feat1, obj_feat1, roi_feat1], dim=1)
         cls_score = self.classifier(feat)
-        cls_prob = nn.Sigmoid(cls_score)
+        cls_prob = F.sigmoid(cls_score)
 
         RCNN_loss_cls = 0
         RCNN_loss_bin = 0
 
         if self.training:
             # classification loss
-            bin_classes = bin_classes[0, :, 0]
-            bin_weights = bin_classes * 3
+            bin_classes = bin_classes[0, :, 0:1]
+            bin_weights = bin_classes + 1
             RCNN_loss_cls = F.binary_cross_entropy(cls_prob, bin_classes, weight=bin_weights)
 
         cls_prob = cls_prob.view(batch_size, irois.size(1), -1)
@@ -137,12 +137,14 @@ class _fasterRCNN(nn.Module):
                 m.weight.data.normal_(mean, stddev)
                 m.bias.data.zero_()
 
-        new_modules = [self.iRCNN_cls_score, self.hRCNN_cls_score, self.oRCNN_cls_score]
+        new_modules = [self.iRCNN_feat, self.spa_feat, self.obj_feat, self.classifier]
         for module in new_modules:
-            if isinstance(module, collections.Iterable):
+            if isinstance(module, nn.Sequential):
                 for layer in module:
                     if hasattr(layer, 'weight'):
                         normal_init(layer, 0, 0.01, cfg.TRAIN.TRUNCATED)
+            else:
+                normal_init(module, 0, 0.01, cfg.TRAIN.TRUNCATED)
 
     def create_architecture(self):
         self._init_modules()

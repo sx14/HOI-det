@@ -30,7 +30,6 @@ from model.utils.config import cfg, cfg_from_file, cfg_from_list, get_output_dir
 from model.utils.net_utils import weights_normal_init, save_net, load_net, \
       adjust_learning_rate, save_checkpoint, clip_gradient
 
-from model.interaction_proposal.vgg16 import vgg16
 from model.interaction_proposal.resnet import resnet
 
 
@@ -70,7 +69,7 @@ def parse_args():
                       action='store_true')
   parser.add_argument('--ls', dest='large_scale',
                       help='whether use large imag scale',
-                      action='store_true')                      
+                      action='store_true')
   parser.add_argument('--mGPUs', dest='mGPUs',
                       help='whether use multiple GPUs',
                       action='store_true')
@@ -87,7 +86,7 @@ def parse_args():
                       default="sgd", type=str)
   parser.add_argument('--lr', dest='lr',
                       help='starting learning rate',
-                      default=0.00001, type=float)
+                      default=0.01, type=float)
   parser.add_argument('--lr_decay_step', dest='lr_decay_step',
                       help='step to do learning rate decay, unit is epoch',
                       default=1, type=int)
@@ -366,7 +365,7 @@ if __name__ == '__main__':
           # loss_bin = RCNN_loss_bin.mean().item()
           loss_bin = 0
       else:
-          loss_cls = RCNN_loss_cls.item()
+          loss_cls = RCNN_loss_cls.mean().item()
           # loss_bin = RCNN_loss_bin.item()
           loss_bin = 0
 
@@ -394,7 +393,7 @@ if __name__ == '__main__':
 
         print("[session %d][epoch %2d][iter %4d/%4d] loss: %.4f, lr: %.2e" \
                                 % (args.session, epoch, step, iters_per_epoch, loss_temp, lr))
-        print("loss_cls: %.4f, loss_bin: %.4f" % (loss_cls, loss_bin))
+        print("loss_cls: %.10f, loss_bin: %.4f" % (loss_cls, loss_bin))
         print("\t\t\tfg/bg=(%d/%d), time cost: %f" % (nPos, nNeg, end-start))
 
         if args.use_tfboard:
