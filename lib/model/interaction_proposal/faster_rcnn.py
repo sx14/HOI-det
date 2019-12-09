@@ -29,13 +29,26 @@ class SpaConv(nn.Module):
         self.conv2 = nn.Conv2d(in_channels=64, out_channels=32, kernel_size=5)
         # (batch,26,26,32)->(batch,13,13,32)
         self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.feat = nn.Linear(5408, 1024)
 
     def forward(self, spa_map):
         conv1 = self.conv1(spa_map)
         pool1 = self.pool1(conv1)
         conv2 = self.conv2(pool1)
         pool2 = self.pool2(conv2)
-        return pool2.view(spa_map.shape[0], -1)
+        pool2_flat = pool2.view(spa_map.shape[0], -1)
+        return self.feat(pool2_flat)
+
+
+class SpaFeat(nn.Module):
+    def __init__(self):
+        super(SpaFeat, self).__init__()
+        self.feat = nn.Sequential(
+            nn.Linear(14, 1024)
+        )
+
+    def forward(self, spa_feat):
+        return self.feat(spa_feat)
 
 
 class _fasterRCNN(nn.Module):
@@ -52,9 +65,7 @@ class _fasterRCNN(nn.Module):
 
         self.grid_size = cfg.POOLING_SIZE * 2 if cfg.CROP_RESIZE_WITH_MAX_POOL else cfg.POOLING_SIZE
         self.RCNN_roi_crop = _RoICrop()
-        self.spaCNN = SpaConv()
-
-        self.spa_feat = nn.Linear(5408, 1024)
+        self.spa_feat = SpaConv()
 
         self.obj_feat = nn.Linear(300, 1024)
 
@@ -99,9 +110,7 @@ class _fasterRCNN(nn.Module):
         # feed pooled features to top  model
         iroi_pooled_feat = self._ihead_to_tail(iroi_pooled_feat)
 
-        spa_feat = self.spaCNN(spa_maps[0])
-        spa_feat1 = self.spa_feat(spa_feat)
-
+        spa_feat1 = self.spa_feat(spa_maps[0])
         obj_feat1 = self.obj_feat(obj_vecs[0])
 
         # compute object classification probability
@@ -137,7 +146,7 @@ class _fasterRCNN(nn.Module):
                 m.weight.data.normal_(mean, stddev)
                 m.bias.data.zero_()
 
-        new_modules = [self.iRCNN_feat, self.spa_feat, self.obj_feat, self.classifier]
+        new_modules = [self.iRCNN_feat, self.obj_feat, self.classifier]
         for module in new_modules:
             if isinstance(module, nn.Sequential):
                 for layer in module:

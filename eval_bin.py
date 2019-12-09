@@ -182,12 +182,7 @@ def box_label_recall(gt_hois, human_boxes, object_boxes, object_labels, iou_thre
     return stats
 
 
-def evaluate_boxes_and_labels(output_root, data_root):
-
-    select_boxes_h5py = os.path.join(output_root,
-        'all_hoi_proposals.pkl')
-    with open(select_boxes_h5py) as f:
-        select_boxes = pickle.load(f)
+def evaluate_boxes_and_labels(select_boxes, data_root):
 
     print('Loading anno_list.json ...')
     anno_list_path = os.path.join(data_root, 'anno_list.json')
@@ -221,16 +216,21 @@ def evaluate_boxes_and_labels(output_root, data_root):
             continue
 
         im_proposals = select_boxes[global_id]
-        human_boxes = im_proposals['human_boxes']
-        object_boxes = im_proposals['object_boxes']
+        human_boxes = im_proposals['human_boxes'][:, :4]
+        human_scores = im_proposals['human_boxes'][:, 4]
+        object_boxes = im_proposals['object_boxes'][:, :4]
+        object_scores = im_proposals['object_boxes'][:, 4]
         object_labels = im_proposals['object_labels']
+        inter_scores = im_proposals['interactiveness']
+
+        good_inds = (human_scores > 0.4) & (object_scores > 0.4) & (inter_scores > 0.3)
 
         try:
             recall_stats = box_label_recall(
                 anno['hois'],
-                human_boxes.tolist(),
-                object_boxes.tolist(),
-                object_labels,
+                human_boxes[good_inds].tolist(),
+                object_boxes[good_inds].tolist(),
+                object_labels[good_inds],
                 0.5,
                 hoi_list)
         except IndexError:

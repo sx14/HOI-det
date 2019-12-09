@@ -21,7 +21,6 @@ from scipy.misc import imread
 from roi_data_layer.roibatchLoader_bin import roibatchLoader, gen_spatial_map
 from model.utils.config import cfg, cfg_from_file, cfg_from_list, get_output_dir
 from model.utils.blob import im_list_to_blob
-from model.interaction_proposal.vgg16 import vgg16
 from model.interaction_proposal.resnet import resnet
 from generate_HICO_detection import org_obj2hoi
 from datasets.hico2 import hico2
@@ -141,7 +140,10 @@ if __name__ == '__main__':
   output_path = os.path.join(args.output_dir, 'all_hoi_proposals.pkl')
   if os.path.exists(output_path):
       print('Test results found!')
-      evaluate_boxes_and_labels(output_path, cfg.DATA_DIR)
+      print('Loading results ...')
+      with open(output_path) as f:
+          select_boxes = pickle.load(f)
+      evaluate_boxes_and_labels(select_boxes, cfg.DATA_DIR)
       exit(0)
 
   print('Loading object detections ...')
@@ -164,9 +166,7 @@ if __name__ == '__main__':
   pascal_classes = ['1'] * len(vrb_classes) 
 
   # initilize the network here.
-  if args.net == 'vgg16':
-    fasterRCNN = vgg16(pascal_classes, pretrained=False, class_agnostic=args.class_agnostic)
-  elif args.net == 'res101':
+  if args.net == 'res101':
     fasterRCNN = resnet(pascal_classes, 101, pretrained=False, class_agnostic=args.class_agnostic)
   elif args.net == 'res50':
     fasterRCNN = resnet(pascal_classes, 50, pretrained=False, class_agnostic=args.class_agnostic)
@@ -272,7 +272,8 @@ if __name__ == '__main__':
       num_cand = 0
       im_results = {'human_boxes': [],
                     'object_boxes': [],
-                    'object_labels': []}
+                    'object_labels': [],
+                    'interactiveness': []}
       for human_det in det_db[im_id]:
           if (np.max(human_det[5]) > human_thres) and (human_det[1] == 'Human'):
               # This is a valid human
@@ -353,21 +354,26 @@ if __name__ == '__main__':
                          hoi_masks, spa_maps,
                          obj_vecs, num_hois)
 
-      proposal_inds = cls_prob.cpu().data.numpy() > 0.3
-      im_hboxes = hboxes_raw[0][proposal_inds, :]
-      im_oboxes = hboxes_raw[0][proposal_inds, :]
-      im_oclses = np.array(obj_clses)[proposal_inds]
+      im_hboxes = hboxes_raw[0]
+      im_hboxes = np.concatenate((im_hboxes, np.array(hscores)[:, np.newaxis]), axis=1)
+      im_oboxes = hboxes_raw[0]
+      im_oboxes = np.concatenate((im_oboxes, np.array(oscores)[:, np.newaxis]), axis=1)
+      im_oclses = np.array(obj_clses)
       im_olabels = [hoi_classes[org_obj2hoi[ocls]].object_name() for ocls in im_oclses]
       im_results['human_boxes'] = im_hboxes.tolist()
       im_results['object_boxes'] = im_oboxes.tolist()
       im_results['object_labels'] = im_olabels
+      im_results['interactiveness'] = cls_prob.cpu().data.numpy()[0, :, 0]
+
       all_results[im_file[:-4]] = im_results
 
   if not os.path.exists(args.output_dir):
       os.mkdir(args.output_dir)
 
+  evaluate_boxes_and_labels(all_results, cfg.DATA_DIR)
+
   print('Saving results ...')
   with open(output_path, 'wb') as f:
       pickle.dump(all_results, f)
 
-  evaluate_boxes_and_labels(output_path, cfg.DATA_DIR)
+

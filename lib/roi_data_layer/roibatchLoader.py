@@ -9,6 +9,7 @@ from __future__ import print_function
 import torch.utils.data as data
 from PIL import Image
 import torch
+from math import e, log
 
 from model.utils.config import cfg
 from roi_data_layer.minibatch import get_minibatch, get_minibatch
@@ -18,6 +19,33 @@ import numpy as np
 import random
 import time
 import pdb
+
+
+def gen_spatial_feat(box1, box2, image_wh):
+    img_w, img_h = image_wh
+    img_w = float(img_w)
+    img_h = float(img_h)
+
+    sbj_h = box1[3] - box1[1] + 1
+    sbj_w = box1[2] - box1[0] + 1
+    obj_h = box2[3] - box2[1] + 1
+    obj_w = box2[2] - box2[0] + 1
+    spatial_feat = [
+        box1[0] * 1.0 / img_w,
+        box1[1] * 1.0 / img_h,
+        box1[2] * 1.0 / img_w,
+        box1[3] * 1.0 / img_h,
+        (sbj_h * sbj_w * 1.0) / (img_h * img_w),
+        box2[0] * 1.0 / img_w,
+        box2[1] * 1.0 / img_h,
+        box2[2] * 1.0 / img_w,
+        box2[3] * 1.0 / img_h,
+        (obj_h * obj_w * 1.0) / (img_h * img_w),
+        (box1[0] - box2[0] + 1) / (obj_w * 1.0),
+        (box1[1] - box2[1] + 1) / (obj_h * 1.0),
+        log(sbj_w * 1.0 / obj_w, e),
+        log(sbj_h * 1.0 / obj_h, e)]
+    return np.array(spatial_feat)
 
 
 def bbox_trans(human_box_roi, object_box_roi, size=64):
@@ -194,6 +222,12 @@ class roibatchLoader(data.Dataset):
         raw_spa_maps[i] = gen_spatial_map(blobs['hboxes'][i], blobs['oboxes'][i])
     raw_spa_maps = np.tile(raw_spa_maps, (3, 1, 1, 1))
     gt_spa_maps = torch.from_numpy(raw_spa_maps).float()
+
+    # raw_spa_maps = np.zeros((num_hoi, 14))
+    # for i in range(num_hoi):
+    #     raw_spa_maps[i] = gen_spatial_feat(blobs['hboxes'][i], blobs['oboxes'][i], [data_width, data_height])
+    # raw_spa_maps = np.tile(raw_spa_maps, (3, 1))
+    # gt_spa_maps = torch.from_numpy(raw_spa_maps).float()
 
     raw_obj_vecs = self._obj2vec[blobs['obj_classes']]
     raw_obj_vecs = np.tile(raw_obj_vecs, (3, 1))
