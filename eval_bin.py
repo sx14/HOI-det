@@ -284,18 +284,18 @@ def evaluate_boxes_and_labels(select_boxes, output_root, data_root):
             evaluation_stats[k] += recall_stats[k]
 
     evaluation_stats['human_recall'] = \
-        evaluation_stats['num_gt_human_boxes_recalled'] / \
+        evaluation_stats['num_gt_human_boxes_recalled'] * 1.0 / \
         evaluation_stats['num_gt_human_boxes']
     evaluation_stats['object_recall'] = \
-        evaluation_stats['num_gt_object_boxes_recalled'] / \
+        evaluation_stats['num_gt_object_boxes_recalled'] * 1.0 / \
         evaluation_stats['num_gt_object_boxes']
     evaluation_stats['connection_recall'] = \
-        evaluation_stats['num_gt_connections_recalled'] / \
+        evaluation_stats['num_gt_connections_recalled'] * 1.0 / \
         evaluation_stats['num_gt_connections']
     evaluation_stats['average_human_proposals_per_image'] = \
-        evaluation_stats['num_human_proposals'] / num_images
+        evaluation_stats['num_human_proposals'] * 1.0 / num_images
     evaluation_stats['average_object_proposals_per_image'] = \
-        evaluation_stats['num_object_proposals'] / num_images
+        evaluation_stats['num_object_proposals'] * 1.0 / num_images
     evaluation_stats['average_connection_proposals_per_image'] = \
         evaluation_stats['average_human_proposals_per_image'] * \
         evaluation_stats['average_object_proposals_per_image']
