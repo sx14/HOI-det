@@ -270,7 +270,9 @@ if __name__ == '__main__':
       oscores = []
 
       num_cand = 0
-      im_results = {}
+      im_results = {'human_boxes': [],
+                    'object_boxes': [],
+                    'object_labels': []}
       for human_det in det_db[im_id]:
           if (np.max(human_det[5]) > human_thres) and (human_det[1] == 'Human'):
               # This is a valid human
@@ -308,6 +310,7 @@ if __name__ == '__main__':
                       hscores.append(human_det[5])
                       oscores.append(object_det[5])
                       num_cand += 1
+
       if num_cand == 0:
           all_results[im_file[:-4]] = im_results
           continue
