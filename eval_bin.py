@@ -219,12 +219,13 @@ def evaluate_boxes_and_labels(select_boxes, output_root, data_root):
 
     print('Loading anno_list.json ...')
     anno_list_path = os.path.join(data_root, 'anno_list.json')
-    with open(anno_list_path, 'r') as f:
+    with open(anno_list_path) as f:
         anno_list = json.load(f)
 
     print('Loading hoi_list.json ...')
     hoi_list_path = os.path.join(data_root, 'hoi_list.json')
-    hoi_list = json.load(hoi_list_path)
+    with open(hoi_list_path) as f:
+        hoi_list = json.load(f)
 
     print('Evaluating box proposals ...')
     evaluation_stats = {
@@ -249,12 +250,21 @@ def evaluate_boxes_and_labels(select_boxes, output_root, data_root):
             continue
 
         im_proposals = select_boxes[global_id]
-        human_boxes = np.array(im_proposals['human_boxes'])[:, :4]
-        human_scores = np.array(im_proposals['human_boxes'])[:, 4]
-        object_boxes = np.array(im_proposals['object_boxes'])[:, :4]
-        object_scores = np.array(im_proposals['object_boxes'])[:, 4]
-        object_labels = im_proposals['object_labels']
-        inter_scores = np.array(im_proposals['interactiveness'])
+
+        if len(im_proposals['human_boxes']) == 0:
+            human_boxes = np.zeros((0, 4))
+            human_scores = np.zeros(0)
+            object_boxes = np.zeros((0, 4))
+            object_scores = np.zeros(0)
+            object_labels = np.zeros(0)
+            inter_scores = np.zeros(0)
+        else:
+            human_boxes = np.array(im_proposals['human_boxes'])[:, :4]
+            human_scores = np.array(im_proposals['human_boxes'])[:, 4]
+            object_boxes = np.array(im_proposals['object_boxes'])[:, :4]
+            object_scores = np.array(im_proposals['object_boxes'])[:, 4]
+            object_labels = np.array(im_proposals['object_labels'])
+            inter_scores = np.array(im_proposals['interactiveness'])
 
         good_inds = (human_scores > 0.4) & (object_scores > 0.4) & (inter_scores > 0.3)
 

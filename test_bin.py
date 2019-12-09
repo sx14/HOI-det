@@ -137,14 +137,16 @@ if __name__ == '__main__':
   pprint.pprint(cfg)
   np.random.seed(cfg.RNG_SEED)
 
+  data_dir = os.path.join(cfg.DATA_DIR, 'hico')
   output_path = os.path.join(args.output_dir, 'all_hoi_proposals.pkl')
   if os.path.exists(output_path):
       print('Test results found!')
       print('Loading results ...')
       with open(output_path) as f:
           select_boxes = pickle.load(f)
-      evaluate_boxes_and_labels(select_boxes, args.output_dir, cfg.DATA_DIR)
+      evaluate_boxes_and_labels(select_boxes, args.output_dir, data_dir)
       exit(0)
+
 
   print('Loading object detections ...')
   det_path = 'data/hico/Test_Faster_RCNN_R-50-PFN_2x_HICO_DET.pkl'
@@ -157,7 +159,7 @@ if __name__ == '__main__':
   load_name = os.path.join(input_dir,
     'ho_spa_rcnn_bin_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
 
-  data_dir = os.path.join(cfg.DATA_DIR, 'hico')
+
   hoi_classes, obj_classes, vrb_classes, obj2int, hoi2vrb, vrb2hoi = hico2.load_hoi_classes(data_dir)
   obj2ind = dict(zip(obj_classes, range(len(obj_classes))))
 
@@ -357,7 +359,7 @@ if __name__ == '__main__':
 
       im_hboxes = hboxes_raw[0]
       im_hboxes = np.concatenate((im_hboxes, np.array(hscores)[:, np.newaxis]), axis=1)
-      im_oboxes = hboxes_raw[0]
+      im_oboxes = oboxes_raw[0]
       im_oboxes = np.concatenate((im_oboxes, np.array(oscores)[:, np.newaxis]), axis=1)
       im_oclses = np.array(obj_clses)
       im_olabels = [hoi_classes[org_obj2hoi[ocls]].object_name() for ocls in im_oclses]
