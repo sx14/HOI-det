@@ -353,6 +353,12 @@ if __name__ == '__main__':
                      vrb_masks, spa_maps,
                      obj_vecs, num_hois)
 
+      bin_mask = bin_classes.cpu().data.numpy()[0, :, 0:1]
+      pos_mask = bin_mask > 0
+      cls_prob = cls_prob.cpu().data.numpy()[0]
+      pos_prob = cls_prob[pos_mask]
+      pos_hit = np.sum(pos_prob > 0.3)[0]
+
       # loss = RCNN_loss_cls.mean() + RCNN_loss_bin.mean()
       loss = RCNN_loss_cls.mean()
 
@@ -390,7 +396,7 @@ if __name__ == '__main__':
         print("[session %d][epoch %2d][iter %4d/%4d] loss: %.4f, lr: %.2e" \
                                 % (args.session, epoch, step, iters_per_epoch, loss_temp, lr))
         print("loss_cls: %.10f, loss_bin: %.4f" % (loss_cls, loss_bin))
-        print("\t\t\tfg/bg=(%d/%d), time cost: %f" % (nPos, nNeg, end-start))
+        print("\t\t\tfg_hit/fg/bg=(%d/%d/%d), time cost: %f" % (pos_hit, nPos, nNeg, end-start))
 
         if args.use_tfboard:
           info = {

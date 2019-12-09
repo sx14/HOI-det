@@ -155,6 +155,17 @@ class _fasterRCNN(nn.Module):
             else:
                 normal_init(module, 0, 0.01, cfg.TRAIN.TRUNCATED)
 
+        # print('Updating weights with model pretrained on COCO ...')
+        # coco_checkpoint = torch.load(self.weight_path)
+        # coco_weights = coco_checkpoint['model']
+        # imagenet_weights = self.state_dict()
+        # for k in self.state_dict():
+        #     if k in coco_weights:
+        #         imagenet_weights[k] = coco_weights[k]
+        #     elif 'RCNN_top' in k:
+        #         imagenet_weights[k] = coco_weights[k[1:]]
+        # self.load_state_dict(imagenet_weights)
+
     def create_architecture(self):
         self._init_modules()
         self._init_weights()

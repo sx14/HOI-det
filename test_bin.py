@@ -143,7 +143,7 @@ if __name__ == '__main__':
       print('Loading results ...')
       with open(output_path) as f:
           select_boxes = pickle.load(f)
-      evaluate_boxes_and_labels(select_boxes, cfg.DATA_DIR)
+      evaluate_boxes_and_labels(select_boxes, args.output_dir, cfg.DATA_DIR)
       exit(0)
 
   print('Loading object detections ...')
@@ -157,13 +157,13 @@ if __name__ == '__main__':
   load_name = os.path.join(input_dir,
     'ho_spa_rcnn_bin_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
 
-  hoi_classes, obj_classes, vrb_classes, obj2int, hoi2vrb, vrb2hoi = hico2.load_hoi_classes(cfg.DATA_DIR + '/hico')
+  data_dir = os.path.join(cfg.DATA_DIR, 'hico')
+  hoi_classes, obj_classes, vrb_classes, obj2int, hoi2vrb, vrb2hoi = hico2.load_hoi_classes(data_dir)
   obj2ind = dict(zip(obj_classes, range(len(obj_classes))))
 
-  obj2vec = hico2.load_obj2vec(cfg.DATA_DIR + '/hico')
+  obj2vec = hico2.load_obj2vec(data_dir)
 
-
-  pascal_classes = ['1'] * len(vrb_classes) 
+  pascal_classes = ['1'] * len(vrb_classes)
 
   # initilize the network here.
   if args.net == 'res101':
@@ -249,6 +249,7 @@ if __name__ == '__main__':
 
   all_results = {}
   image_path_template = 'data/hico/images/test2015/HICO_test2015_%s.jpg'
+  image_id_template = 'HICO_test2015_%s'
   for i, im_id in enumerate(det_db):
       print('test [%d/%d]' % (i + 1, num_images))
       im_file = image_path_template % str(im_id).zfill(8)
@@ -313,7 +314,7 @@ if __name__ == '__main__':
                       num_cand += 1
 
       if num_cand == 0:
-          all_results[im_file[:-4]] = im_results
+          all_results[image_id_template % str(im_id).zfill(8)] = im_results
           continue
 
       hboxes_raw = hboxes_raw[np.newaxis, :, :]
@@ -365,15 +366,17 @@ if __name__ == '__main__':
       im_results['object_labels'] = im_olabels
       im_results['interactiveness'] = cls_prob.cpu().data.numpy()[0, :, 0]
 
-      all_results[im_file[:-4]] = im_results
+      all_results[image_id_template % str(im_id).zfill(8)] = im_results
 
   if not os.path.exists(args.output_dir):
       os.mkdir(args.output_dir)
 
-  evaluate_boxes_and_labels(all_results, cfg.DATA_DIR)
-
   print('Saving results ...')
   with open(output_path, 'wb') as f:
       pickle.dump(all_results, f)
+
+  evaluate_boxes_and_labels(all_results, args.output_dir, data_dir)
+
+
 
 
