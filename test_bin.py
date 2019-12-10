@@ -191,7 +191,6 @@ if __name__ == '__main__':
 
   print('Load model successfully!')
 
-
   # initilize the tensor holder here.
   im_data = torch.FloatTensor(1)
   im_info = torch.FloatTensor(1)

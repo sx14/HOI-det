@@ -122,9 +122,16 @@ def compute_iou(bbox1, bbox2, verbose=False):
 
 
 def box_label_recall(gt_hois, human_boxes, object_boxes, object_labels, iou_thresh, hoi_list):
-    num_pred_human_boxes = len(human_boxes)
-    num_pred_object_boxes = len(object_boxes)
-    num_pred_connections = num_pred_human_boxes * num_pred_object_boxes
+    if len(human_boxes) > 0:
+        unique_human_boxes = np.unique(human_boxes, axis=0)
+        unique_object_boxes = np.unique(object_boxes, axis=0)
+        num_pred_human_boxes = len(unique_human_boxes)
+        num_pred_object_boxes = len(unique_object_boxes)
+    else:
+        num_pred_human_boxes = 0
+        num_pred_object_boxes = 0
+
+    num_pred_connections = len(human_boxes)
 
     hoi_dict = {hoi['id']: hoi for hoi in hoi_list}
 
@@ -170,8 +177,21 @@ def box_label_recall(gt_hois, human_boxes, object_boxes, object_labels, iou_thre
 
         gt_connections_recalled = [False] * len(gt_connections)
         for k, (i, j) in enumerate(gt_connections):
-            if gt_human_boxes_recalled[i] and gt_object_boxes_recalled[j]:
-                gt_connections_recalled[k] = True
+            gt_hbox = gt_human_boxes[i]
+            gt_obox = gt_object_boxes[j]
+
+            for ii in range(len(human_boxes)):
+                hbox = human_boxes[ii]
+                obox = object_boxes[ii]
+                hiou = compute_iou(hbox, gt_hbox)
+                oiou = compute_iou(obox, gt_obox)
+
+                if hiou >= iou_thresh and oiou >= iou_thresh and object_labels[ii] == gt_hoi['object']:
+                    gt_connections_recalled[k] = True
+                    break
+
+            # if gt_human_boxes_recalled[i] and gt_object_boxes_recalled[j]:
+            #     gt_connections_recalled[k] = True
 
         num_gt_connections += len(gt_connections)
         num_gt_connections_recalled += gt_connections_recalled.count(True)
@@ -271,8 +291,8 @@ def evaluate_boxes_and_labels(select_boxes, output_root, data_root):
         try:
             recall_stats = box_label_recall(
                 anno['hois'],
-                human_boxes[good_inds].tolist(),
-                object_boxes[good_inds].tolist(),
+                human_boxes[good_inds],
+                object_boxes[good_inds],
                 object_labels[good_inds],
                 0.5,
                 hoi_list)
