@@ -87,7 +87,7 @@ def parse_args():
                       default=1, type=int)
   parser.add_argument('--checkepoch', dest='checkepoch',
                       help='checkepoch to load network',
-                      default=8, type=int)
+                      default=4, type=int)
   parser.add_argument('--checkpoint', dest='checkpoint',
                       help='checkpoint to load network',
                       default=75265, type=int)
@@ -158,10 +158,14 @@ if __name__ == '__main__':
       os.system('matlab -nodesktop -nosplash -r "Generate_detection ' + '../output/results/' + '/;quit;"')
       exit(0)
 
-  print('Loading object detections ...')
-  det_path = 'data/hico/Test_Faster_RCNN_R-50-PFN_2x_HICO_DET.pkl'
-  with open(det_path) as f:
-      det_db = pickle.load(f)
+  # print('Loading object detections ...')
+  # det_path = 'data/hico/Test_Faster_RCNN_R-50-PFN_2x_HICO_DET.pkl'
+  # with open(det_path) as f:
+  #     det_db = pickle.load(f)
+  print('Loading interaction proposals ...')
+  proposal_path = 'output/all_hoi_proposals.pkl'
+  with open(proposal_path) as f:
+      proposal_db = pickle.load(f)
 
   input_dir = args.load_dir + "/" + args.net + "/" + args.dataset
   if not os.path.exists(input_dir):
@@ -171,9 +175,12 @@ if __name__ == '__main__':
 
   hoi_classes, obj_classes, vrb_classes, obj2int, hoi2vrb, vrb2hoi = hico2.load_hoi_classes(cfg.DATA_DIR + '/hico')
   obj2ind = dict(zip(obj_classes, range(len(obj_classes))))
-
   obj2vec = hico2.load_obj2vec(cfg.DATA_DIR + '/hico')
-
+  obj2org_ind = {}
+  for org_obj_id, hoi_id in enumerate(org_obj2hoi):
+      if hoi_id >= 0:
+        hoi_class = hoi_classes[hoi_id]
+        obj2org_ind[hoi_class.object_name()] = org_obj_id
 
   pascal_classes = ['1'] * len(vrb_classes) 
 
@@ -258,14 +265,15 @@ if __name__ == '__main__':
   human_thres = 0.4
   object_thres = 0.4
 
-  num_images = len(det_db)
+  num_images = len(proposal_db)
   print('Loaded Photo: {} images.'.format(num_images))
 
   all_results = {}
-  image_path_template = 'data/hico/images/test2015/HICO_test2015_%s.jpg'
-  for i, im_id in enumerate(det_db):
-      print('test [%d/%d]' % (i + 1, num_images))
-      im_file = image_path_template % str(im_id).zfill(8)
+  image_path_template = 'data/hico/images/test2015/%s.jpg'
+  for im_cnt, im_name in enumerate(proposal_db):
+      print('test [%d/%d]' % (im_cnt + 1, num_images))
+      im_id = int(im_name[-8:])
+      im_file = image_path_template % im_name
       im_in = np.array(imread(im_file))
       if len(im_in.shape) == 2:
           im_in = im_in[:, :, np.newaxis]
@@ -274,57 +282,41 @@ if __name__ == '__main__':
       im = im_in
       blobs, im_scales = _get_image_blob(im)
 
-      hboxes_raw = np.zeros((0, 4))
-      oboxes_raw = np.zeros((0, 4))
-      iboxes_raw = np.zeros((0, 4))
-      spa_maps_raw = np.zeros((0, 2, 64, 64))
-      obj_vecs_raw = np.zeros((0, 300))
-      obj_classes = []
-      hscores = []
-      oscores = []
 
-      num_cand = 0
       im_results = []
-      for human_det in det_db[im_id]:
-          if (np.max(human_det[5]) > human_thres) and (human_det[1] == 'Human'):
-              # This is a valid human
-              hbox = np.array([human_det[2][0],
-                               human_det[2][1],
-                               human_det[2][2],
-                               human_det[2][3]]).reshape(1, 4)
+      im_proposals = proposal_db[im_name]
 
-              for object_det in det_db[im_id]:
-                  if (np.max(object_det[5]) > object_thres) and not (np.all(object_det[2] == human_det[2])):
-                      # This is a valid object
-                      obox = np.array([object_det[2][0],
-                                       object_det[2][1],
-                                       object_det[2][2],
-                                       object_det[2][3]]).reshape(1, 4)
 
-                      ibox = np.array([min(hbox[0, 0], obox[0, 0]),
-                                       min(hbox[0, 1], obox[0, 1]),
-                                       max(hbox[0, 2], obox[0, 2]),
-                                       max(hbox[0, 3], obox[0, 3])]).reshape(1, 4)
-                      spa_map_raw = gen_spatial_map(human_det[2], object_det[2])
-                      spa_map_raw = spa_map_raw[np.newaxis, : ,: ,:]
-                      spa_maps_raw = np.concatenate((spa_maps_raw, spa_map_raw))
+      hboxes_raw = np.array(im_proposals['human_boxes'])[:, :4]
+      hscores = np.array(im_proposals['human_boxes'])[:, 4].tolist()
+      oboxes_raw = np.array(im_proposals['object_boxes'])[:, :4]
+      oscores = np.array(im_proposals['object_boxes'])[:, 4].tolist()
+      olabels = im_proposals['object_labels']
+      interactiveness = np.array(im_proposals['interactiveness'])
+      num_cand = hboxes_raw.shape[0]
 
-                      # original object id(1 base) --hoi--> our object id(0 base)
-                      obj_class_id = obj2ind[hoi_classes[org_obj2hoi[object_det[4]]].object_name()]
-                      obj_vec_raw = obj2vec[obj_class_id]
-                      obj_vec_raw = obj_vec_raw[np.newaxis, :]
-                      obj_vecs_raw = np.concatenate((obj_vecs_raw, obj_vec_raw))
-
-                      hboxes_raw = np.concatenate((hboxes_raw, hbox))
-                      oboxes_raw = np.concatenate((oboxes_raw, obox))
-                      iboxes_raw = np.concatenate((iboxes_raw, ibox))
-                      obj_classes.append(object_det[4])
-                      hscores.append(human_det[5])
-                      oscores.append(object_det[5])
-                      num_cand += 1
       if num_cand == 0:
           all_results[im_id] = im_results
           continue
+
+      iboxes_raw = np.zeros(hboxes_raw.shape)
+      spa_maps_raw = np.zeros((num_cand, 2, 64, 64))
+      obj_vecs_raw = np.zeros((num_cand, 300))
+
+      obj_classes = [-1] * num_cand
+
+      for i in range(len(hboxes_raw)):
+          hbox = hboxes_raw[i]
+          obox = oboxes_raw[i]
+          ibox = np.array([min(hbox[0, 0], obox[0, 0]),
+                           min(hbox[0, 1], obox[0, 1]),
+                           max(hbox[0, 2], obox[0, 2]),
+                           max(hbox[0, 3], obox[0, 3])])
+          iboxes_raw[i] = ibox
+          spa_map = gen_spatial_map(hbox, obox)
+          spa_maps_raw[i] = spa_map
+          obj_vecs_raw[i] = obj2vec[obj2ind[olabels[i]]]
+          obj_classes[i] = obj2org_ind[olabels[i]]
 
       hboxes_raw = hboxes_raw[np.newaxis, :, :]
       oboxes_raw = oboxes_raw[np.newaxis, :, :]
@@ -378,7 +370,7 @@ if __name__ == '__main__':
           temp.append(hoi_prob[0, j].tolist())  # Score (600)
           temp.append(hscores[j])  # Human score
           temp.append(oscores[j])  # Object score
-          temp.append(bin_prob.cpu().data.numpy()[0, j].tolist())  # binary score
+          temp.append([interactiveness[j], 1-interactiveness[j]])  # binary score
           im_results.append(temp)
 
       all_results[im_id] = im_results
@@ -390,7 +382,7 @@ if __name__ == '__main__':
   with open(output_path, 'wb') as f:
       pickle.dump(all_results, f)
 
-  generate_HICO_detection(output_path, 'output/results', 1.0, 0.0)
+  generate_HICO_detection(output_path, 'output/results', 0.9, 0.1)
 
   os.chdir('benchmark')
   os.system('matlab -nodesktop -nosplash -r "Generate_detection ' + '../output/results/' + '/;quit;"')

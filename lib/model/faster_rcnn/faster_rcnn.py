@@ -201,16 +201,16 @@ class _fasterRCNN(nn.Module):
                 m.weight.data.normal_(mean, stddev)
                 m.bias.data.zero_()
 
-        new_modules = [self.iRCNN_cls_score,
-                       self.hRCNN_cls_score,
-                       self.oRCNN_cls_score,
-                       self.obj_cls_score,
-                       self.spa_cls_score]
-
-        for module in new_modules:
-            for layer in module:
-                if hasattr(layer, 'weight'):
-                    normal_init(layer, 0, 0.01, cfg.TRAIN.TRUNCATED)
+        # new_modules = [self.iRCNN_cls_score,
+        #                self.hRCNN_cls_score,
+        #                self.oRCNN_cls_score,
+        #                self.obj_cls_score,
+        #                self.spa_cls_score]
+        #
+        # for module in new_modules:
+        #     for layer in module:
+        #         if hasattr(layer, 'weight'):
+        #             normal_init(layer, 0, 0.01, cfg.TRAIN.TRUNCATED)
 
     def create_architecture(self):
         self._init_modules()
