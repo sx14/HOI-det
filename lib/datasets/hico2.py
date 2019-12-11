@@ -387,12 +387,12 @@ class hico2(imdb):
                         image_anno['vrb_masks'].append([self.hoi2vrb[hoi]
                                                         for hoi in range(self.obj2int[obj_class_name][0],
                                                                          self.obj2int[obj_class_name][1]+1)])
-                    if pn == 0:
-                        # positive - 0
-                        image_anno['bin_classes'].append(0)
-                    else:
-                        # negative - 1
-                        image_anno['bin_classes'].append(1)
+                        if pn == 0:
+                            # positive - 0
+                            image_anno['bin_classes'].append(0)
+                        else:
+                            # negative - 1
+                            image_anno['bin_classes'].append(1)
 
             # list -> np.array
             if len(image_anno['hboxes']) == 0:
@@ -400,15 +400,15 @@ class hico2(imdb):
                 image_anno['oboxes'] = np.zeros((0, 4))
                 image_anno['iboxes'] = np.zeros((0, 4))
                 image_anno['obj_classes'] = np.zeros(0)
+                image_anno['vrb_classes'] = np.zeros(0)
                 image_anno['bin_classes'] = np.zeros(0, 2)
-                image_anno['vrb_classes'] = np.zeros((0))
                 image_anno['vrb_masks'] = np.ones((0, len(self.vrb_classes)))
             else:
                 image_anno['hboxes'] = np.array(image_anno['hboxes'])
                 image_anno['oboxes'] = np.array(image_anno['oboxes'])
                 image_anno['iboxes'] = np.array(image_anno['iboxes'])
                 image_anno['obj_classes'] = np.array(image_anno['obj_classes'])
-
+                image_anno['vrb_classes'] = np.array(image_anno['vrb_classes'])
                 bin_classes = image_anno['bin_classes']
                 image_anno['bin_classes'] = np.zeros((len(bin_classes), 2))
                 for i, ins_class in enumerate(bin_classes):

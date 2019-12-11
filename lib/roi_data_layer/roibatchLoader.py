@@ -172,7 +172,7 @@ class roibatchLoader(data.Dataset):
     gt_boxes = np.concatenate((blobs['hboxes'], blobs['oboxes'], blobs['iboxes']))
     gt_boxes = torch.from_numpy(gt_boxes)
 
-    gt_verbs = np.tile(blobs['vrb_classes'], (3, 1))
+    gt_verbs = np.tile(blobs['vrb_classes'], 3)
     gt_verbs = torch.from_numpy(gt_verbs)
 
     gt_binaries = np.tile(blobs['bin_classes'], (3, 1))
@@ -331,7 +331,7 @@ class roibatchLoader(data.Dataset):
         oboxes_padding = gt_boxes[gt_num_boxes * 1: gt_num_boxes * 1 + num_boxes]
         iboxes_padding = gt_boxes[gt_num_boxes * 2: gt_num_boxes * 2 + num_boxes]
 
-        vrb_classes_padding = gt_verbs[:num_boxes]
+        vrb_classes_padding = gt_verbs[:num_boxes].long()
         bin_classes_padding = gt_binaries[:num_boxes].long()
         spa_maps_padding = gt_spa_maps[:num_boxes]
         vrb_masks_padding = gt_vrb_masks[:num_boxes]
@@ -340,10 +340,10 @@ class roibatchLoader(data.Dataset):
         hboxes_padding = torch.FloatTensor(1, gt_boxes.size(1)).zero_()
         oboxes_padding = torch.FloatTensor(1, gt_boxes.size(1)).zero_()
         iboxes_padding = torch.FloatTensor(1, gt_boxes.size(1)).zero_()
-        vrb_classes_padding = torch.FloatTensor(1, gt_verbs.size(1)).zero_()
+        vrb_classes_padding = torch.LongTensor(1).zero_()
         bin_classes_padding = torch.LongTensor(1).zero_()
-        spa_maps_padding = torch.LongTensor(1, 2, 64, 64).zero_()
-        vrb_masks_padding = torch.LongTensor(1, gt_verbs.size(1)).zero_()
+        spa_maps_padding = torch.FloatTensor(1, 2, 64, 64).zero_()
+        vrb_masks_padding = torch.FloatTensor(1, gt_verbs.size(1)).zero_()
         obj_vecs_padding = torch.FloatTensor(1, self._obj2vec.shape[1]).zero_()
         num_boxes = 0
 

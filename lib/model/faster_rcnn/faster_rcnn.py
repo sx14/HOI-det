@@ -158,7 +158,7 @@ class _fasterRCNN(nn.Module):
         hcls_score = self.hRCNN_cls_score(hroi_pooled_feat)
         ocls_score = self.oRCNN_cls_score(oroi_pooled_feat)
 
-        cls_score = icls_score * hcls_score * ocls_score * scls_score * vcls_score
+        cls_score = icls_score + hcls_score + ocls_score + scls_score + vcls_score
         cls_prob = F.softmax(cls_score)
 
         RCNN_loss_cls = 0
@@ -166,8 +166,8 @@ class _fasterRCNN(nn.Module):
 
         if self.training:
             # classification loss
-            hoi_masks = hoi_masks.view(-1, hoi_masks.shape[2])
-            cls_loss = F.cross_entropy(cls_score * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]))
+            # hoi_masks = hoi_masks.view(-1, hoi_masks.shape[2])
+            cls_loss = F.cross_entropy(cls_score, hoi_classes[0])
             RCNN_loss_cls = cls_loss
 
         cls_prob = cls_prob.view(batch_size, irois.size(1), -1)
