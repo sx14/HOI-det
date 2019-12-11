@@ -150,41 +150,24 @@ class _fasterRCNN(nn.Module):
 
         # feed pooled features to top  model
         oroi_pooled_feat = self._ohead_to_tail(oroi_pooled_feat)
-
         spa_feat = self.spaCNN(spa_maps[0])
+
         scls_score = self.spa_cls_score(spa_feat)
-        #scls_prob = F.sigmoid(scls_score)
-
         vcls_score = self.obj_cls_score(obj_vecs[0])
-        #vcls_prob = F.sigmoid(vcls_score)
-
-        # compute object classification probability
         icls_score = self.iRCNN_cls_score(iroi_pooled_feat)
-        #icls_prob = F.sigmoid(icls_score)
-
         hcls_score = self.hRCNN_cls_score(hroi_pooled_feat)
-        #hcls_prob = F.sigmoid(hcls_score)
-
         ocls_score = self.oRCNN_cls_score(oroi_pooled_feat)
-        #ocls_prob = F.sigmoid(ocls_score)
 
-        #cls_prob = (icls_prob + hcls_prob + ocls_prob) * scls_prob * vcls_prob
         cls_score = icls_score * hcls_score * ocls_score * scls_score * vcls_score
-        cls_prob = F.sigmoid(cls_score)
+        cls_prob = F.softmax(cls_score)
 
         RCNN_loss_cls = 0
         RCNN_loss_bin = 0
 
         if self.training:
             # classification loss
-            pos_map = bin_classes[0, :, 0].long()
             hoi_masks = hoi_masks.view(-1, hoi_masks.shape[2])
-            # scls_loss = F.binary_cross_entropy(scls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
-            # icls_loss = F.binary_cross_entropy(icls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
-            # hcls_loss = F.binary_cross_entropy(hcls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
-            # ocls_loss = F.binary_cross_entropy(ocls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
-            # vcls_loss = F.binary_cross_entropy(vcls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
-            cls_loss = F.binary_cross_entropy(cls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
+            cls_loss = F.cross_entropy(cls_score * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]))
             RCNN_loss_cls = cls_loss
 
         cls_prob = cls_prob.view(batch_size, irois.size(1), -1)

@@ -164,27 +164,19 @@ class roibatchLoader(data.Dataset):
     blobs['hboxes'] = blobs['hboxes'][hoi_inds]
     blobs['oboxes'] = blobs['oboxes'][hoi_inds]
     blobs['iboxes'] = blobs['iboxes'][hoi_inds]
-    blobs['hoi_classes'] = blobs['hoi_classes'][hoi_inds]
     blobs['vrb_classes'] = blobs['vrb_classes'][hoi_inds]
     blobs['obj_classes'] = blobs['obj_classes'][hoi_inds]
     blobs['bin_classes'] = blobs['bin_classes'][hoi_inds]
-    blobs['hoi_masks'] = blobs['hoi_masks'][hoi_inds]
     blobs['vrb_masks'] = blobs['vrb_masks'][hoi_inds]
 
     gt_boxes = np.concatenate((blobs['hboxes'], blobs['oboxes'], blobs['iboxes']))
     gt_boxes = torch.from_numpy(gt_boxes)
-
-    gt_classes = np.tile(blobs['hoi_classes'], (3, 1))
-    gt_classes = torch.from_numpy(gt_classes)
 
     gt_verbs = np.tile(blobs['vrb_classes'], (3, 1))
     gt_verbs = torch.from_numpy(gt_verbs)
 
     gt_binaries = np.tile(blobs['bin_classes'], (3, 1))
     gt_binaries = torch.from_numpy(gt_binaries)
-
-    gt_hoi_masks = np.tile(blobs['hoi_masks'], (3, 1))
-    gt_hoi_masks = torch.from_numpy(gt_hoi_masks)
 
     gt_vrb_masks = np.tile(blobs['vrb_masks'], (3, 1))
     gt_vrb_masks = torch.from_numpy(gt_vrb_masks)
@@ -324,11 +316,9 @@ class roibatchLoader(data.Dataset):
 
     if keep.numel() != 0:
         gt_boxes = gt_boxes[keep]
-        gt_classes = gt_classes[keep]
         gt_verbs = gt_verbs[keep]
         gt_binaries = gt_binaries[keep]
         gt_spa_maps = gt_spa_maps[keep]
-        gt_hoi_masks = gt_hoi_masks[keep]
         gt_vrb_masks = gt_vrb_masks[keep]
         gt_obj_vecs = gt_obj_vecs[keep]
 
@@ -341,22 +331,18 @@ class roibatchLoader(data.Dataset):
         oboxes_padding = gt_boxes[gt_num_boxes * 1: gt_num_boxes * 1 + num_boxes]
         iboxes_padding = gt_boxes[gt_num_boxes * 2: gt_num_boxes * 2 + num_boxes]
 
-        hoi_classes_padding = gt_classes[:num_boxes]
         vrb_classes_padding = gt_verbs[:num_boxes]
         bin_classes_padding = gt_binaries[:num_boxes].long()
         spa_maps_padding = gt_spa_maps[:num_boxes]
-        hoi_masks_padding = gt_hoi_masks[:num_boxes]
         vrb_masks_padding = gt_vrb_masks[:num_boxes]
         obj_vecs_padding = gt_obj_vecs[:num_boxes]
     else:
         hboxes_padding = torch.FloatTensor(1, gt_boxes.size(1)).zero_()
         oboxes_padding = torch.FloatTensor(1, gt_boxes.size(1)).zero_()
         iboxes_padding = torch.FloatTensor(1, gt_boxes.size(1)).zero_()
-        hoi_classes_padding = torch.FloatTensor(1, gt_classes.size(1)).zero_()
         vrb_classes_padding = torch.FloatTensor(1, gt_verbs.size(1)).zero_()
         bin_classes_padding = torch.LongTensor(1).zero_()
         spa_maps_padding = torch.LongTensor(1, 2, 64, 64).zero_()
-        hoi_masks_padding = torch.LongTensor(1, gt_classes.size(1)).zero_()
         vrb_masks_padding = torch.LongTensor(1, gt_verbs.size(1)).zero_()
         obj_vecs_padding = torch.FloatTensor(1, self._obj2vec.shape[1]).zero_()
         num_boxes = 0
@@ -367,8 +353,8 @@ class roibatchLoader(data.Dataset):
 
     return padding_data, im_info, \
            hboxes_padding, oboxes_padding, iboxes_padding, \
-           hoi_classes_padding, vrb_classes_padding, bin_classes_padding, \
-           hoi_masks_padding, vrb_masks_padding, spa_maps_padding, \
+           vrb_classes_padding, bin_classes_padding, \
+           vrb_masks_padding, spa_maps_padding, \
            obj_vecs_padding, num_boxes
 
   def __len__(self):

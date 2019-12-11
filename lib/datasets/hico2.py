@@ -218,7 +218,7 @@ class hico2(imdb):
         return os.path.join(cfg.DATA_DIR, 'hico')
 
     def gt_roidb(self):
-        cache_file = os.path.join(self.cache_path, self.name + '_gt_roidb.pkl')
+        cache_file = os.path.join(self.cache_path, self.name + '_gt_roidb_one_hot.pkl')
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
                 gt_roidb_dict = pickle.load(fid)
@@ -354,11 +354,9 @@ class hico2(imdb):
             image_anno = {'hboxes': [],
                           'oboxes': [],
                           'iboxes': [],
-                          'hoi_classes': [],
                           'obj_classes': [],
                           'vrb_classes': [],
                           'bin_classes': [],
-                          'hoi_masks': [],
                           'vrb_masks': [],
                           'width': self._all_image_info[image_name][0],
                           'height': self._all_image_info[image_name][1],
@@ -379,16 +377,16 @@ class hico2(imdb):
                     obox = raw_hoi[3]
                     ibox = [min(hbox[0], obox[0]), min(hbox[1], obox[1]),
                             max(hbox[2], obox[2]), max(hbox[3], obox[3])]
-                    image_anno['hboxes'].append(hbox)
-                    image_anno['oboxes'].append(obox)
-                    image_anno['iboxes'].append(ibox)
-                    image_anno['hoi_classes'].append(hoi_class_ids)
-                    image_anno['vrb_classes'].append([self.hoi2vrb[hoi_id] for hoi_id in hoi_class_ids])
-                    image_anno['obj_classes'].append(obj_class_id)
-                    image_anno['hoi_masks'].append(self.obj2int[obj_class_name])
-                    image_anno['vrb_masks'].append([self.hoi2vrb[hoi]
-                                                    for hoi in range(self.obj2int[obj_class_name][0],
-                                                                     self.obj2int[obj_class_name][1]+1)])
+
+                    for hoi_class_id in hoi_class_ids:
+                        image_anno['hboxes'].append(hbox)
+                        image_anno['oboxes'].append(obox)
+                        image_anno['iboxes'].append(ibox)
+                        image_anno['obj_classes'].append(obj_class_id)
+                        image_anno['vrb_classes'].append(self.hoi2vrb[hoi_class_id])
+                        image_anno['vrb_masks'].append([self.hoi2vrb[hoi]
+                                                        for hoi in range(self.obj2int[obj_class_name][0],
+                                                                         self.obj2int[obj_class_name][1]+1)])
                     if pn == 0:
                         # positive - 0
                         image_anno['bin_classes'].append(0)
@@ -403,9 +401,7 @@ class hico2(imdb):
                 image_anno['iboxes'] = np.zeros((0, 4))
                 image_anno['obj_classes'] = np.zeros(0)
                 image_anno['bin_classes'] = np.zeros(0, 2)
-                image_anno['hoi_classes'] = np.zeros((0, len(self.hoi_classes)))
-                image_anno['vrb_classes'] = np.zeros((0, len(self.vrb_classes)))
-                image_anno['hoi_masks'] = np.ones((0, len(self.hoi_classes)))
+                image_anno['vrb_classes'] = np.zeros((0))
                 image_anno['vrb_masks'] = np.ones((0, len(self.vrb_classes)))
             else:
                 image_anno['hboxes'] = np.array(image_anno['hboxes'])
@@ -417,23 +413,6 @@ class hico2(imdb):
                 image_anno['bin_classes'] = np.zeros((len(bin_classes), 2))
                 for i, ins_class in enumerate(bin_classes):
                     image_anno['bin_classes'][i, ins_class] = 1
-
-                hoi_classes = image_anno['hoi_classes']
-                image_anno['hoi_classes'] = np.zeros((len(hoi_classes), len(self.hoi_classes)))
-                for i, ins_classes in enumerate(hoi_classes):
-                    for cls in ins_classes:
-                        image_anno['hoi_classes'][i, cls] = 1
-
-                hoi_intervals = image_anno['hoi_masks']
-                image_anno['hoi_masks'] = np.zeros((len(hoi_intervals), len(self.hoi_classes)))
-                for i, ins_interval in enumerate(hoi_intervals):
-                    image_anno['hoi_masks'][i, ins_interval[0]:ins_interval[1]+1] = 1
-
-                vrb_classes = image_anno['vrb_classes']
-                image_anno['vrb_classes'] = np.zeros((len(vrb_classes), len(self.vrb_classes)))
-                for i, ins_verbs in enumerate(vrb_classes):
-                    for vrb_id in ins_verbs:
-                        image_anno['vrb_classes'][i, vrb_id] = 1
 
                 vrb_masks = image_anno['vrb_masks']
                 image_anno['vrb_masks'] = np.zeros((len(vrb_masks), len(self.vrb_classes)))
