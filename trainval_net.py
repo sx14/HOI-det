@@ -50,7 +50,7 @@ def parse_args():
                       default=1, type=int)
   parser.add_argument('--epochs', dest='max_epochs',
                       help='number of epochs to train',
-                      default=4, type=int)
+                      default=8, type=int)
   parser.add_argument('--disp_interval', dest='disp_interval',
                       help='number of iterations to display',
                       default=100, type=int)
@@ -276,8 +276,11 @@ if __name__ == '__main__':
   for key, value in dict(fasterRCNN.named_parameters()).items():
     if value.requires_grad:
       if 'bias' in key:
-        params += [{'params':[value],'lr':lr*(cfg.TRAIN.DOUBLE_BIAS + 1), \
+        params += [{'params':[value],'lr':lr * (cfg.TRAIN.DOUBLE_BIAS + 1), \
                 'weight_decay': cfg.TRAIN.BIAS_DECAY and cfg.TRAIN.WEIGHT_DECAY or 0}]
+      elif 'spa' in key or 'cls' in key:
+        params += [{'params': [value], 'lr': lr * 10, \
+                    'weight_decay': cfg.TRAIN.BIAS_DECAY and cfg.TRAIN.WEIGHT_DECAY or 0}]
       else:
         params += [{'params':[value],'lr':lr, 'weight_decay': cfg.TRAIN.WEIGHT_DECAY}]
 

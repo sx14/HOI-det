@@ -32,8 +32,7 @@ class SpaConv(nn.Module):
 
         self.hidden = nn.Sequential(
             nn.LeakyReLU(),
-            nn.Dropout(p=0.5),
-            nn.Linear(5408, 1024))
+            nn.Dropout(p=0.5))
 
     def forward(self, spa_map):
         conv1 = self.conv1(spa_map)
@@ -64,6 +63,7 @@ class _fasterRCNN(nn.Module):
         self.spaCNN = SpaConv()
 
         self.spa_cls_score = nn.Sequential(
+            nn.Linear(5408, 1024),
             nn.LeakyReLU(),
             nn.Dropout(p=0.5),
             nn.Linear(1024, self.n_classes))
