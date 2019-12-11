@@ -21,21 +21,21 @@ key_points = ["nose",
               "left_knee", "right_knee",
               "left_ankle", "right_ankle"]
 
+all_part_kps = {
+    'left_leg': ['left_ankle'],
+    'right_leg': ['right_ankle'],
+    'left_hand': ['left_hand', 'left_wrist', 'left_elbow'],
+    'right_hand': ['right_hand', 'right_wrist', 'right_elbow'],
+    'hip': ['left_hip', 'right_hip', 'left_knee', 'right_knee'],
+    'head': ['nose', 'left_eye', 'right_eye', 'left_ear', 'right_ear'],
+}
+
 
 def est_hand(wrist, elbow):
     return wrist - 0.5 * (wrist - elbow)
 
 
 def get_body_part_kps(part, all_kps):
-    all_part_kps = {
-        'left_leg':  ['left_ankle'],
-        'right_leg': ['right_ankle'],
-        'left_hand':    ['left_hand', 'left_wrist', 'left_elbow'],
-        'right_hand':   ['right_hand', 'right_wrist', 'right_elbow'],
-        'hip':  ['left_hip', 'right_hip', 'left_knee', 'right_knee'],
-        'head': ['nose', 'left_eye', 'right_eye', 'left_ear', 'right_ear'],
-    }
-
     kp2ind = dict(zip(key_points, range(len(key_points))))
     part_kps = np.zeros((len(all_part_kps[part]), 3))
     for i, kp_name in enumerate(all_part_kps[part]):
@@ -72,18 +72,21 @@ def gen_body_part_box(all_kps, human_wh, part, kp_thr=0.01, area_thr=0):
     xmax = 0
     ymax = 0
     conf_sum = 0.0
+    conf_cnt = 0.0
     for i in range(len(part_kps)):
         conf = part_kps[i, 2]
         if conf < kp_thr:
-            return None
+            continue
         conf_sum += conf
+        conf_cnt += 1
         xmin = min(xmin, part_kps[i, 0])
         ymin = min(ymin, part_kps[i, 1])
         xmax = max(xmax, part_kps[i, 0])
         ymax = max(ymax, part_kps[i, 1])
-    conf_avg = conf_sum / len(part_kps)
-    if (ymax - ymin + 1) * (xmax - xmin + 1) < area_thr:
+
+    if conf_sum == 0 or ((ymax - ymin + 1) * (xmax - xmin + 1) < area_thr):
         return None
+    conf_avg = conf_sum / conf_cnt
     return [xmin - get_body_part_alpha(part) * human_wh[0],
             ymin - get_body_part_alpha(part) * human_wh[1],
             xmax + get_body_part_alpha(part) * human_wh[0],
@@ -99,17 +102,27 @@ def gen_pose_obj_map(hbox, obox, ibox, skeleton, size=224):
     human_wh = [h_xmax - h_xmin + 1, h_ymax - h_ymin + 1]
     interact_wh = [i_xmax - i_xmin + 1, i_ymax - i_ymin + 1]
 
-    skeleton[:, 0] = skeleton[:, 0] - i_xmin
-    skeleton[:, 1] = skeleton[:, 1] - i_ymin
-
     x_ratio = size * 1.0 / interact_wh[0]
     y_ratio = size * 1.0 / interact_wh[1]
+
+    # absolute position -> relative position
+    skeleton[:, 0] = skeleton[:, 0] - i_xmin
+    skeleton[:, 1] = skeleton[:, 1] - i_ymin
+    skeleton[skeleton < 0] = 0
 
     pose_obj_map = np.zeros((8, size, size))
     for i, body_part in enumerate(body_parts):
         box_conf = gen_body_part_box(skeleton, human_wh, body_part)
         if box_conf is not None:
             xmin, ymin, xmax, ymax, conf = box_conf
+
+            # make sure skeleton box in union box
+            xmin = max(0, xmin)
+            ymin = max(0, ymin)
+            xmax = min(xmax, interact_wh[0]-1)
+            ymax = min(ymax, interact_wh[1]-1)
+
+            # scale skeleton box
             xmin = int(xmin * x_ratio)
             ymin = int(ymin * y_ratio)
             xmax = int(xmax * x_ratio)
