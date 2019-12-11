@@ -293,7 +293,7 @@ if __name__ == '__main__':
 
   if args.resume:
     load_name = os.path.join(output_dir,
-      'ho_spa_rcnn3_lf_no_nis_3b_vrb_obj_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
+      'ho_spa_rcnn3_lf_no_nis_3b_vrb_obj_pos_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
     print("loading checkpoint %s" % (load_name))
     checkpoint = torch.load(load_name)
     args.session = checkpoint['session']
@@ -391,7 +391,6 @@ if __name__ == '__main__':
         nNeg = torch.sum(bin_classes[:, :, 1]).item()
         nPos = bin_classes.shape[1] - nNeg
 
-
         print("[session %d][epoch %2d][iter %4d/%4d] loss: %.4f, lr: %.2e" \
                                 % (args.session, epoch, step, iters_per_epoch, loss_temp, lr))
         print("loss_cls: %.4f, loss_bin: %.4f" % (loss_cls, loss_bin))
@@ -410,7 +409,7 @@ if __name__ == '__main__':
         loss_bin_temp = 0
         start = time.time()
 
-    save_name = os.path.join(output_dir, 'ho_spa_rcnn3_lf_no_nis_3b_vrb_obj_{}_{}_{}.pth'.format(args.session, epoch, step))
+    save_name = os.path.join(output_dir, 'ho_spa_rcnn3_lf_no_nis_3b_vrb_obj_pos_{}_{}_{}.pth'.format(args.session, epoch, step))
     save_checkpoint({
       'session': args.session,
       'epoch': epoch + 1,

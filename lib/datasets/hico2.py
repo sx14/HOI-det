@@ -218,7 +218,7 @@ class hico2(imdb):
         return os.path.join(cfg.DATA_DIR, 'hico')
 
     def gt_roidb(self):
-        cache_file = os.path.join(self.cache_path, self.name + '_gt_roidb.pkl')
+        cache_file = os.path.join(self.cache_path, self.name + '_gt_roidb_pos_only.pkl')
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
                 gt_roidb_dict = pickle.load(fid)
@@ -335,20 +335,22 @@ class hico2(imdb):
             img_pos_hois = self.augment_hoi_instances(img_pos_hois, image_hw)
 
             # select negative instances
-            if image_id in anno_ng_db and len(anno_ng_db[image_id]) > 0:
-                img_neg_hois0 = anno_ng_db[image_id]
-                if len(img_neg_hois0) > len(img_pos_hois):
-                    inds = random.sample(range(len(img_neg_hois0)), len(img_pos_hois))
-                else:
-                    inds = []
-                    for i in range(int(len(img_pos_hois) / len(img_neg_hois0))):
-                        inds += range(len(img_neg_hois0))
-                    for i in range(len(img_pos_hois) - len(inds)):
-                        inds.append(i)
-                img_neg_hois = [img_neg_hois0[ind] for ind in inds]
-                assert len(img_neg_hois) == (len(img_pos_hois))
-            else:
-                img_neg_hois = []
+            # if image_id in anno_ng_db and len(anno_ng_db[image_id]) > 0:
+            #     img_neg_hois0 = anno_ng_db[image_id]
+            #     if len(img_neg_hois0) > len(img_pos_hois):
+            #         inds = random.sample(range(len(img_neg_hois0)), len(img_pos_hois))
+            #     else:
+            #         inds = []
+            #         for i in range(int(len(img_pos_hois) / len(img_neg_hois0))):
+            #             inds += range(len(img_neg_hois0))
+            #         for i in range(len(img_pos_hois) - len(inds)):
+            #             inds.append(i)
+            #     img_neg_hois = [img_neg_hois0[ind] for ind in inds]
+            #     assert len(img_neg_hois) == (len(img_pos_hois))
+            # else:
+            #     img_neg_hois = []
+
+            img_neg_hois = []
 
             # boxes: x1, y1, x2, y2
             image_anno = {'hboxes': [],
