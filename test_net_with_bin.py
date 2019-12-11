@@ -288,6 +288,7 @@ if __name__ == '__main__':
       im_results = []
       im_proposals = proposal_db[im_name]
       num_cand = len(im_proposals['human_boxes'])
+
       if num_cand == 0:
           all_results[im_id] = im_results
           continue
@@ -298,19 +299,13 @@ if __name__ == '__main__':
       oscores = np.array(im_proposals['object_boxes'])[:, 4].tolist()
       olabels = im_proposals['object_labels']
       interactiveness = np.array(im_proposals['interactiveness'])
-
-
-      if num_cand == 0:
-          all_results[im_id] = im_results
-          continue
-
       iboxes_raw = np.zeros(hboxes_raw.shape)
       spa_maps_raw = np.zeros((num_cand, 2, 64, 64))
       obj_vecs_raw = np.zeros((num_cand, 300))
 
       obj_classes = [-1] * num_cand
 
-      for i in range(len(hboxes_raw)):
+      for i in range(num_cand):
           hbox = hboxes_raw[i]
           obox = oboxes_raw[i]
           ibox = np.array([min(hbox[0], obox[0]),
