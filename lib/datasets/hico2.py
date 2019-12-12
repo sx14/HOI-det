@@ -369,9 +369,6 @@ class hico2(imdb):
                     hoi_class_ids = raw_hoi[1]
                     if isinstance(hoi_class_ids, int):
                         hoi_class_ids = [hoi_class_ids]
-                    hoi_classes = [self.hoi_classes[class_id] for class_id in hoi_class_ids]
-                    obj_class_name = hoi_classes[0].object_name()
-                    obj_class_id = self.obj_class2ind[obj_class_name]
 
                     hbox = raw_hoi[2]
                     obox = raw_hoi[3]
@@ -382,11 +379,15 @@ class hico2(imdb):
                         image_anno['hboxes'].append(hbox)
                         image_anno['oboxes'].append(obox)
                         image_anno['iboxes'].append(ibox)
-                        image_anno['obj_classes'].append(obj_class_id)
+
+                        hoi_class = self.hoi_classes[hoi_class_id]
+                        obj_name = hoi_class.object_name()
+                        obj_ind = self.obj_class2ind[obj_name]
+                        image_anno['obj_classes'].append(obj_ind)
                         image_anno['vrb_classes'].append(self.hoi2vrb[hoi_class_id])
                         image_anno['vrb_masks'].append([self.hoi2vrb[hoi]
-                                                        for hoi in range(self.obj2int[obj_class_name][0],
-                                                                         self.obj2int[obj_class_name][1]+1)])
+                                                        for hoi in range(self.obj2int[obj_name][0],
+                                                                         self.obj2int[obj_name][1]+1)])
                         if pn == 0:
                             # positive - 0
                             image_anno['bin_classes'].append(0)
