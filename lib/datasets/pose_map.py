@@ -183,26 +183,18 @@ if __name__ == '__main__':
             im_i0 = cv2.rectangle(im_i0, (hbox[0], hbox[1]), (hbox[2], hbox[3]), (0, 255, 0), 4)
             im_i0 = cv2.rectangle(im_i0, (obox[0], obox[1]), (obox[2], obox[3]), (0, 0, 255), 4)
 
-            for i in range(part_boxes.shape[0]):
-                im_i1 = im_i0.copy()
-                im_i1 = cv2.rectangle(im_i1, (part_boxes[i, 0], part_boxes[i, 1]),
-                                      (part_boxes[i, 2], part_boxes[i, 3]), (0, 255, 255), 4)
-
-                cv2.imshow('123', im_i1)
-                cv2.waitKey(0)
-
         else:
             all_kps = np.reshape(raw_kps, (len(key_points), 3))
             part_boxes = gen_part_boxes(hbox, all_kps, im_i0.shape[:2])
             part_boxes = np.array(part_boxes).reshape((6, 4)).astype(np.int)
 
-            # im_i0 = cv2.rectangle(im_i0, (hbox[0], hbox[1]), (hbox[2], hbox[3]), (0, 255, 0), 4)
-            # im_i0 = cv2.rectangle(im_i0, (obox[0], obox[1]), (obox[2], obox[3]), (0, 0, 255), 4)
-            #
-            # for i in range(part_boxes.shape[0]):
-            #     im_i1 = im_i0.copy()
-            #     im_i1 = cv2.rectangle(im_i1,  (part_boxes[i, 0], part_boxes[i, 1]),
-            #                                   (part_boxes[i, 2], part_boxes[i, 3]), (0, 255, 255), 4)
-            #
-            #     cv2.imshow('123', im_i1)
-            #     cv2.waitKey(0)
+            im_i0 = cv2.rectangle(im_i0, (hbox[0], hbox[1]), (hbox[2], hbox[3]), (0, 255, 0), 4)
+            im_i0 = cv2.rectangle(im_i0, (obox[0], obox[1]), (obox[2], obox[3]), (0, 0, 255), 4)
+
+        for i in range(part_boxes.shape[0]):
+            im_i1 = im_i0.copy()
+            im_i1 = cv2.rectangle(im_i1,  (part_boxes[i, 0], part_boxes[i, 1]),
+                                          (part_boxes[i, 2], part_boxes[i, 3]), (0, 255, 255), 4)
+
+            cv2.imshow('123', im_i1)
+            cv2.waitKey(0)

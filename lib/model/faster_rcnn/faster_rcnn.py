@@ -98,11 +98,12 @@ class _fasterRCNN(nn.Module):
             hrois = hrois.cuda()
             orois = orois.cuda()
             irois = irois.cuda()
+            prois = prois.cuda()
 
         hrois[:, :, 1:] = hboxes
         orois[:, :, 1:] = oboxes
         irois[:, :, 1:] = iboxes
-        prois[:, :, 1:] = prois.view(pboxes.shape[0], -1, pboxes.shape[3])
+        prois[:, :, 1:] = pboxes.view(pboxes.shape[0], -1, pboxes.shape[3])
 
 
         # do roi pooling based on predicted rois

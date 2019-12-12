@@ -327,5 +327,5 @@ class resnet(_fasterRCNN):
 
   def _phead_to_tail(self, pool5):
     fc7_all = self.pRCNN_top(pool5).mean(3).mean(2)
-    fc7 = fc7_all.view(fc7_all, fc7_all.shape[1] * 6)
+    fc7 = fc7_all.view(-1, fc7_all.shape[1] * 6)
     return fc7
