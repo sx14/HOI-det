@@ -166,7 +166,6 @@ class _fasterRCNN(nn.Module):
 
         if self.training:
             # classification loss
-            # hoi_masks = hoi_masks.view(-1, hoi_masks.shape[2])
             cls_loss = F.cross_entropy(cls_score, hoi_classes[0])
             RCNN_loss_cls = cls_loss
 

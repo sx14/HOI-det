@@ -343,7 +343,7 @@ class roibatchLoader(data.Dataset):
         vrb_classes_padding = torch.LongTensor(1).zero_()
         bin_classes_padding = torch.LongTensor(1).zero_()
         spa_maps_padding = torch.FloatTensor(1, 2, 64, 64).zero_()
-        vrb_masks_padding = torch.FloatTensor(1, gt_verbs.size(1)).zero_()
+        vrb_masks_padding = torch.FloatTensor(1, gt_vrb_masks.size(1)).zero_()
         obj_vecs_padding = torch.FloatTensor(1, self._obj2vec.shape[1]).zero_()
         num_boxes = 0
 
