@@ -164,15 +164,23 @@ class roibatchLoader(data.Dataset):
     blobs['hboxes'] = blobs['hboxes'][hoi_inds]
     blobs['oboxes'] = blobs['oboxes'][hoi_inds]
     blobs['iboxes'] = blobs['iboxes'][hoi_inds]
+
+    blobs['pbox_lists'] = blobs['pbox_lists'][hoi_inds]
     blobs['hoi_classes'] = blobs['hoi_classes'][hoi_inds]
     blobs['vrb_classes'] = blobs['vrb_classes'][hoi_inds]
     blobs['obj_classes'] = blobs['obj_classes'][hoi_inds]
     blobs['bin_classes'] = blobs['bin_classes'][hoi_inds]
+
     blobs['hoi_masks'] = blobs['hoi_masks'][hoi_inds]
     blobs['vrb_masks'] = blobs['vrb_masks'][hoi_inds]
 
     gt_boxes = np.concatenate((blobs['hboxes'], blobs['oboxes'], blobs['iboxes']))
     gt_boxes = torch.from_numpy(gt_boxes)
+
+
+    gt_pboxes = np.reshape(blobs['pbox_lists'], (blobs['pbox_lists'].shape[0], 6, 4))
+    gt_pboxes = np.tile(gt_pboxes, (3, 1, 1))
+    gt_pboxes = torch.from_numpy(gt_pboxes)
 
     gt_classes = np.tile(blobs['hoi_classes'], (3, 1))
     gt_classes = torch.from_numpy(gt_classes)
@@ -215,8 +223,13 @@ class roibatchLoader(data.Dataset):
         if ratio < 1:
             # this means that data_width << data_height, we need to crop the
             # data_height
-            min_y = int(torch.min(gt_boxes[:,1]))
-            max_y = int(torch.max(gt_boxes[:,3]))
+            min_y_p = int(torch.min(gt_pboxes[:, :, 1]))
+            max_y_p = int(torch.max(gt_pboxes[:, :, 3]))
+            min_y_b = int(torch.min(gt_boxes[:,1]))
+            max_y_b = int(torch.max(gt_boxes[:,3]))
+            max_y = max(max_y_b, max_y_p)
+            min_y = min(min_y_b, min_y_p)
+
             trim_size = int(np.floor(data_width / ratio))
             if trim_size > data_height:
                 trim_size = data_height
@@ -243,16 +256,25 @@ class roibatchLoader(data.Dataset):
             # shift y coordiante of gt_boxes
             gt_boxes[:, 1] = gt_boxes[:, 1] - float(y_s)
             gt_boxes[:, 3] = gt_boxes[:, 3] - float(y_s)
+            gt_pboxes[:, :, 1] = gt_pboxes[:, :, 1] - float(y_s)
+            gt_pboxes[:, :, 3] = gt_pboxes[:, :, 3] - float(y_s)
 
             # update gt bounding box according the trip
             gt_boxes[:, 1].clamp_(0, trim_size - 1)
             gt_boxes[:, 3].clamp_(0, trim_size - 1)
+            gt_pboxes[:, :, 1].clamp_(0, trim_size - 1)
+            gt_pboxes[:, :, 3].clamp_(0, trim_size - 1)
 
         else:
             # this means that data_width >> data_height, we need to crop the
             # data_width
-            min_x = int(torch.min(gt_boxes[:,0]))
-            max_x = int(torch.max(gt_boxes[:,2]))
+            min_x_p = int(torch.min(gt_pboxes[:, :, 0]))
+            max_x_p = int(torch.max(gt_pboxes[:, :, 2]))
+            min_x_b = int(torch.min(gt_boxes[:,0]))
+            max_x_b = int(torch.max(gt_boxes[:,2]))
+            min_x = min(min_x_b, min_x_p)
+            max_x = max(max_x_b, max_x_p)
+
             trim_size = int(np.ceil(data_height * ratio))
             if trim_size > data_width:
                 trim_size = data_width
@@ -279,9 +301,13 @@ class roibatchLoader(data.Dataset):
             # shift x coordiante of gt_boxes
             gt_boxes[:, 0] = gt_boxes[:, 0] - float(x_s)
             gt_boxes[:, 2] = gt_boxes[:, 2] - float(x_s)
+            gt_pboxes[:, :, 0] = gt_pboxes[:, :, 0] - float(x_s)
+            gt_pboxes[:, :, 2] = gt_pboxes[:, :, 2] - float(x_s)
             # update gt bounding box according the trip
             gt_boxes[:, 0].clamp_(0, trim_size - 1)
             gt_boxes[:, 2].clamp_(0, trim_size - 1)
+            gt_pboxes[:, :, 0].clamp_(0, trim_size - 1)
+            gt_pboxes[:, :, 2].clamp_(0, trim_size - 1)
 
     # based on the ratio, padding the image.
     if ratio < 1:
@@ -308,6 +334,7 @@ class roibatchLoader(data.Dataset):
         padding_data = data[0][:trim_size, :trim_size, :]
         # gt_boxes.clamp_(0, trim_size)
         gt_boxes[:, :4].clamp_(0, trim_size)
+        gt_pboxes[:, :, :4].clamp_(0, trim_size)
         im_info[0, 0] = trim_size
         im_info[0, 1] = trim_size
 
@@ -324,6 +351,7 @@ class roibatchLoader(data.Dataset):
 
     if keep.numel() != 0:
         gt_boxes = gt_boxes[keep]
+        gt_pboxes = gt_pboxes[keep]
         gt_classes = gt_classes[keep]
         gt_verbs = gt_verbs[keep]
         gt_binaries = gt_binaries[keep]
@@ -341,6 +369,7 @@ class roibatchLoader(data.Dataset):
         oboxes_padding = gt_boxes[gt_num_boxes * 1: gt_num_boxes * 1 + num_boxes]
         iboxes_padding = gt_boxes[gt_num_boxes * 2: gt_num_boxes * 2 + num_boxes]
 
+        pboxes_padding = gt_pboxes[:num_boxes]
         hoi_classes_padding = gt_classes[:num_boxes]
         vrb_classes_padding = gt_verbs[:num_boxes]
         bin_classes_padding = gt_binaries[:num_boxes].long()
@@ -349,9 +378,11 @@ class roibatchLoader(data.Dataset):
         vrb_masks_padding = gt_vrb_masks[:num_boxes]
         obj_vecs_padding = gt_obj_vecs[:num_boxes]
     else:
+        pboxes_padding = torch.FloatTensor(1, gt_pboxes.size(1), gt_pboxes.size(2)).zero_()
         hboxes_padding = torch.FloatTensor(1, gt_boxes.size(1)).zero_()
         oboxes_padding = torch.FloatTensor(1, gt_boxes.size(1)).zero_()
         iboxes_padding = torch.FloatTensor(1, gt_boxes.size(1)).zero_()
+
         hoi_classes_padding = torch.FloatTensor(1, gt_classes.size(1)).zero_()
         vrb_classes_padding = torch.FloatTensor(1, gt_verbs.size(1)).zero_()
         bin_classes_padding = torch.LongTensor(1).zero_()
@@ -366,7 +397,7 @@ class roibatchLoader(data.Dataset):
     im_info = im_info.view(3)
 
     return padding_data, im_info, \
-           hboxes_padding, oboxes_padding, iboxes_padding, \
+           hboxes_padding, oboxes_padding, iboxes_padding, pboxes_padding, \
            hoi_classes_padding, vrb_classes_padding, bin_classes_padding, \
            hoi_masks_padding, vrb_masks_padding, spa_maps_padding, \
            obj_vecs_padding, num_boxes

@@ -26,7 +26,7 @@ from .imdb import imdb
 from .imdb import ROOT_DIR
 from . import ds_utils
 from .voc_eval import voc_eval
-
+from datasets.pose_map import est_part_boxes, gen_part_boxes
 # TODO: make fast_rcnn irrelevant
 # >>>> obsolete, because it depends on sth outside of this project
 from model.utils.config import cfg
@@ -354,6 +354,7 @@ class hico2(imdb):
             image_anno = {'hboxes': [],
                           'oboxes': [],
                           'iboxes': [],
+                          'pbox_lists': [],
                           'hoi_classes': [],
                           'obj_classes': [],
                           'vrb_classes': [],
@@ -389,6 +390,13 @@ class hico2(imdb):
                     image_anno['vrb_masks'].append([self.hoi2vrb[hoi]
                                                     for hoi in range(self.obj2int[obj_class_name][0],
                                                                      self.obj2int[obj_class_name][1]+1)])
+
+                    raw_key_points = raw_hoi[7]
+                    if raw_key_points is None or len(raw_key_points) != 51:
+                        image_anno['pbox_lists'].append(est_part_boxes(hbox))
+                    else:
+                        image_anno['pbox_lists'].append(gen_part_boxes(hbox, raw_key_points, image_hw))
+
                     if pn == 0:
                         # positive - 0
                         image_anno['bin_classes'].append(0)
@@ -401,6 +409,7 @@ class hico2(imdb):
                 image_anno['hboxes'] = np.zeros((0, 4))
                 image_anno['oboxes'] = np.zeros((0, 4))
                 image_anno['iboxes'] = np.zeros((0, 4))
+                image_anno['pbox_lists'] = np.zeros((0, 6*4))
                 image_anno['obj_classes'] = np.zeros(0)
                 image_anno['bin_classes'] = np.zeros(0, 2)
                 image_anno['hoi_classes'] = np.zeros((0, len(self.hoi_classes)))
@@ -412,6 +421,7 @@ class hico2(imdb):
                 image_anno['oboxes'] = np.array(image_anno['oboxes'])
                 image_anno['iboxes'] = np.array(image_anno['iboxes'])
                 image_anno['obj_classes'] = np.array(image_anno['obj_classes'])
+                image_anno['pbox_lists'] = np.array(image_anno['pbox_lists'])
 
                 bin_classes = image_anno['bin_classes']
                 image_anno['bin_classes'] = np.zeros((len(bin_classes), 2))

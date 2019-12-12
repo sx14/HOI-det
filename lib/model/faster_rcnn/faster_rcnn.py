@@ -74,7 +74,7 @@ class _fasterRCNN(nn.Module):
             nn.Linear(512, self.n_classes))
 
     def forward(self, im_data, im_info,
-                hboxes, oboxes, iboxes,
+                hboxes, oboxes, iboxes, pboxes,
                 hoi_classes, bin_classes,
                 hoi_masks, spa_maps,
                 obj_vecs, num_hois):
