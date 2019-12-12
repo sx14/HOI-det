@@ -159,6 +159,9 @@ class _fasterRCNN(nn.Module):
         ocls_score = self.oRCNN_cls_score(oroi_pooled_feat)
 
         cls_score = icls_score + hcls_score + ocls_score + scls_score + vcls_score
+        neg_masks = hoi_masks[0] == 0
+        neg_masks = neg_masks.float()
+        cls_score = cls_score + neg_masks * (-9999)
         cls_prob = F.softmax(cls_score)
 
         RCNN_loss_cls = 0
