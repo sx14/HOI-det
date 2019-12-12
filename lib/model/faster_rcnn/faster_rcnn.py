@@ -168,9 +168,7 @@ class _fasterRCNN(nn.Module):
             proi_pooled_feat = self.RCNN_roi_pool(base_feat, prois.view(-1, 5))
 
         # feed pooled features to top  model
-        proi_pooled_feat = self._ohead_to_tail(proi_pooled_feat)
-
-
+        proi_pooled_feat = self._phead_to_tail(proi_pooled_feat)
 
         spa_feat = self.spaCNN(spa_maps[0])
         scls_score = self.spa_cls_score(spa_feat)

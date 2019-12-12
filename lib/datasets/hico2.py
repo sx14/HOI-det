@@ -303,18 +303,22 @@ class hico2(imdb):
                 aug_cls_ids = raw_hoi[1]
                 aug_hbox = aug_hboxes[i]
                 aug_obox = aug_oboxes[i]
-                new_hois.append([[0],
+                new_hois.append([0,             # stub
                                  aug_cls_ids,
                                  aug_hbox,
-                                 aug_obox])
+                                 aug_obox,
+                                 0,             # stub
+                                 0,             # stub
+                                 0,             # stub
+                                 raw_hoi[5]])
         return new_hois
 
     def _load_all_annotations(self):
         all_annos = {}
 
         print('Loading annotations ...')
-        anno_ng_db = pickle.load(open(os.path.join(self._data_path, '%s_NG_HICO.pkl' % self._image_set)))
-        anno_gt_tmp = pickle.load(open(os.path.join(self._data_path, '%s_GT_HICO.pkl' % self._image_set)))
+        anno_ng_db = pickle.load(open(os.path.join(self._data_path, '%s_NG_HICO_with_pose.pkl' % self._image_set)))
+        anno_gt_tmp = pickle.load(open(os.path.join(self._data_path, '%s_GT_HICO_with_pose.pkl' % self._image_set)))
 
         print('Processing annotations ...')
         anno_gt_db = {}

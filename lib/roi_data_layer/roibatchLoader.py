@@ -224,8 +224,8 @@ class roibatchLoader(data.Dataset):
             # data_height
             min_y_p = int(torch.min(gt_pboxes[:, :, 1]))
             max_y_p = int(torch.max(gt_pboxes[:, :, 3]))
-            min_y_b = int(torch.min(gt_boxes[:,1]))
-            max_y_b = int(torch.max(gt_boxes[:,3]))
+            min_y_b = int(torch.min(gt_boxes[:, 1]))
+            max_y_b = int(torch.max(gt_boxes[:, 3]))
             max_y = max(max_y_b, max_y_p)
             min_y = min(min_y_b, min_y_p)
 
