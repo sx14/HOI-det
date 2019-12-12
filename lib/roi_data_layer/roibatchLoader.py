@@ -177,7 +177,6 @@ class roibatchLoader(data.Dataset):
     gt_boxes = np.concatenate((blobs['hboxes'], blobs['oboxes'], blobs['iboxes']))
     gt_boxes = torch.from_numpy(gt_boxes)
 
-
     gt_pboxes = np.reshape(blobs['pbox_lists'], (blobs['pbox_lists'].shape[0], 6, 4))
     gt_pboxes = np.tile(gt_pboxes, (3, 1, 1))
     gt_pboxes = torch.from_numpy(gt_pboxes)
