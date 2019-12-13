@@ -119,13 +119,9 @@ def save_HICO(HICO, HICO_dir, thres_inter, classid, begin, finish):
     return num_delete_inter, num_delete_pair_c
 
 
-def generate_HICO_detection(output_file, HICO_dir, thres_inter):
+def generate_HICO_detection(HICO, HICO_dir, thres_inter):
     if not os.path.exists(HICO_dir):
         os.makedirs(HICO_dir)
-
-    print('Loading detection results ...')
-    HICO = pickle.load(open(output_file, "rb"))
-
     # del_i and del_ni
 
     del_i = 0
@@ -454,10 +450,3 @@ def generate_HICO_detection(output_file, HICO_dir, thres_inter):
 
     print('num_del_inter', del_i, 'num_del_no_inter', del_ni)
 
-
-def main(output_file, HICO_dir, thres_inter):
-    print("the output file is", output_file)
-    print("the threshold of no interaction score is", thres_no_inter)
-    print("the threshold of interaction score is", thres_inter)
-
-    generate_HICO_detection(output_file, HICO_dir, thres_inter)
