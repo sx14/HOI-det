@@ -81,7 +81,7 @@ def getSigmoid(b, c, d, x, a=6):
     return a / (1 + e ** (b - c * x)) + d
 
 
-def save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, classid, begin, finish):
+def save_HICO(HICO, HICO_dir, thres_inter, classid, begin, finish):
     # if class is "dog"
     # only consider: "watch_dog", "walk_dog", ..., "no_interact_dog"
 
@@ -113,8 +113,7 @@ def save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, classid, begin, finis
                     human_score = element[4]
                     object_score = element[5]
 
-                    d_score = element[6][0]
-                    d_score_noi = element[6][1]
+                    interactiveness = element[6][0]
 
                     score_old = element[3][begin - 1 + i] * human_score * object_score
                     print 'H: %.4f O: %.4f I: %.4f' % (human_score, object_score, element[3][begin - 1 + i])
@@ -123,7 +122,7 @@ def save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, classid, begin, finis
 
                     score_new = score_old
 
-                    if (d_score_noi > thres_no_inter) and (d_score < thres_inter) and not (int(key) in all_remaining):
+                    if (interactiveness < thres_inter) and not (int(key) in all_remaining):
                         # 1. Non-interactiveness is great enough
                         # 2. Current image contains HOI instances
 
@@ -152,7 +151,7 @@ def save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, classid, begin, finis
     return num_delete_inter, num_delete_pair_c
 
 
-def generate_HICO_detection(output_file, HICO_dir, thres_no_inter, thres_inter):
+def generate_HICO_detection(output_file, HICO_dir, thres_inter):
     if not os.path.exists(HICO_dir):
         os.makedirs(HICO_dir)
 
@@ -164,323 +163,323 @@ def generate_HICO_detection(output_file, HICO_dir, thres_no_inter, thres_inter):
     del_i = 0
     del_ni = 0
 
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 1, 161, 170)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 1, 161, 170)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 1 person
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 2, 11, 24)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 2, 11, 24)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 2 bicycle
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 3, 66, 76)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 3, 66, 76)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 3 car
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 4, 147, 160)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 4, 147, 160)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 4 motorcycle
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 5, 1, 10)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 5, 1, 10)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 5 airplane
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 6, 55, 65)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 6, 55, 65)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 6 bus
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 7, 187, 194)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 7, 187, 194)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 7 train
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 8, 568, 576)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 8, 568, 576)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 8 truck
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 9, 32, 46)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 9, 32, 46)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 9 boat
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 10, 563, 567)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 10, 563, 567)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 10 traffic light
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 11, 326, 330)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 11, 326, 330)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 11 fire_hydrant
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 12, 503, 506)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 12, 503, 506)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 12 stop_sign
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 13, 415, 418)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 13, 415, 418)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 13 parking_meter
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 14, 244, 247)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 14, 244, 247)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 14 bench
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 15, 25, 31)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 15, 25, 31)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 15 bird
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 16, 77, 86)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 16, 77, 86)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 16 cat
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 17, 112, 129)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 17, 112, 129)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 17 dog
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 18, 130, 146)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 18, 130, 146)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 18 horse
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 19, 175, 186)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 19, 175, 186)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 19 sheep
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 20, 97, 107)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 20, 97, 107)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 20 cow
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 21, 314, 325)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 21, 314, 325)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 21 elephant
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 22, 236, 239)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 22, 236, 239)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 22 bear
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 23, 596, 600)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 23, 596, 600)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 23 zebra
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 24, 343, 348)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 24, 343, 348)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 24 giraffe
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 25, 209, 214)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 25, 209, 214)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 25 backpack
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 26, 577, 584)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 26, 577, 584)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 26 umbrella
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 27, 353, 356)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 27, 353, 356)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 27 handbag
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 28, 539, 546)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 28, 539, 546)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 28 tie
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 29, 507, 516)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 29, 507, 516)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 29 suitcase
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 30, 337, 342)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 30, 337, 342)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 30 Frisbee
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 31, 464, 474)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 31, 464, 474)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 31 skis
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 32, 475, 483)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 32, 475, 483)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 32 snowboard
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 33, 489, 502)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 33, 489, 502)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 33 sports_ball
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 34, 369, 376)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 34, 369, 376)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 34 kite
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 35, 225, 232)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 35, 225, 232)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 35 baseball_bat
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 36, 233, 235)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 36, 233, 235)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 36 baseball_glove
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 37, 454, 463)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 37, 454, 463)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 37 skateboard
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 38, 517, 528)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 38, 517, 528)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 38 surfboard
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 39, 534, 538)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 39, 534, 538)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 39 tennis_racket
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 40, 47, 54)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 40, 47, 54)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 40 bottle
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 41, 589, 595)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 41, 589, 595)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 41 wine_glass
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 42, 296, 305)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 42, 296, 305)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 42 cup
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 43, 331, 336)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 43, 331, 336)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 43 fork
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 44, 377, 383)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 44, 377, 383)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 44 knife
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 45, 484, 488)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 45, 484, 488)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 45 spoon
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 46, 253, 257)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 46, 253, 257)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 46 bowl
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 47, 215, 224)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 47, 215, 224)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 47 banana
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 48, 199, 208)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 48, 199, 208)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 48 apple
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 49, 439, 445)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 49, 439, 445)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 49 sandwich
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 50, 398, 407)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 50, 398, 407)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 50 orange
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 51, 258, 264)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 51, 258, 264)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 51 broccoli
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 52, 274, 283)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 52, 274, 283)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 52 carrot
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 53, 357, 363)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 53, 357, 363)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 53 hot_dog
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 54, 419, 429)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 54, 419, 429)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 54 pizza
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 55, 306, 313)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 55, 306, 313)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 55 donut
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 56, 265, 273)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 56, 265, 273)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 56 cake
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 57, 87, 92)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 57, 87, 92)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 57 chair
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 58, 93, 96)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 58, 93, 96)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 58 couch
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 59, 171, 174)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 59, 171, 174)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 59 potted_plant
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 60, 240, 243)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 60, 240, 243)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 60 bed
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 61, 108, 111)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 61, 108, 111)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 61 dining_table
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 62, 551, 558)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 62, 551, 558)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 62 toilet
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 63, 195, 198)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 63, 195, 198)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 63 TV
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 64, 384, 389)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 64, 384, 389)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 64 laptop
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 65, 394, 397)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 65, 394, 397)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 65 mouse
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 66, 435, 438)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 66, 435, 438)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 66 remote
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 67, 364, 368)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 67, 364, 368)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 67 keyboard
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 68, 284, 290)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 68, 284, 290)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 68 cell_phone
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 69, 390, 393)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 69, 390, 393)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 69 microwave
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 70, 408, 414)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 70, 408, 414)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 70 oven
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 71, 547, 550)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 71, 547, 550)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 71 toaster
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 72, 450, 453)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 72, 450, 453)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 72 sink
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 73, 430, 434)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 73, 430, 434)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 73 refrigerator
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 74, 248, 252)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 74, 248, 252)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 74 book
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 75, 291, 295)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 75, 291, 295)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 75 clock
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 76, 585, 588)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 76, 585, 588)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 76 vase
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 77, 446, 449)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 77, 446, 449)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 77 scissors
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 78, 529, 533)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 78, 529, 533)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 78 teddy_bear
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 79, 349, 352)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 79, 349, 352)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 79 hair_drier
-    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, 80, 559, 562)
+    num_del_i, num_del_no_i = save_HICO(HICO, HICO_dir, thres_inter, 80, 559, 562)
     del_i += num_del_i
     del_ni += num_del_no_i
     # 80 toothbrush
@@ -488,9 +487,9 @@ def generate_HICO_detection(output_file, HICO_dir, thres_no_inter, thres_inter):
     print('num_del_inter', del_i, 'num_del_no_inter', del_ni)
 
 
-def main(output_file, HICO_dir, thres_no_inter, thres_inter):
+def main(output_file, HICO_dir, thres_inter):
     print("the output file is", output_file)
     print("the threshold of no interaction score is", thres_no_inter)
     print("the threshold of interaction score is", thres_inter)
 
-    generate_HICO_detection(output_file, HICO_dir, thres_no_inter, thres_inter)
+    generate_HICO_detection(output_file, HICO_dir, thres_inter)
