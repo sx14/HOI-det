@@ -16,10 +16,10 @@ eval_ko_path = os.path.join(PROJECT_ROOT, 'output', 'results', exp_name, 'eval_r
 
 
 eval_def = sio.loadmat(eval_def_path)
-def_recs = eval_def['REC'].reshape()
-def_aps = eval_def['AP']
+def_recs = eval_def['REC'].reshape(600)
+def_aps = eval_def['AP'].reshape(600)
 
-def_order = np.argsort(def_aps)
+def_order = np.argsort(def_recs)[::-1]
 def_hois = hoi_labels[def_order]
 def_aps = def_aps[def_order]
 def_recs = def_recs[def_order]
@@ -27,12 +27,12 @@ def_recs = def_recs[def_order]
 color_list = ['b', 'g', 'r']
 
 for i in range(0, 12):
-    fig = plt.figure(figsize=(500, 300))
+    fig = plt.figure(figsize=(15, 10))
     fig.tight_layout()
 
-    hois = def_hois[i*50, (i+1)*50]
-    recs = def_recs[i*50, (i+1)*50]
-    aps = def_aps[i*50, (i+1)*50]
+    hois = def_hois[i*50: (i+1)*50]
+    recs = def_recs[i*50: (i+1)*50]
+    aps = def_aps[i*50: (i+1)*50]
 
     ax1 = fig.subplots()
     xlocation = np.linspace(1, len(hois) * 0.6, len(hois))

@@ -157,6 +157,7 @@ if __name__ == '__main__':
       with open(output_path) as f:
           HICO = pickle.load(f, 'rb')
       generate_HICO_detection(HICO, 'output/results', 0.0)
+
       os.chdir('benchmark')
       os.system('matlab -nodesktop -nosplash -r "Generate_detection ' + '../output/results/' + '/;quit;"')
       exit(0)
@@ -392,6 +393,7 @@ if __name__ == '__main__':
   generate_HICO_detection(all_results, 'output/results', 0.0)
   os.chdir('benchmark')
   os.system('matlab -nodesktop -nosplash -r "Generate_detection ' + '../output/results/' + '/;quit;"')
+  os.chdir('benchmark')
 
   print('Saving results ...')
   with open(output_path, 'wb') as f:

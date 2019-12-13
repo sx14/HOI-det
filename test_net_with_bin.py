@@ -381,6 +381,7 @@ if __name__ == '__main__':
 
   os.chdir('benchmark')
   os.system('matlab -nodesktop -nosplash -r "Generate_detection ' + '../output/results/' + '/;quit;"')
+  os.chdir('..')
 
   print('Saving results ...')
   with open(output_path, 'wb') as f:
