@@ -19,8 +19,6 @@ import pdb
 from random import randint
 
 
-
-
 def get_minibatch(roidb, num_classes):
   """Given a roidb, construct a minibatch sampled from it."""
   num_images = len(roidb)
