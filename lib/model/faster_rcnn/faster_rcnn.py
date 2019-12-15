@@ -158,19 +158,34 @@ class _fasterRCNN(nn.Module):
         hcls_score = self.hRCNN_cls_score(hroi_pooled_feat)
         ocls_score = self.oRCNN_cls_score(oroi_pooled_feat)
 
-        cls_score = icls_score + hcls_score + ocls_score + scls_score + vcls_score
         neg_masks = hoi_masks[0] == 0
         neg_masks = neg_masks.float()
-        cls_score = cls_score + neg_masks * (-9999)
-        cls_prob = F.softmax(cls_score)
+
+        icls_score = icls_score + neg_masks * (-9999)
+        hcls_score = hcls_score + neg_masks * (-9999)
+        ocls_score = ocls_score + neg_masks * (-9999)
+        scls_score = scls_score + neg_masks * (-9999)
+        vcls_score = vcls_score + neg_masks * (-9999)
+
+        icls_prob = F.softmax(icls_score)
+        hcls_prob = F.softmax(hcls_score)
+        ocls_prob = F.softmax(ocls_score)
+        scls_prob = F.softmax(scls_score)
+        vcls_prob = F.softmax(vcls_score)
+
+        cls_prob = (icls_prob + hcls_prob + ocls_prob) * scls_prob * vcls_prob
 
         RCNN_loss_cls = 0
         RCNN_loss_bin = 0
 
         if self.training:
             # classification loss
-            cls_loss = F.cross_entropy(cls_score, hoi_classes[0])
-            RCNN_loss_cls = cls_loss
+            icls_loss = F.cross_entropy(icls_score, hoi_classes[0])
+            hcls_loss = F.cross_entropy(hcls_score, hoi_classes[0])
+            ocls_loss = F.cross_entropy(ocls_score, hoi_classes[0])
+            scls_loss = F.cross_entropy(scls_score, hoi_classes[0])
+            vcls_loss = F.cross_entropy(vcls_score, hoi_classes[0])
+            RCNN_loss_cls = icls_loss + hcls_loss + ocls_loss + scls_loss + vcls_loss
 
         cls_prob = cls_prob.view(batch_size, irois.size(1), -1)
         bin_prob = Variable(torch.zeros(batch_size, irois.size(1), 2)).cuda()
