@@ -277,8 +277,7 @@ if __name__ == '__main__':
           im_in = im_in[:, :, np.newaxis]
           im_in = np.concatenate((im_in, im_in, im_in), axis=2)
       im_in = im_in[:, :, ::-1]     # rgb -> bgr
-      im = im_in
-      blobs, im_scales = _get_image_blob(im)
+      blobs, im_scales = _get_image_blob(im_in)
 
       hboxes_raw = np.zeros((0, 4))
       oboxes_raw = np.zeros((0, 4))
@@ -315,7 +314,7 @@ if __name__ == '__main__':
                                        max(hbox[0, 3], obox[0, 3])]).reshape(1, 4)
 
                       if raw_key_points != None and len(raw_key_points) == 51:
-                          pbox = gen_part_boxes(hbox[0], raw_key_points, blobs.shape[:2])
+                          pbox = gen_part_boxes(hbox[0], raw_key_points, im_in.shape[:2])
                       else:
                           pbox = est_part_boxes(hbox[0])
 
@@ -387,13 +386,12 @@ if __name__ == '__main__':
                              oboxes[:, k:k+batch_size],
                              iboxes[:, k:k+batch_size],
                              pboxes[:, k:k+batch_size],
-                             vrb_classes[:, k:k+batch_size],
-                             bin_classes[:, k:k+batch_size],
-                             hoi_masks[:, k:k+batch_size],
+                             vrb_classes,
+                             bin_classes,
+                             hoi_masks,
                              spa_maps[:, k:k+batch_size],
                              obj_vecs[:, k:k+batch_size],
-                             batch_size)
-          # TODO: fix bug ...
+                             num_hois)
           curr_batch_size = vrb_prob.shape[1]
           hoi_prob = np.zeros((1, curr_batch_size, len(hoi_classes)))
 
