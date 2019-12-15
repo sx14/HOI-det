@@ -153,7 +153,10 @@ if __name__ == '__main__':
   output_path = os.path.join(args.output_dir, 'all_hoi_detections.pkl')
   if os.path.exists(output_path):
       print('Test results found!')
-      generate_HICO_detection(output_path, 'output/results', 1.0, 0.0)
+      print('Loading test results ...')
+      with open(output_path) as f:
+          HICO = pickle.load(f)
+      generate_HICO_detection(HICO, 'output/results', 1.0, 0.0)
       os.chdir('benchmark')
       os.system('matlab -nodesktop -nosplash -r "Generate_detection ' + '../output/results/' + '/;quit;"')
       exit(0)
@@ -274,20 +277,22 @@ if __name__ == '__main__':
           im_in = im_in[:, :, np.newaxis]
           im_in = np.concatenate((im_in, im_in, im_in), axis=2)
       im_in = im_in[:, :, ::-1]     # rgb -> bgr
-      blobs, im_scales = _get_image_blob(im_in)
+      im = im_in
+      blobs, im_scales = _get_image_blob(im)
 
+      hboxes_raw = np.zeros((0, 4))
+      oboxes_raw = np.zeros((0, 4))
+      iboxes_raw = np.zeros((0, 4))
+      pboxes_raw = np.zeros((0, 6, 4))
+      spa_maps_raw = np.zeros((0, 2, 64, 64))
+      obj_vecs_raw = np.zeros((0, 300))
+      obj_classes = []
+      hscores = []
+      oscores = []
+
+      num_cand = 0
       im_results = []
       for human_det in det_db[im_id]:
-          hboxes_raw = np.zeros((0, 4))
-          oboxes_raw = np.zeros((0, 4))
-          iboxes_raw = np.zeros((0, 4))
-          pboxes_raw = np.zeros((0, 6, 4))
-          spa_maps_raw = np.zeros((0, 2, 64, 64))
-          obj_vecs_raw = np.zeros((0, 300))
-          obj_classes = []
-          hscores = []
-          oscores = []
-          num_cand = 0
           if (np.max(human_det[5]) > human_thres) and (human_det[1] == 'Human'):
               # This is a valid human
               hbox = np.array([human_det[2][0],
@@ -310,12 +315,12 @@ if __name__ == '__main__':
                                        max(hbox[0, 3], obox[0, 3])]).reshape(1, 4)
 
                       if raw_key_points != None and len(raw_key_points) == 51:
-                          pbox = gen_part_boxes(hbox[0], raw_key_points, im_in.shape[:2])
+                          pbox = gen_part_boxes(hbox[0], raw_key_points, blobs.shape[:2])
                       else:
                           pbox = est_part_boxes(hbox[0])
 
                       pbox = np.array(pbox)
-                      pbox = pbox.reshape((1, 6, 4))
+                      pbox = pbox.reshape((6, 4))[np.newaxis, :, :]
                       spa_map_raw = gen_spatial_map(human_det[2], object_det[2])
                       spa_map_raw = spa_map_raw[np.newaxis, : ,: ,:]
                       spa_maps_raw = np.concatenate((spa_maps_raw, spa_map_raw))
@@ -335,65 +340,75 @@ if __name__ == '__main__':
                       hscores.append(human_det[5])
                       oscores.append(object_det[5])
                       num_cand += 1
+      if num_cand == 0:
+          all_results[im_id] = im_results
+          continue
 
-          if num_cand == 0:
-              continue
+      hboxes_raw = hboxes_raw[np.newaxis, :, :]
+      oboxes_raw = oboxes_raw[np.newaxis, :, :]
+      iboxes_raw = iboxes_raw[np.newaxis, :, :]
+      pboxes_raw = pboxes_raw[np.newaxis, :, :]
+      spa_maps_raw = spa_maps_raw[np.newaxis, :, :, :, :]
+      obj_vecs_raw = obj_vecs_raw[np.newaxis, :, :]
+      hboxes_t = torch.from_numpy(hboxes_raw * im_scales[0])
+      oboxes_t = torch.from_numpy(oboxes_raw * im_scales[0])
+      iboxes_t = torch.from_numpy(iboxes_raw * im_scales[0])
+      pboxes_t = torch.from_numpy(pboxes_raw * im_scales[0])
+      spa_maps_t = torch.from_numpy(spa_maps_raw)
+      obj_vecs_t = torch.from_numpy(obj_vecs_raw)
 
-          hboxes_raw = hboxes_raw[np.newaxis, :, :]
-          oboxes_raw = oboxes_raw[np.newaxis, :, :]
-          iboxes_raw = iboxes_raw[np.newaxis, :, :]
-          pboxes_raw = pboxes_raw[np.newaxis, :, :]
-          spa_maps_raw = spa_maps_raw[np.newaxis, :, :, :, :]
-          obj_vecs_raw = obj_vecs_raw[np.newaxis, :, :]
-          hboxes_t = torch.from_numpy(hboxes_raw * im_scales[0])
-          oboxes_t = torch.from_numpy(oboxes_raw * im_scales[0])
-          iboxes_t = torch.from_numpy(iboxes_raw * im_scales[0])
-          pboxes_t = torch.from_numpy(pboxes_raw * im_scales[0])
-          spa_maps_t = torch.from_numpy(spa_maps_raw)
-          obj_vecs_t = torch.from_numpy(obj_vecs_raw)
+      hboxes.data.resize_(hboxes_t.size()).copy_(hboxes_t)
+      oboxes.data.resize_(oboxes_t.size()).copy_(oboxes_t)
+      iboxes.data.resize_(iboxes_t.size()).copy_(iboxes_t)
+      pboxes.data.resize_(pboxes_t.size()).copy_(pboxes_t)
 
-          hboxes.data.resize_(hboxes_t.size()).copy_(hboxes_t)
-          oboxes.data.resize_(oboxes_t.size()).copy_(oboxes_t)
-          iboxes.data.resize_(iboxes_t.size()).copy_(iboxes_t)
-          pboxes.data.resize_(pboxes_t.size()).copy_(pboxes_t)
+      spa_maps.data.resize_(spa_maps_t.size()).copy_(spa_maps_t)
+      obj_vecs.data.resize_(obj_vecs_t.size()).copy_(obj_vecs_t)
 
-          spa_maps.data.resize_(spa_maps_t.size()).copy_(spa_maps_t)
-          obj_vecs.data.resize_(obj_vecs_t.size()).copy_(obj_vecs_t)
+      assert len(im_scales) == 1, "Only single-image batch implemented"
+      im_blob = blobs
+      im_info_np = np.array([[im_blob.shape[1], im_blob.shape[2], im_scales[0]]], dtype=np.float32)
 
-          assert len(im_scales) == 1, "Only single-image batch implemented"
-          im_blob = blobs
-          im_info_np = np.array([[im_blob.shape[1], im_blob.shape[2], im_scales[0]]], dtype=np.float32)
+      im_data_pt = torch.from_numpy(im_blob)
+      im_data_pt = im_data_pt.permute(0, 3, 1, 2)
+      im_info_pt = torch.from_numpy(im_info_np)
 
-          im_data_pt = torch.from_numpy(im_blob)
-          im_data_pt = im_data_pt.permute(0, 3, 1, 2)
-          im_info_pt = torch.from_numpy(im_info_np)
+      im_data.data.resize_(im_data_pt.size()).copy_(im_data_pt)
+      im_info.data.resize_(im_info_pt.size()).copy_(im_info_pt)
 
-          im_data.data.resize_(im_data_pt.size()).copy_(im_data_pt)
-          im_info.data.resize_(im_info_pt.size()).copy_(im_info_pt)
+      det_tic = time.time()
 
-          det_tic = time.time()
+      batch_size = 75
+      for k in range(0, num_cand, batch_size):
           with torch.no_grad():
               vrb_prob, bin_prob, RCNN_loss_cls, RCNN_loss_bin = \
                   fasterRCNN(im_data, im_info,
-                             hboxes, oboxes, iboxes, pboxes,
-                             vrb_classes, bin_classes,
-                             hoi_masks, spa_maps,
-                             obj_vecs, num_hois)
+                             hboxes[:, k:k+batch_size],
+                             oboxes[:, k:k+batch_size],
+                             iboxes[:, k:k+batch_size],
+                             pboxes[:, k:k+batch_size],
+                             vrb_classes[:, k:k+batch_size],
+                             bin_classes[:, k:k+batch_size],
+                             hoi_masks[:, k:k+batch_size],
+                             spa_maps[:, k:k+batch_size],
+                             obj_vecs[:, k:k+batch_size],
+                             batch_size)
+          # TODO: fix bug ...
+          curr_batch_size = vrb_prob.shape[1]
+          hoi_prob = np.zeros((1, curr_batch_size, len(hoi_classes)))
 
-          hoi_prob = np.zeros((1, num_cand, len(hoi_classes)))
-
-          for j in range(num_cand):
+          for j in range(curr_batch_size):
               for vrb_id in range(vrb_prob.shape[2]):
                   hoi_prob[0, j, vrb2hoi[vrb_id]] = vrb_prob[0, j, vrb_id]
 
-          for j in range(num_cand):
+          for j in range(curr_batch_size):
               temp = []
-              temp.append(hboxes_raw[0, j])  # Human box
-              temp.append(oboxes_raw[0, j])  # Object box
-              temp.append(obj_classes[j])    # Object class
+              temp.append(hboxes_raw[0, k+j])  # Human box
+              temp.append(oboxes_raw[0, k+j])  # Object box
+              temp.append(obj_classes[k+j])    # Object class
               temp.append(hoi_prob[0, j].tolist())  # Score (600)
-              temp.append(hscores[j])  # Human score
-              temp.append(oscores[j])  # Object score
+              temp.append(hscores[k+j])  # Human score
+              temp.append(oscores[k+j])  # Object score
               temp.append(bin_prob.cpu().data.numpy()[0, j].tolist())  # binary score
               im_results.append(temp)
 
@@ -402,11 +417,15 @@ if __name__ == '__main__':
   if not os.path.exists(args.output_dir):
       os.mkdir(args.output_dir)
 
+  generate_HICO_detection(all_results, 'output/results', 1.0, 0.0)
+  os.chdir('benchmark')
+  os.system('matlab -nodesktop -nosplash -r "Generate_detection ' + '../output/results/' + '/;quit;"')
+  os.chdir('..')
+
   print('Saving results ...')
   with open(output_path, 'wb') as f:
       pickle.dump(all_results, f)
 
-  generate_HICO_detection(output_path, 'output/results', 1.0, 0.0)
 
-  os.chdir('benchmark')
-  os.system('matlab -nodesktop -nosplash -r "Generate_detection ' + '../output/results/' + '/;quit;"')
+
+

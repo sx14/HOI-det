@@ -191,7 +191,7 @@ class _fasterRCNN(nn.Module):
         pcls_score = self.pRCNN_cls_score(proi_pooled_feat)
         pcls_prob = F.sigmoid(pcls_score)
 
-        cls_prob = (icls_prob + hcls_prob + ocls_prob + pcls_score) * scls_prob * vcls_prob
+        cls_prob = (icls_prob + hcls_prob + ocls_prob + pcls_prob) * scls_prob * vcls_prob
 
         RCNN_loss_cls = 0
         RCNN_loss_bin = 0
