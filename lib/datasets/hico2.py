@@ -71,16 +71,14 @@ def iou(box1, box2):
     return iou
 
 
-def refine_human_box_with_skeleton(box, skeleton, im_hw, conf_thr=0.01):
-    im_h, im_w = im_hw
+def refine_human_box_with_skeleton(box, skeleton, conf_thr=0.01):
+    if skeleton is None:
+        return box
+
     xmin, ymin, xmax, ymax = box
     for i in range(len(skeleton)):
         pt_x = skeleton[i, 0]
-        pt_x = max(pt_x, 0)
-        pt_x = min(pt_x, im_w - 1)
         pt_y = skeleton[i, 1]
-        pt_y = max(pt_y, 0)
-        pt_y = min(pt_y, im_h - 1)
         pt_s = skeleton[i, 2]
         if pt_s > conf_thr:
             xmin = min(xmin, pt_x)
@@ -355,8 +353,8 @@ class hico2(imdb):
             image_name = image_id_template % str(image_id).zfill(8)
 
             # augment positive instances
-            im_h = self._all_image_info[image_name][1]
             im_w = self._all_image_info[image_name][0]
+            im_h = self._all_image_info[image_name][1]
             image_hw = [im_h, im_w]
             img_pos_hois = self.augment_hoi_instances(img_pos_hois, image_hw)
 
@@ -404,23 +402,22 @@ class hico2(imdb):
                     obj_class_id = self.obj_class2ind[obj_class_name]
 
                     raw_key_points = raw_hoi[7]
-                    if raw_key_points is None or len(raw_key_points) != 51:
-                        raw_key_points = np.array([-1] * 51)
-                        key_points = np.reshape(key_points, (17, 3))
-                    else:
+                    if raw_key_points is not None and len(raw_key_points) == 51:
+                        # valid skeleton key points
                         key_points = np.array(raw_key_points)
                         key_points = np.reshape(key_points, (17, 3))
                         key_points[:, :2][key_points[:, :2] < 0] = 0
                         key_points[:, 0][key_points[:, 0] >= im_w] = im_w - 1
                         key_points[:, 1][key_points[:, 1] >= im_h] = im_h - 1
+                    else:
+                        key_points = None
 
-                    im_h, im_w = image_hw
                     hbox = raw_hoi[2]
                     hbox = [max(0, hbox[0]), max(0, hbox[1]),
                             max(0, hbox[2]), max(0, hbox[3])]
                     hbox = [min(im_w-1, hbox[0]), min(im_h-1, hbox[1]),
                             min(im_w-1, hbox[2]), min(im_h-1, hbox[3])]
-                    hbox = refine_human_box_with_skeleton(hbox, key_points, image_hw)
+                    hbox = refine_human_box_with_skeleton(hbox, key_points)
                     obox = raw_hoi[3]
                     obox = [max(0, obox[0]), max(0, obox[1]),
                             max(0, obox[2]), max(0, obox[3])]
@@ -439,14 +436,8 @@ class hico2(imdb):
                     image_anno['vrb_masks'].append([self.hoi2vrb[hoi]
                                                     for hoi in range(self.obj2int[obj_class_name][0],
                                                                      self.obj2int[obj_class_name][1]+1)])
-
-                    raw_key_points = key_points.reshape(-1)
-                    if raw_key_points.sum() == -51:
-                        image_anno['pbox_lists'].append(est_part_boxes(hbox))
-                        image_anno['pbox_lists1'].append(est_part_boxes(hbox))
-                    else:
-                        image_anno['pbox_lists'].append(gen_part_boxes(hbox, raw_key_points.tolist(), image_hw))
-                        image_anno['pbox_lists1'].append(gen_part_boxes1(hbox, raw_key_points.tolist()))
+                    image_anno['pbox_lists'].append(gen_part_boxes(hbox, key_points, image_hw))
+                    image_anno['pbox_lists1'].append(gen_part_boxes1(hbox, key_points))
 
                     if pn == 0:
                         # positive - 0

@@ -47,9 +47,8 @@ def get_minibatch(roidb, num_classes):
   iboxes = roidb[0]['iboxes'] * im_scales[0]
   pboxes = roidb[0]['pbox_lists'] * im_scales[0]
   pboxes1 = roidb[0]['pbox_lists1']
-  for i in range(len(pboxes1)):
-    for j in range(6):
-      pboxes1[i, :4] = pboxes1[i, :4] * im_scales[0]
+  pboxes1 = pboxes1.reshape((pboxes1.shape[0], 6, 5))
+  pboxes1[:, :, :4] = pboxes1[:, :, :4] * im_scales[0]
 
   hoi_classes = roidb[0]['hoi_classes']
   vrb_classes = roidb[0]['vrb_classes']

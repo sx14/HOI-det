@@ -89,7 +89,6 @@ class roibatchLoader(data.Dataset):
 
     blobs['hoi_masks'] = blobs['hoi_masks'][hoi_inds]
     blobs['vrb_masks'] = blobs['vrb_masks'][hoi_inds]
-    blobs['key_points'] = blobs['key_points'][hoi_inds]
 
     gt_boxes = np.concatenate((blobs['hboxes'], blobs['oboxes'], blobs['iboxes']))
     gt_boxes = torch.from_numpy(gt_boxes)

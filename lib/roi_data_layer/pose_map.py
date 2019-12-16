@@ -162,21 +162,19 @@ def gen_pose_obj_map1(hbox, obox, ibox, pboxes, size=224):
     pose_obj_map = np.zeros((8, size, size))
     for i in range(pboxes.shape[0]):
         box_conf = pboxes[i]
-        if box_conf is not None:
-            xmin, ymin, xmax, ymax, conf = box_conf
+        xmin, ymin, xmax, ymax, conf = box_conf
+        # make sure skeleton box in union box
+        xmin = max(0, xmin)
+        ymin = max(0, ymin)
+        xmax = min(xmax, i_wh[0]-1)
+        ymax = min(ymax, i_wh[1]-1)
 
-            # make sure skeleton box in union box
-            xmin = max(0, xmin)
-            ymin = max(0, ymin)
-            xmax = min(xmax, i_wh[0]-1)
-            ymax = min(ymax, i_wh[1]-1)
-
-            # scale skeleton box
-            xmin = int(xmin * x_ratio)
-            ymin = int(ymin * y_ratio)
-            xmax = int(xmax * x_ratio)
-            ymax = int(ymax * y_ratio)
-            pose_obj_map[i, ymin:ymax+1, xmin:xmax+1] = conf
+        # scale skeleton box
+        xmin = int(xmin * x_ratio)
+        ymin = int(ymin * y_ratio)
+        xmax = int(xmax * x_ratio)
+        ymax = int(ymax * y_ratio)
+        pose_obj_map[i, ymin:ymax+1, xmin:xmax+1] = conf
 
     o_xmin = int((o_xmin - i_xmin) * x_ratio)
     o_ymin = int((o_ymin - i_ymin) * y_ratio)
