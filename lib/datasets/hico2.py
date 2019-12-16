@@ -515,7 +515,7 @@ class hico2(imdb):
                 assert (boxes[:, 2] >= boxes[:, 0]).all()
                 new_entry[box_type] = boxes
 
-            box_types = ['pbox_list', 'pbox_list1']
+            box_types = ['pbox_lists', 'pbox_lists1']
             for box_type in box_types:
                 box_lists = self.roidb[i][box_type].copy()
                 inst_num = box_lists.shape[0]

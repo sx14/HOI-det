@@ -144,15 +144,20 @@ def gen_part_boxes(hbox, skeleton, im_hw):
         return part_boxes
 
     part_boxes = []
-    for i, body_part in enumerate(body_parts):
+    for _, body_part in enumerate(body_parts):
         box = gen_body_part_box(skeleton, h_wh, body_part)
 
         xmin, ymin, xmax, ymax, conf = box
+
         xmin = max(0, xmin)
         ymin = max(0, ymin)
         xmax = min(xmax, im_hw[1]-1)
         ymax = min(ymax, im_hw[0]-1)
-        part_boxes.append([xmin, ymin, xmax, ymax, conf])
+
+        if (xmax > xmin) and (ymax > ymin):
+            part_boxes.append([xmin, ymin, xmax, ymax, conf])
+        else:
+            part_boxes.append([h_xmin, h_ymin, h_xmax, h_ymax, 0.01])
 
     return part_boxes
 
@@ -170,15 +175,21 @@ def gen_part_boxes1(hbox, skeleton):
     part_boxes = []
     for i, body_part in enumerate(body_parts):
         box = gen_body_part_box(skeleton, h_wh, body_part)
+
         if iou(box[:4], hbox) == 0:
             part_boxes.append([h_xmin, h_ymin, h_xmax, h_ymax, 0.01])
         else:
             xmin, ymin, xmax, ymax, conf = box
+
             xmin = max(h_xmin, xmin)
             ymin = max(h_ymin, ymin)
             xmax = min(h_xmax, xmax)
             ymax = min(h_ymax, ymax)
-            part_boxes.append([xmin, ymin, xmax, ymax, conf])
+
+            if (xmax > xmin) and (ymax > ymin):
+                part_boxes.append([xmin, ymin, xmax, ymax, conf])
+            else:
+                part_boxes.append([h_xmin, h_ymin, h_xmax, h_ymax, 0.01])
 
     return part_boxes
 
@@ -238,6 +249,7 @@ if __name__ == '__main__':
         else:
             all_kps = np.reshape(raw_kps, (len(key_points), 3))
             part_boxes = gen_part_boxes(hbox, all_kps, im_i0.shape[:2])
+            # part_boxes = gen_part_boxes1(hbox, all_kps)
             part_boxes = np.array(part_boxes).reshape((6, 4)).astype(np.int)
 
             im_i0 = cv2.rectangle(im_i0, (hbox[0], hbox[1]), (hbox[2], hbox[3]), (0, 255, 0), 4)

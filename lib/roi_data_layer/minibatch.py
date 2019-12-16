@@ -46,7 +46,7 @@ def get_minibatch(roidb, num_classes):
   oboxes = roidb[0]['oboxes'] * im_scales[0]
   iboxes = roidb[0]['iboxes'] * im_scales[0]
   pboxes = roidb[0]['pbox_lists']
-  pboxes[:, :, :4] = pboxes[:, :, 4] * im_scales[0]
+  pboxes[:, :, :4] = pboxes[:, :, :4] * im_scales[0]
   pboxes1 = roidb[0]['pbox_lists1']
   pboxes1[:, :, :4] = pboxes1[:, :, :4] * im_scales[0]
 
