@@ -45,6 +45,7 @@ def get_minibatch(roidb, num_classes):
   hboxes = roidb[0]['hboxes'] * im_scales[0]
   oboxes = roidb[0]['oboxes'] * im_scales[0]
   iboxes = roidb[0]['iboxes'] * im_scales[0]
+  pboxes = roidb[0]['pbox_lists'] * im_scales[0]
   hoi_classes = roidb[0]['hoi_classes']
   vrb_classes = roidb[0]['vrb_classes']
   bin_classes = roidb[0]['bin_classes']
@@ -55,18 +56,17 @@ def get_minibatch(roidb, num_classes):
     key_points[:, i*3+0] = key_points[:, i*3+0] * im_scales[0]
     key_points[:, i*3+1] = key_points[:, i*3+1] * im_scales[0]
 
-
   blobs['hboxes'] = hboxes
   blobs['oboxes'] = oboxes
   blobs['iboxes'] = iboxes
+  blobs['pbox_lists'] = pboxes
   blobs['hoi_classes'] = hoi_classes
   blobs['vrb_classes'] = vrb_classes
   blobs['bin_classes'] = bin_classes
   blobs['hoi_masks'] = hoi_masks
   blobs['vrb_masks'] = vrb_masks
   blobs['im_info'] = np.array(
-    [[im_blob.shape[1], im_blob.shape[2], im_scales[0]]],
-    dtype=np.float32)
+    [[im_blob.shape[1], im_blob.shape[2], im_scales[0]]], dtype=np.float32)
   blobs['key_points'] = key_points
   blobs['img_id'] = roidb[0]['img_id']
 

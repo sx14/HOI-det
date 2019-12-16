@@ -40,6 +40,7 @@ from generate_HICO_detection import generate_HICO_detection
 
 from datasets.hico2 import hico2
 from datasets.hico2 import refine_human_box_with_skeleton
+from datasets.pose_map import gen_part_boxes, est_part_boxes
 import pdb
 
 try:
@@ -222,6 +223,7 @@ if __name__ == '__main__':
   hboxes = torch.FloatTensor(1)
   oboxes = torch.FloatTensor(1)
   iboxes = torch.FloatTensor(1)
+  pboxes = torch.FloatTensor(1)
   # hoi_classes = torch.FloatTensor(1)
   vrb_classes = torch.FloatTensor(1)
   bin_classes = torch.FloatTensor(1)
@@ -238,6 +240,7 @@ if __name__ == '__main__':
     hboxes = hboxes.cuda()
     oboxes = oboxes.cuda()
     iboxes = iboxes.cuda()
+    pboxes = pboxes.cuda()
     # hoi_classes = hoi_classes.cuda()
     vrb_classes = vrb_classes.cuda()
     bin_classes = bin_classes.cuda()
@@ -254,6 +257,7 @@ if __name__ == '__main__':
       hboxes = Variable(hboxes)
       oboxes = Variable(oboxes)
       iboxes = Variable(iboxes)
+      pboxes = Variable(pboxes)
       # hoi_classes = Variable(hoi_classes)
       vrb_classes = Variable(vrb_classes)
       bin_classes = Variable(bin_classes)
@@ -304,6 +308,8 @@ if __name__ == '__main__':
               hboxes_raw = np.zeros((0, 4))
               oboxes_raw = np.zeros((0, 4))
               iboxes_raw = np.zeros((0, 4))
+              pboxes_raw = np.zeros((0, 6, 4))
+
               spa_maps_raw = np.zeros((0, 2, 64, 64))
               pose_maps_raw = np.zeros((0, 8, 224, 224))
               obj_classes = []
@@ -340,6 +346,15 @@ if __name__ == '__main__':
                                        min(hbox[0, 1], obox[0, 1]),
                                        max(hbox[0, 2], obox[0, 2]),
                                        max(hbox[0, 3], obox[0, 3])]).reshape(1, 4)
+
+                      raw_key_points = human_det[6]
+                      if raw_key_points != None and len(raw_key_points) == 51:
+                          pbox = gen_part_boxes(hbox[0], raw_key_points, im_in.shape[:2])
+                      else:
+                          pbox = est_part_boxes(hbox[0])
+                      pbox = np.array(pbox)
+                      pbox = pbox.reshape((1, 6, 4))[np.newaxis, :, :]
+
                       spa_map_raw = gen_spatial_map(human_det[2], object_det[2])
                       spa_map_raw = spa_map_raw[np.newaxis, : ,: ,:]
                       spa_maps_raw = np.concatenate((spa_maps_raw, spa_map_raw))
@@ -351,6 +366,8 @@ if __name__ == '__main__':
                       hboxes_raw = np.concatenate((hboxes_raw, hbox))
                       oboxes_raw = np.concatenate((oboxes_raw, obox))
                       iboxes_raw = np.concatenate((iboxes_raw, ibox))
+                      pboxes_raw = np.concatenate((pboxes_raw, pbox))
+
                       obj_classes.append(object_det[4])
                       hscores.append(human_det[5])
                       oscores.append(object_det[5])
@@ -362,18 +379,24 @@ if __name__ == '__main__':
               hboxes_raw = hboxes_raw[np.newaxis, :, :]
               oboxes_raw = oboxes_raw[np.newaxis, :, :]
               iboxes_raw = iboxes_raw[np.newaxis, :, :]
+              pboxes_raw = pboxes_raw[np.newaxis, :, :]
+
               spa_maps_raw = spa_maps_raw[np.newaxis, :, :, :, :]
               pose_maps_raw = pose_maps_raw[np.newaxis, :, :, :, :]
 
               hboxes_t = torch.from_numpy(hboxes_raw * im_scales[0])
               oboxes_t = torch.from_numpy(oboxes_raw * im_scales[0])
               iboxes_t = torch.from_numpy(iboxes_raw * im_scales[0])
+              pboxes_t = torch.from_numpy(pboxes_raw * im_scales[0])
+
               spa_maps_t = torch.from_numpy(spa_maps_raw)
               pose_maps_t = torch.from_numpy(pose_maps_raw)
 
               hboxes.data.resize_(hboxes_t.size()).copy_(hboxes_t)
               oboxes.data.resize_(oboxes_t.size()).copy_(oboxes_t)
               iboxes.data.resize_(iboxes_t.size()).copy_(iboxes_t)
+              pboxes.data.resize_(pboxes_t.size()).copy_(pboxes_t)
+
               spa_maps.data.resize_(spa_maps_t.size()).copy_(spa_maps_t)
               pose_maps.data.resize_(pose_maps_t.size()).copy_(pose_maps_t)
 
@@ -396,7 +419,7 @@ if __name__ == '__main__':
               with torch.no_grad():
                   vrb_prob, bin_prob, RCNN_loss_cls, RCNN_loss_bin = \
                       fasterRCNN(im_data, dp_data, im_info,
-                                 hboxes, oboxes, iboxes,
+                                 hboxes, oboxes, iboxes, pboxes,
                                  vrb_classes, bin_classes, hoi_masks,
                                  spa_maps, pose_maps, num_hois)
 

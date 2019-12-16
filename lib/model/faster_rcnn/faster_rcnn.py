@@ -66,13 +66,18 @@ class _fasterRCNN(nn.Module):
             nn.Dropout(p=0.5),
             nn.Linear(1024, self.n_classes))
 
-    def forward(self, im_data, de_data, im_info, hboxes, oboxes, iboxes, hoi_classes, bin_classes, hoi_masks, spa_maps, pose_maps, num_hois):
+    def forward(self, im_data, de_data, im_info,
+                hboxes, oboxes, iboxes, pboxes,
+                hoi_classes, bin_classes, hoi_masks,
+                spa_maps, pose_maps, num_hois):
+
         batch_size = im_data.size(0)
 
         im_info = im_info.data
         hboxes = hboxes.data
         oboxes = oboxes.data
         iboxes = iboxes.data
+        pboxes = pboxes.data
         num_hois = num_hois.data
 
         # feed image data to base model to obtain base feature map
@@ -95,15 +100,19 @@ class _fasterRCNN(nn.Module):
         hrois = Variable(torch.zeros(hboxes.shape[0], hboxes.shape[1], hboxes.shape[2] + 1))
         orois = Variable(torch.zeros(oboxes.shape[0], oboxes.shape[1], oboxes.shape[2] + 1))
         irois = Variable(torch.zeros(iboxes.shape[0], iboxes.shape[1], iboxes.shape[2] + 1))
+        prois = Variable(torch.zeros(pboxes.shape[0], pboxes.shape[1] * pboxes.shape[2], pboxes.shape[3] + 1))
+
 
         if im_data.is_cuda:
             hrois = hrois.cuda()
             orois = orois.cuda()
             irois = irois.cuda()
+            prois = prois.cuda()
 
         hrois[:, :, 1:] = hboxes
         orois[:, :, 1:] = oboxes
         irois[:, :, 1:] = iboxes
+        prois[:, :, 1:] = pboxes.view(pboxes.shape[0], -1, pboxes.shape[3])
 
         # do roi pooling based on predicted rois
         if cfg.POOLING_MODE == 'crop':
@@ -154,6 +163,22 @@ class _fasterRCNN(nn.Module):
         # feed pooled features to top  model
         oroi_pooled_feat = self._ohead_to_tail(oroi_pooled_feat)
 
+        if cfg.POOLING_MODE == 'crop':
+            # pdb.set_trace()
+            # pooled_feat_anchor = _crop_pool_layer(base_feat, rois.view(-1, 5))
+            grid_xy = _affine_grid_gen(prois.view(-1, 5), base_feat.size()[2:], self.grid_size)
+            grid_yx = torch.stack([grid_xy.data[:, :, :, 1], grid_xy.data[:, :, :, 0]], 3).contiguous()
+            proi_pooled_feat = self.RCNN_roi_crop(base_feat, Variable(grid_yx).detach())
+            if cfg.CROP_RESIZE_WITH_MAX_POOL:
+                proi_pooled_feat = F.max_pool2d(proi_pooled_feat, 2, 2)
+        elif cfg.POOLING_MODE == 'align':
+            proi_pooled_feat = self.RCNN_roi_align(base_feat, prois.view(-1, 5))
+        elif cfg.POOLING_MODE == 'pool':
+            proi_pooled_feat = self.RCNN_roi_pool(base_feat, prois.view(-1, 5))
+
+        # feed pooled features to top  model
+        proi_pooled_feat = self._phead_to_tail(proi_pooled_feat)
+
         spa_feat = self.spaCNN(spa_maps[0])
         scls_score = self.spa_cls_score(spa_feat)
         scls_prob = F.sigmoid(scls_score)
@@ -168,7 +193,10 @@ class _fasterRCNN(nn.Module):
         ocls_score = self.oRCNN_cls_score(oroi_pooled_feat)
         ocls_prob = F.sigmoid(ocls_score)
 
-        cls_prob = (icls_prob + hcls_prob + ocls_prob) * scls_prob
+        pcls_score = self.pRCNN_cls_score(proi_pooled_feat)
+        pcls_prob = F.sigmoid(pcls_score)
+
+        cls_prob = (icls_prob + hcls_prob + ocls_prob + pcls_prob) * scls_prob
 
         RCNN_loss_cls = 0
         RCNN_loss_bin = 0
@@ -180,7 +208,9 @@ class _fasterRCNN(nn.Module):
             icls_loss = F.binary_cross_entropy(icls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
             hcls_loss = F.binary_cross_entropy(hcls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
             ocls_loss = F.binary_cross_entropy(ocls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
-            RCNN_loss_cls = scls_loss + icls_loss + hcls_loss + ocls_loss
+            pcls_loss = F.binary_cross_entropy(pcls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
+
+            RCNN_loss_cls = scls_loss + icls_loss + hcls_loss + ocls_loss + pcls_loss
 
         cls_prob = cls_prob.view(batch_size, irois.size(1), -1)
         bin_prob = Variable(torch.zeros(batch_size, irois.size(1), 2)).cuda()

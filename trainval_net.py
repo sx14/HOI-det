@@ -211,6 +211,7 @@ if __name__ == '__main__':
   hboxes = torch.FloatTensor(1)
   oboxes = torch.FloatTensor(1)
   iboxes = torch.FloatTensor(1)
+  pboxes = torch.FloatTensor(1)
   hoi_classes = torch.FloatTensor(1)
   vrb_classes = torch.FloatTensor(1)
   bin_classes = torch.FloatTensor(1)
@@ -228,6 +229,7 @@ if __name__ == '__main__':
     hboxes = hboxes.cuda()
     oboxes = oboxes.cuda()
     iboxes = iboxes.cuda()
+    pboxes = pboxes.cuda()
     hoi_classes = hoi_classes.cuda()
     vrb_classes = vrb_classes.cuda()
     bin_classes = bin_classes.cuda()
@@ -244,6 +246,7 @@ if __name__ == '__main__':
   hboxes = Variable(hboxes)
   oboxes = Variable(oboxes)
   iboxes = Variable(iboxes)
+  pboxes = Variable(pboxes)
   hoi_classes = Variable(hoi_classes)
   vrb_classes = Variable(vrb_classes)
   bin_classes = Variable(bin_classes)
@@ -345,14 +348,15 @@ if __name__ == '__main__':
       hboxes.data.resize_(data[3].size()).copy_(data[3])
       oboxes.data.resize_(data[4].size()).copy_(data[4])
       iboxes.data.resize_(data[5].size()).copy_(data[5])
-      hoi_classes.resize_(data[6].size()).copy_(data[6])
-      vrb_classes.resize_(data[7].size()).copy_(data[7])
-      bin_classes.resize_(data[8].size()).copy_(data[8])
-      hoi_masks.resize_(data[9].size()).copy_(data[9])
-      vrb_masks.resize_(data[10].size()).copy_(data[10])
-      spa_maps.data.resize_(data[11].size()).copy_(data[11])
-      pose_maps.data.resize_(data[12].size()).copy_(data[12])
-      num_hois.data.resize_(data[13].size()).copy_(data[13])
+      pboxes.data.resize_(data[6].size()).copy_(data[6])
+      hoi_classes.resize_(data[7].size()).copy_(data[7])
+      vrb_classes.resize_(data[8].size()).copy_(data[8])
+      bin_classes.resize_(data[9].size()).copy_(data[9])
+      hoi_masks.resize_(data[10].size()).copy_(data[10])
+      vrb_masks.resize_(data[11].size()).copy_(data[11])
+      spa_maps.data.resize_(data[12].size()).copy_(data[12])
+      pose_maps.data.resize_(data[13].size()).copy_(data[13])
+      num_hois.data.resize_(data[14].size()).copy_(data[14])
       ld_end = time.time()
       ld_time += (ld_end-ld_start)
 
@@ -362,7 +366,7 @@ if __name__ == '__main__':
       fasterRCNN.zero_grad()
       cls_prob, bin_prob, RCNN_loss_cls, RCNN_loss_bin = \
           fasterRCNN(im_data, dp_data, im_info,
-                     hboxes, oboxes, iboxes,
+                     hboxes, oboxes, iboxes, pboxes,
                      vrb_classes, bin_classes, vrb_masks,
                      spa_maps, pose_maps, num_hois)
 
