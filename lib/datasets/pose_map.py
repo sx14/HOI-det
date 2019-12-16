@@ -30,6 +30,26 @@ all_part_kps = {
     'head': ['nose', 'left_eye', 'right_eye', 'left_ear', 'right_ear'],
 }
 
+def iou(box1, box2):
+    xmin1, ymin1, xmax1, ymax1 = box1
+    xmin2, ymin2, xmax2, ymax2 = box2
+
+    area1 = (xmax1 - xmin1 + 1) * (ymax1 - ymin1 + 1)
+    area2 = (xmax2 - xmin2 + 1) * (ymax2 - ymin2 + 1)
+
+    xmin_i = max(xmin1, xmin2)
+    ymin_i = max(ymin1, ymin2)
+    xmax_i = min(xmax1, xmax2)
+    ymax_i = min(ymax1, ymax2)
+    w_i = xmax_i - xmin_i + 1
+    h_i = ymax_i - ymin_i + 1
+    if w_i > 0 and h_i > 0:
+        area_i = w_i * h_i
+        return area_i / (area1 + area2 - area_i)
+    else:
+        return 0
+
+
 
 def est_part_boxes(hbox):
     # xmin, ymin, xmax, ymax = hbox
@@ -97,16 +117,19 @@ def gen_body_part_box(all_kps, human_wh, part):
     ymin = 9999
     xmax = 0
     ymax = 0
+    conf_sum = 0.0
     for i in range(len(part_kps)):
         xmin = min(xmin, part_kps[i, 0])
         ymin = min(ymin, part_kps[i, 1])
         xmax = max(xmax, part_kps[i, 0])
         ymax = max(ymax, part_kps[i, 1])
+        conf_sum += part_kps[i, 2]
 
     return [xmin - get_body_part_alpha(part) * human_wh[0],
             ymin - get_body_part_alpha(part) * human_wh[1],
             xmax + get_body_part_alpha(part) * human_wh[0],
-            ymax + get_body_part_alpha(part) * human_wh[1]]
+            ymax + get_body_part_alpha(part) * human_wh[1],
+            conf_sum / len(part_kps)]
 
 
 def gen_part_boxes(hbox, skeleton, im_hw):
@@ -117,7 +140,7 @@ def gen_part_boxes(hbox, skeleton, im_hw):
     for i, body_part in enumerate(body_parts):
         box = gen_body_part_box(skeleton, h_wh, body_part)
 
-        xmin, ymin, xmax, ymax = box
+        xmin, ymin, xmax, ymax, conf = box
         xmin = max(0, xmin)
         ymin = max(0, ymin)
         xmax = min(xmax, im_hw[1]-1)
@@ -127,6 +150,35 @@ def gen_part_boxes(hbox, skeleton, im_hw):
         part_boxes.append(ymin)
         part_boxes.append(xmax)
         part_boxes.append(ymax)
+
+    return part_boxes
+
+
+def gen_part_boxes1(hbox, skeleton):
+    h_xmin, h_ymin, h_xmax, h_ymax = hbox
+    h_wh = [h_xmax - h_xmin + 1, h_ymax - h_ymin + 1]
+
+    part_boxes = []
+    for i, body_part in enumerate(body_parts):
+        box = gen_body_part_box(skeleton, h_wh, body_part)
+
+        if iou(box, hbox) == 0:
+            part_boxes.append(h_xmin)
+            part_boxes.append(h_ymin)
+            part_boxes.append(h_xmax)
+            part_boxes.append(h_ymax)
+        else:
+            xmin, ymin, xmax, ymax, conf = box
+            xmin = max(h_xmin, xmin)
+            ymin = max(h_ymin, ymin)
+            xmax = min(xmax, h_xmax)
+            ymax = min(ymax, h_ymax)
+
+            part_boxes.append(xmin)
+            part_boxes.append(ymin)
+            part_boxes.append(xmax)
+            part_boxes.append(ymax)
+            part_boxes.append(conf)
 
     return part_boxes
 

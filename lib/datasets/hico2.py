@@ -31,7 +31,7 @@ from .voc_eval import voc_eval
 # TODO: make fast_rcnn irrelevant
 # >>>> obsolete, because it depends on sth outside of this project
 from model.utils.config import cfg
-from datasets.pose_map import est_part_boxes, gen_part_boxes
+from datasets.pose_map import est_part_boxes, gen_part_boxes, gen_part_boxes1
 
 try:
     xrange          # Python 2
@@ -355,8 +355,9 @@ class hico2(imdb):
             image_name = image_id_template % str(image_id).zfill(8)
 
             # augment positive instances
-            image_hw = [self._all_image_info[image_name][1],
-                        self._all_image_info[image_name][0]]
+            im_h = self._all_image_info[image_name][1]
+            im_w = self._all_image_info[image_name][0]
+            image_hw = [im_h, im_w]
             img_pos_hois = self.augment_hoi_instances(img_pos_hois, image_hw)
 
             # select negative instances
@@ -380,13 +381,13 @@ class hico2(imdb):
                           'oboxes': [],
                           'iboxes': [],
                           'pbox_lists': [],
+                          'pbox_lists1': [],
                           'hoi_classes': [],
                           'obj_classes': [],
                           'vrb_classes': [],
                           'bin_classes': [],
                           'hoi_masks': [],
                           'vrb_masks': [],
-                          'key_points': [],
                           'width': self._all_image_info[image_name][0],
                           'height': self._all_image_info[image_name][1],
                           'flipped': False}
@@ -404,9 +405,14 @@ class hico2(imdb):
 
                     raw_key_points = raw_hoi[7]
                     if raw_key_points is None or len(raw_key_points) != 51:
-                        raw_key_points = [-1] * 51
-                    key_points = np.array(raw_key_points)
-                    key_points = np.reshape(key_points, (17, 3))
+                        raw_key_points = np.array([-1] * 51)
+                        key_points = np.reshape(key_points, (17, 3))
+                    else:
+                        key_points = np.array(raw_key_points)
+                        key_points = np.reshape(key_points, (17, 3))
+                        key_points[:, :2][key_points[:, :2] < 0] = 0
+                        key_points[:, 0][key_points[:, 0] >= im_w] = im_w - 1
+                        key_points[:, 1][key_points[:, 1] >= im_h] = im_h - 1
 
                     im_h, im_w = image_hw
                     hbox = raw_hoi[2]
@@ -429,17 +435,18 @@ class hico2(imdb):
                     image_anno['hoi_classes'].append(hoi_class_ids)
                     image_anno['vrb_classes'].append([self.hoi2vrb[hoi_id] for hoi_id in hoi_class_ids])
                     image_anno['obj_classes'].append(obj_class_id)
-                    image_anno['key_points'].append(raw_key_points)
                     image_anno['hoi_masks'].append(self.obj2int[obj_class_name])
                     image_anno['vrb_masks'].append([self.hoi2vrb[hoi]
                                                     for hoi in range(self.obj2int[obj_class_name][0],
                                                                      self.obj2int[obj_class_name][1]+1)])
 
-                    raw_key_points = raw_hoi[7]
-                    if raw_key_points is None or len(raw_key_points) != 51:
+                    raw_key_points = key_points.reshape(-1)
+                    if raw_key_points.sum() == -51:
                         image_anno['pbox_lists'].append(est_part_boxes(hbox))
+                        image_anno['pbox_lists1'].append(est_part_boxes(hbox))
                     else:
-                        image_anno['pbox_lists'].append(gen_part_boxes(hbox, raw_key_points, image_hw))
+                        image_anno['pbox_lists'].append(gen_part_boxes(hbox, raw_key_points.tolist(), image_hw))
+                        image_anno['pbox_lists1'].append(gen_part_boxes1(hbox, raw_key_points.tolist()))
 
                     if pn == 0:
                         # positive - 0
@@ -454,30 +461,20 @@ class hico2(imdb):
                 image_anno['oboxes'] = np.zeros((0, 4))
                 image_anno['iboxes'] = np.zeros((0, 4))
                 image_anno['pbox_lists'] = np.zeros((0, 6 * 4))
+                image_anno['pbox_lists1'] = np.zeros((0, 6 * 5))
                 image_anno['obj_classes'] = np.zeros(0)
                 image_anno['bin_classes'] = np.zeros(0, 2)
                 image_anno['hoi_classes'] = np.zeros((0, len(self.hoi_classes)))
                 image_anno['vrb_classes'] = np.zeros((0, len(self.vrb_classes)))
                 image_anno['hoi_masks'] = np.ones((0, len(self.hoi_classes)))
                 image_anno['vrb_masks'] = np.ones((0, len(self.vrb_classes)))
-                image_anno['key_points'] = np.zeros((0, 51))
             else:
                 image_anno['hboxes'] = np.array(image_anno['hboxes'])
                 image_anno['oboxes'] = np.array(image_anno['oboxes'])
                 image_anno['iboxes'] = np.array(image_anno['iboxes'])
                 image_anno['obj_classes'] = np.array(image_anno['obj_classes'])
-                image_anno['key_points'] = np.array(image_anno['key_points'])
                 image_anno['pbox_lists'] = np.array(image_anno['pbox_lists'])
-
-
-                if np.sum(image_anno['hboxes'][:, [0,2]] > image_anno['width']) > 0 or \
-                    np.sum(image_anno['oboxes'][:, [0,2]] > image_anno['width']) > 0 or \
-                        np.sum(image_anno['iboxes'][:, [0,2]] > image_anno['width']) > 0:
-                    print('box(x) out of the image !!!')
-                if np.sum(image_anno['hboxes'][:, [1,3]] > image_anno['height']) > 0 or \
-                    np.sum(image_anno['oboxes'][:, [1,3]] > image_anno['height']) > 0 or \
-                        np.sum(image_anno['iboxes'][:, [1,3]] > image_anno['height']) > 0:
-                    print('box(y) out of the image !!!')
+                image_anno['pbox_lists1'] = np.array(image_anno['pbox_lists1'])
 
                 bin_classes = image_anno['bin_classes']
                 image_anno['bin_classes'] = np.zeros((len(bin_classes), 2))

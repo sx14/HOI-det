@@ -143,6 +143,56 @@ def gen_pose_obj_map(hbox, obox, ibox, skeleton, size=224):
     return pose_obj_map
 
 
+def gen_pose_obj_map1(hbox, obox, ibox, pboxes, size=224):
+    h_xmin, h_ymin, h_xmax, h_ymax = hbox
+    o_xmin, o_ymin, o_xmax, o_ymax = obox
+    i_xmin, i_ymin, i_xmax, i_ymax = ibox
+
+    i_wh = [i_xmax - i_xmin + 1, i_ymax - i_ymin + 1]
+
+    x_ratio = size * 1.0 / i_wh[0]
+    y_ratio = size * 1.0 / i_wh[1]
+
+    # absolute position -> relative position
+    pboxes[:, 0] = pboxes[:, 0] - i_xmin
+    pboxes[:, 1] = pboxes[:, 1] - i_ymin
+    pboxes[:, 2] = pboxes[:, 2] - i_xmin
+    pboxes[:, 3] = pboxes[:, 3] - i_ymin
+
+    pose_obj_map = np.zeros((8, size, size))
+    for i in range(pboxes.shape[0]):
+        box_conf = pboxes[i]
+        if box_conf is not None:
+            xmin, ymin, xmax, ymax, conf = box_conf
+
+            # make sure skeleton box in union box
+            xmin = max(0, xmin)
+            ymin = max(0, ymin)
+            xmax = min(xmax, i_wh[0]-1)
+            ymax = min(ymax, i_wh[1]-1)
+
+            # scale skeleton box
+            xmin = int(xmin * x_ratio)
+            ymin = int(ymin * y_ratio)
+            xmax = int(xmax * x_ratio)
+            ymax = int(ymax * y_ratio)
+            pose_obj_map[i, ymin:ymax+1, xmin:xmax+1] = conf
+
+    o_xmin = int((o_xmin - i_xmin) * x_ratio)
+    o_ymin = int((o_ymin - i_ymin) * y_ratio)
+    o_xmax = int((o_xmax - i_xmin) * x_ratio)
+    o_ymax = int((o_ymax - i_ymin) * y_ratio)
+    pose_obj_map[6, o_ymin:o_ymax+1, o_xmin:o_xmax+1] = 1
+
+    h_xmin = int((h_xmin - i_xmin) * x_ratio)
+    h_ymin = int((h_ymin - i_ymin) * y_ratio)
+    h_xmax = int((h_xmax - i_xmin) * x_ratio)
+    h_ymax = int((h_ymax - i_ymin) * y_ratio)
+    pose_obj_map[7, h_ymin:h_ymax+1, h_xmin:h_xmax+1] = 1
+    return pose_obj_map
+
+
+
 def show_boxes(im_path, dets, cls=None, colors=None):
     """Draw detected bounding boxes."""
     if colors is None:

@@ -13,7 +13,7 @@ import torch
 from model.utils.config import cfg
 from roi_data_layer.minibatch import get_minibatch, get_minibatch
 from roi_data_layer.spatial_map import gen_spatial_map
-from roi_data_layer.pose_map import gen_pose_obj_map
+from roi_data_layer.pose_map import gen_pose_obj_map, gen_pose_obj_map1
 
 import numpy as np
 import random
@@ -81,6 +81,8 @@ class roibatchLoader(data.Dataset):
     blobs['iboxes'] = blobs['iboxes'][hoi_inds]
 
     blobs['pbox_lists'] = blobs['pbox_lists'][hoi_inds]
+    blobs['pbox_lists1'] = blobs['pbox_lists1'][hoi_inds]
+
     blobs['hoi_classes'] = blobs['hoi_classes'][hoi_inds]
     blobs['vrb_classes'] = blobs['vrb_classes'][hoi_inds]
     blobs['bin_classes'] = blobs['bin_classes'][hoi_inds]
@@ -107,11 +109,9 @@ class roibatchLoader(data.Dataset):
     gt_spa_maps = torch.from_numpy(raw_spa_maps).float()
 
     raw_pose_maps = np.zeros((num_hoi, 8, 224, 224))
+    gt_pboxes1 = np.reshape(blobs['pbox_lists1'], (blobs['pbox_lists1'].shape[0], 6, 5))
     for i in range(num_hoi):
-        raw_key_points = blobs['key_points'][i]
-        key_points = np.array(raw_key_points)
-        key_points = np.reshape(key_points, (17, 3))
-        raw_pose_maps[i] = gen_pose_obj_map(blobs['hboxes'][i], blobs['oboxes'][i], blobs['iboxes'][i], key_points)
+        raw_pose_maps[i] = gen_pose_obj_map1(blobs['hboxes'][i], blobs['oboxes'][i], blobs['iboxes'][i], gt_pboxes1[i])
     gt_pose_maps = torch.from_numpy(raw_pose_maps).float()
 
     ########################################################
