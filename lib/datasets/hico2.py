@@ -399,7 +399,8 @@ class hico2(imdb):
                     if raw_key_points is None or len(raw_key_points) != 51:
                         image_anno['pbox_lists'].append(est_part_boxes(hbox))
                     else:
-                        image_anno['pbox_lists'].append(gen_part_boxes(hbox, raw_key_points, image_hw))
+                        key_points = np.array(raw_key_points).reshape((17, 3))
+                        image_anno['pbox_lists'].append(gen_part_boxes(hbox, key_points, image_hw))
 
                     if pn == 0:
                         # positive - 0
