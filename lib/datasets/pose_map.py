@@ -123,10 +123,16 @@ def gen_part_boxes(hbox, skeleton, im_hw):
         xmax = min(xmax, im_hw[1]-1)
         ymax = min(ymax, im_hw[0]-1)
 
-        part_boxes.append(xmin)
-        part_boxes.append(ymin)
-        part_boxes.append(xmax)
-        part_boxes.append(ymax)
+        if xmax > xmin and ymax > ymin:
+            part_boxes.append(xmin)
+            part_boxes.append(ymin)
+            part_boxes.append(xmax)
+            part_boxes.append(ymax)
+        else:
+            part_boxes.append(h_xmin)
+            part_boxes.append(h_ymin)
+            part_boxes.append(h_xmax)
+            part_boxes.append(h_ymax)
 
     return part_boxes
 
