@@ -93,7 +93,7 @@ class roibatchLoader(data.Dataset):
     gt_boxes = np.concatenate((blobs['hboxes'], blobs['oboxes'], blobs['iboxes']))
     gt_boxes = torch.from_numpy(gt_boxes)
 
-    gt_pboxes = np.reshape(blobs['pbox_lists'], (blobs['pbox_lists'].shape[0], 6, 4))
+    gt_pboxes = blobs['pbox_lists'][:, :, :4]
     gt_pboxes = torch.from_numpy(gt_pboxes)
 
     gt_classes = torch.from_numpy(blobs['hoi_classes'])
@@ -108,7 +108,7 @@ class roibatchLoader(data.Dataset):
     gt_spa_maps = torch.from_numpy(raw_spa_maps).float()
 
     raw_pose_maps = np.zeros((num_hoi, 8, 224, 224))
-    gt_pboxes1 = np.reshape(blobs['pbox_lists1'], (blobs['pbox_lists1'].shape[0], 6, 5))
+    gt_pboxes1 = blobs['pbox_lists1']
     for i in range(num_hoi):
         raw_pose_maps[i] = gen_pose_obj_map1(blobs['hboxes'][i], blobs['oboxes'][i], blobs['iboxes'][i], gt_pboxes1[i])
     gt_pose_maps = torch.from_numpy(raw_pose_maps).float()
@@ -131,8 +131,8 @@ class roibatchLoader(data.Dataset):
             # data_height
             min_y_p = int(torch.min(gt_pboxes[:, :, 1]))
             max_y_p = int(torch.max(gt_pboxes[:, :, 3]))
-            min_y_b = int(torch.min(gt_boxes[:,1]))
-            max_y_b = int(torch.max(gt_boxes[:,3]))
+            min_y_b = int(torch.min(gt_boxes[:, 1]))
+            max_y_b = int(torch.max(gt_boxes[:, 3]))
             max_y = max(max_y_b, max_y_p)
             min_y = min(min_y_b, min_y_p)
 
@@ -310,7 +310,7 @@ class roibatchLoader(data.Dataset):
         spa_maps_padding = torch.LongTensor(1, 2, 64, 64).zero_()
         hoi_masks_padding = torch.LongTensor(1, gt_classes.size(1)).zero_()
         vrb_masks_padding = torch.LongTensor(1, gt_verbs.size(1)).zero_()
-        pose_maps_padding = torch.LongTensor(1, 8, 64, 64).zero_()
+        pose_maps_padding = torch.LongTensor(1, 8, 224, 224).zero_()
         num_boxes = 0
 
         # permute trim_data to adapt to downstream processing

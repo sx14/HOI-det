@@ -451,8 +451,8 @@ class hico2(imdb):
                 image_anno['hboxes'] = np.zeros((0, 4))
                 image_anno['oboxes'] = np.zeros((0, 4))
                 image_anno['iboxes'] = np.zeros((0, 4))
-                image_anno['pbox_lists'] = np.zeros((0, 6 * 4))
-                image_anno['pbox_lists1'] = np.zeros((0, 6 * 5))
+                image_anno['pbox_lists'] = np.zeros((0, 6, 5))
+                image_anno['pbox_lists1'] = np.zeros((0, 6, 5))
                 image_anno['obj_classes'] = np.zeros(0)
                 image_anno['bin_classes'] = np.zeros(0, 2)
                 image_anno['hoi_classes'] = np.zeros((0, len(self.hoi_classes)))
@@ -514,6 +514,20 @@ class hico2(imdb):
                 boxes[:, 2] = widths[i] - oldx1 - 1
                 assert (boxes[:, 2] >= boxes[:, 0]).all()
                 new_entry[box_type] = boxes
+
+            box_types = ['pbox_list', 'pbox_list1']
+            for box_type in box_types:
+                box_lists = self.roidb[i][box_type].copy()
+                inst_num = box_lists.shape[0]
+                part_num = box_lists.shape[1]
+                boxes = box_lists.reshape((inst_num * part_num, -1))
+                oldx1 = boxes[:, 0].copy()
+                oldx2 = boxes[:, 2].copy()
+                boxes[:, 0] = widths[i] - oldx2 - 1
+                boxes[:, 2] = widths[i] - oldx1 - 1
+                assert (boxes[:, 2] >= boxes[:, 0]).all()
+                box_lists = boxes.reshape((inst_num, part_num, -1))
+                new_entry[box_type] = box_lists
 
             self.roidb.append(new_entry)
         self._image_index = self._image_index * 2

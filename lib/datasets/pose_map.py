@@ -30,6 +30,7 @@ all_part_kps = {
     'head': ['nose', 'left_eye', 'right_eye', 'left_ear', 'right_ear'],
 }
 
+
 def iou(box1, box2):
     xmin1, ymin1, xmax1, ymax1 = box1
     xmin2, ymin2, xmax2, ymax2 = box2
@@ -137,7 +138,10 @@ def gen_part_boxes(hbox, skeleton, im_hw):
     h_wh = [h_xmax - h_xmin + 1, h_ymax - h_ymin + 1]
 
     if skeleton is None:
-        return [h_xmin, h_ymin, h_xmax, h_ymax] * len(body_parts)
+        part_boxes = []
+        for _ in range(len(body_parts)):
+            part_boxes.append([h_xmin, h_ymin, h_xmax, h_ymax, 0.01])
+        return part_boxes
 
     part_boxes = []
     for i, body_part in enumerate(body_parts):
@@ -148,11 +152,7 @@ def gen_part_boxes(hbox, skeleton, im_hw):
         ymin = max(0, ymin)
         xmax = min(xmax, im_hw[1]-1)
         ymax = min(ymax, im_hw[0]-1)
-
-        part_boxes.append(xmin)
-        part_boxes.append(ymin)
-        part_boxes.append(xmax)
-        part_boxes.append(ymax)
+        part_boxes.append([xmin, ymin, xmax, ymax, conf])
 
     return part_boxes
 
@@ -162,28 +162,23 @@ def gen_part_boxes1(hbox, skeleton):
     h_wh = [h_xmax - h_xmin + 1, h_ymax - h_ymin + 1]
 
     if skeleton is None:
-        return [h_xmin, h_ymin, h_xmax, h_ymax, 0.0001] * len(body_parts)
+        part_boxes = []
+        for _ in range(len(body_parts)):
+            part_boxes.append([h_xmin, h_ymin, h_xmax, h_ymax, 0.01])
+        return part_boxes
 
     part_boxes = []
     for i, body_part in enumerate(body_parts):
         box = gen_body_part_box(skeleton, h_wh, body_part)
         if iou(box[:4], hbox) == 0:
-            part_boxes.append(h_xmin)
-            part_boxes.append(h_ymin)
-            part_boxes.append(h_xmax)
-            part_boxes.append(h_ymax)
+            part_boxes.append([h_xmin, h_ymin, h_xmax, h_ymax, 0.01])
         else:
             xmin, ymin, xmax, ymax, conf = box
             xmin = max(h_xmin, xmin)
             ymin = max(h_ymin, ymin)
             xmax = min(h_xmax, xmax)
             ymax = min(h_ymax, ymax)
-
-            part_boxes.append(xmin)
-            part_boxes.append(ymin)
-            part_boxes.append(xmax)
-            part_boxes.append(ymax)
-            part_boxes.append(conf)
+            part_boxes.append([xmin, ymin, xmax, ymax, conf])
 
     return part_boxes
 
