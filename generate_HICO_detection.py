@@ -147,12 +147,9 @@ def save_HICO(HICO, HICO_dir, thres_no_inter, thres_inter, classid, begin, finis
     return num_delete_inter, num_delete_pair_c
 
 
-def generate_HICO_detection(output_file, HICO_dir, thres_no_inter, thres_inter):
+def generate_HICO_detection(HICO, HICO_dir, thres_no_inter, thres_inter):
     if not os.path.exists(HICO_dir):
         os.makedirs(HICO_dir)
-
-    print('Loading detection results ...')
-    HICO = pickle.load(open(output_file, "rb"))
 
     # del_i and del_ni
 

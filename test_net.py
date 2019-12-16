@@ -164,7 +164,10 @@ if __name__ == '__main__':
   output_path = os.path.join(args.output_dir, 'all_hoi_detections.pkl')
   if os.path.exists(output_path):
       print('Test results found!')
-      generate_HICO_detection(output_path, 'output/results', 1.0, 0.0)
+      print('Loading test results ...')
+      with open(output_path, 'rb') as f:
+          all_results = pickle.load(f)
+      generate_HICO_detection(all_results, 'output/results', 1.0, 0.0)
       os.chdir('benchmark')
       os.system('matlab -nodesktop -nosplash -r "Generate_detection ' + '../output/results/' + '/;quit;"')
       exit(0)
@@ -418,11 +421,14 @@ if __name__ == '__main__':
   if not os.path.exists(args.output_dir):
       os.mkdir(args.output_dir)
 
+  generate_HICO_detection(all_results, 'output/results', 1.0, 0.0)
+
+  os.chdir('benchmark')
+  os.system('matlab -nodesktop -nosplash -r "Generate_detection ' + '../output/results/' + '/;quit;"')
+  os.chdir('..')
+
   print('Saving results ...')
   with open(output_path, 'wb') as f:
       pickle.dump(all_results, f)
 
-  generate_HICO_detection(output_path, 'output/results', 1.0, 0.0)
 
-  os.chdir('benchmark')
-  os.system('matlab -nodesktop -nosplash -r "Generate_detection ' + '../output/results/' + '/;quit;"')
