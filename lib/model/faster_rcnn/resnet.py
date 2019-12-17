@@ -244,6 +244,7 @@ class resnet(_fasterRCNN):
     self.hRCNN_top = nn.Sequential(copy.deepcopy(resnet.layer4))
     self.oRCNN_top = nn.Sequential(copy.deepcopy(resnet.layer4))
     self.pRCNN_top = nn.Sequential(copy.deepcopy(resnet.layer4))
+    self.sRCNN_top = nn.Sequential(copy.deepcopy(resnet.layer4))
 
     self.iRCNN_cls_score = nn.Sequential(
       nn.Linear(2048, 2048),
@@ -265,6 +266,12 @@ class resnet(_fasterRCNN):
 
     self.pRCNN_cls_score = nn.Sequential(
       nn.Linear(2048 * 6, 4096),
+      nn.LeakyReLU(),
+      nn.Dropout(p=0.5),
+      nn.Linear(4096, self.n_classes))
+
+    self.sRCNN_cls_score = nn.Sequential(
+      nn.Linear(2048 * 5, 4096),
       nn.LeakyReLU(),
       nn.Dropout(p=0.5),
       nn.Linear(4096, self.n_classes))
@@ -292,6 +299,7 @@ class resnet(_fasterRCNN):
     self.hRCNN_top.apply(set_bn_fix)
     self.oRCNN_top.apply(set_bn_fix)
     self.pRCNN_top.apply(set_bn_fix)
+    self.sRCNN_top.apply(set_bn_fix)
 
   def train(self, mode=True):
     # Override train so that the training mode is set as we want
@@ -312,6 +320,7 @@ class resnet(_fasterRCNN):
       self.hRCNN_top.apply(set_bn_eval)
       self.oRCNN_top.apply(set_bn_eval)
       self.pRCNN_top.apply(set_bn_eval)
+      self.sRCNN_top.apply(set_bn_eval)
 
   def _ihead_to_tail(self, pool5):
     fc7 = self.iRCNN_top(pool5).mean(3).mean(2)
@@ -328,4 +337,9 @@ class resnet(_fasterRCNN):
   def _phead_to_tail(self, pool5):
     fc7_all = self.pRCNN_top(pool5).mean(3).mean(2)
     fc7 = fc7_all.view(-1, fc7_all.shape[1] * 6)
+    return fc7
+
+  def _shead_to_tail(self, pool5):
+    fc7_all = self.pRCNN_top(pool5).mean(3).mean(2)
+    fc7 = fc7_all.view(-1)
     return fc7
