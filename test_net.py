@@ -329,7 +329,8 @@ if __name__ == '__main__':
                                        max(hbox[0, 3], obox[0, 3])]).reshape(1, 4)
 
                       if raw_key_points != None and len(raw_key_points) == 51:
-                          pbox = gen_part_boxes(hbox[0], raw_key_points, im_in.shape[:2])
+                          key_points = np.array(raw_key_points).reshape((17, 3))
+                          pbox = gen_part_boxes(hbox[0], key_points, im_in.shape[:2])
                       else:
                           pbox = est_part_boxes(hbox[0])
 
