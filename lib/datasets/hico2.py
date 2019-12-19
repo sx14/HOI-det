@@ -356,9 +356,10 @@ class hico2(imdb):
             im_w = self._all_image_info[image_name][0]
             im_h = self._all_image_info[image_name][1]
             image_hw = [im_h, im_w]
-            img_pos_hois = self.augment_hoi_instances(img_pos_hois, image_hw)
 
-            # select negative instances
+            # augment positive instances
+            img_pos_hois = self.augment_hoi_instances(img_pos_hois, image_hw)
+            # augment negative instances
             if image_id in anno_ng_db and len(anno_ng_db[image_id]) > 0:
                 img_neg_hois0 = anno_ng_db[image_id]
                 if len(img_neg_hois0) > len(img_pos_hois):
@@ -406,23 +407,29 @@ class hico2(imdb):
                         # valid skeleton key points
                         key_points = np.array(raw_key_points)
                         key_points = np.reshape(key_points, (17, 3))
+                        # check x,y
                         key_points[:, :2][key_points[:, :2] < 0] = 0
                         key_points[:, 0][key_points[:, 0] >= im_w] = im_w - 1
                         key_points[:, 1][key_points[:, 1] >= im_h] = im_h - 1
                     else:
                         key_points = None
 
+                    # load and check hbox
                     hbox = raw_hoi[2]
                     hbox = [max(0, hbox[0]), max(0, hbox[1]),
                             max(0, hbox[2]), max(0, hbox[3])]
                     hbox = [min(im_w-1, hbox[0]), min(im_h-1, hbox[1]),
                             min(im_w-1, hbox[2]), min(im_h-1, hbox[3])]
                     hbox = refine_human_box_with_skeleton(hbox, key_points)
+
+                    # load and check obox
                     obox = raw_hoi[3]
                     obox = [max(0, obox[0]), max(0, obox[1]),
                             max(0, obox[2]), max(0, obox[3])]
                     obox = [min(im_w-1, obox[0]), min(im_h-1, obox[1]),
                             min(im_w-1, obox[2]), min(im_h-1, obox[3])]
+
+                    # generate union box
                     ibox = [min(hbox[0], obox[0]), min(hbox[1], obox[1]),
                             max(hbox[2], obox[2]), max(hbox[3], obox[3])]
 

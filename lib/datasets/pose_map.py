@@ -79,7 +79,10 @@ def est_part_boxes(hbox):
 
 
 def est_hand(wrist, elbow):
-    return wrist - 0.5 * (wrist - elbow)
+    hand = np.zeros(3)
+    hand[:2] = wrist[:2] - 0.5 * (wrist[:2] - elbow[:2])
+    hand[2] = (wrist[2] + elbow[2]) / 2.0
+    return hand
 
 
 def get_body_part_kps(part, all_kps):
@@ -113,6 +116,8 @@ def get_body_part_alpha(part):
 
 
 def gen_body_part_box(all_kps, human_wh, part):
+    human_w, human_h = human_wh
+
     part_kps = get_body_part_kps(part, all_kps)
     xmin = 9999
     ymin = 9999
@@ -126,14 +131,15 @@ def gen_body_part_box(all_kps, human_wh, part):
         ymax = max(ymax, part_kps[i, 1])
         conf_sum += part_kps[i, 2]
 
-    return [xmin - get_body_part_alpha(part) * human_wh[0],
-            ymin - get_body_part_alpha(part) * human_wh[1],
-            xmax + get_body_part_alpha(part) * human_wh[0],
-            ymax + get_body_part_alpha(part) * human_wh[1],
+    return [xmin - get_body_part_alpha(part) * human_w,
+            ymin - get_body_part_alpha(part) * human_h,
+            xmax + get_body_part_alpha(part) * human_w,
+            ymax + get_body_part_alpha(part) * human_h,
             conf_sum / len(part_kps)]
 
 
 def gen_part_boxes(hbox, skeleton, im_hw):
+    im_h, im_w = im_hw
     h_xmin, h_ymin, h_xmax, h_ymax = hbox
     h_wh = [h_xmax - h_xmin + 1, h_ymax - h_ymin + 1]
 
@@ -147,12 +153,12 @@ def gen_part_boxes(hbox, skeleton, im_hw):
     for _, body_part in enumerate(body_parts):
         box = gen_body_part_box(skeleton, h_wh, body_part)
 
+        # check part box
         xmin, ymin, xmax, ymax, conf = box
-
         xmin = max(0, xmin)
         ymin = max(0, ymin)
-        xmax = min(xmax, im_hw[1]-1)
-        ymax = min(ymax, im_hw[0]-1)
+        xmax = min(xmax, im_w-1)
+        ymax = min(ymax, im_h-1)
 
         if (xmax > xmin) and (ymax > ymin):
             part_boxes.append([xmin, ymin, xmax, ymax, conf])
@@ -180,7 +186,6 @@ def gen_part_boxes1(hbox, skeleton):
             part_boxes.append([h_xmin, h_ymin, h_xmax, h_ymax, 0.01])
         else:
             xmin, ymin, xmax, ymax, conf = box
-
             xmin = max(h_xmin, xmin)
             ymin = max(h_ymin, ymin)
             xmax = min(h_xmax, xmax)

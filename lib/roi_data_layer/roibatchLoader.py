@@ -22,6 +22,7 @@ import pdb
 
 
 class roibatchLoader(data.Dataset):
+
   def __init__(self, roidb, ratio_list, ratio_index, batch_size, num_classes, training=True, normalize=None):
     self._roidb = roidb
     self._num_classes = num_classes
@@ -267,7 +268,7 @@ class roibatchLoader(data.Dataset):
             not_keep[ii + num_hoi * 2] = 1
 
     keep3 = torch.nonzero(not_keep == 0).view(-1)
-    keep  = torch.nonzero(not_keep[:num_hoi] == 0).view(-1)
+    keep = torch.nonzero(not_keep[:num_hoi] == 0).view(-1)
 
     if keep3.numel() != 0:
 
