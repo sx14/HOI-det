@@ -117,7 +117,6 @@ class roibatchLoader(data.Dataset):
     gt_pose_maps = torch.from_numpy(raw_pose_maps).float()
 
     raw_obj_vecs = self._obj2vec[blobs['obj_classes']]
-    raw_obj_vecs = np.tile(raw_obj_vecs, (3, 1))
     gt_obj_vecs = torch.from_numpy(raw_obj_vecs).float()
 
     ########################################################
