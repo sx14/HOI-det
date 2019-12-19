@@ -36,7 +36,7 @@ from model.utils.net_utils import save_net, load_net, vis_detections
 from model.utils.blob import im_list_to_blob
 from model.faster_rcnn.vgg16 import vgg16
 from model.faster_rcnn.resnet import resnet
-from generate_HICO_detection import generate_HICO_detection
+from generate_HICO_detection import generate_HICO_detection, org_obj2hoi
 
 from datasets.hico2 import hico2
 from datasets.hico2 import refine_human_box_with_skeleton
@@ -185,6 +185,8 @@ if __name__ == '__main__':
     'ho_spa_rcnn3_lf_no_nis_vrb_sft_glb_part_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
 
   hoi_classes, obj_classes, vrb_classes, obj2int, hoi2vrb, vrb2hoi = hico2.load_hoi_classes(cfg.DATA_DIR + '/hico')
+  obj2ind = dict(zip(obj_classes, range(len(obj_classes))))
+  obj2vec = hico2.load_obj2vec(cfg.DATA_DIR + '/hico')
 
   pascal_classes = ['1'] * len(vrb_classes)
 
@@ -231,6 +233,7 @@ if __name__ == '__main__':
   hoi_masks = torch.FloatTensor(1)
   spa_maps = torch.FloatTensor(1)
   pose_maps = torch.FloatTensor(1)
+  obj_vecs = torch.FloatTensor(1)
 
   # ship to cuda
   if args.cuda > 0:
@@ -249,6 +252,7 @@ if __name__ == '__main__':
     hoi_masks = hoi_masks.cuda()
     spa_maps = spa_maps.cuda()
     pose_maps = pose_maps.cuda()
+    obj_vecs = obj_vecs.cuda()
 
   # make variable
   with torch.no_grad():
@@ -267,6 +271,7 @@ if __name__ == '__main__':
       hoi_masks = Variable(hoi_masks)
       spa_maps = Variable(spa_maps)
       pose_maps = Variable(pose_maps)
+      obj_vecs = Variable(obj_vecs)
 
   if args.cuda > 0:
     cfg.CUDA = True
@@ -322,6 +327,8 @@ if __name__ == '__main__':
 
       spa_maps_raw = np.zeros((0, 2, 64, 64))
       pose_maps_raw = np.zeros((0, 8, 224, 224))
+      obj_vecs_raw = np.zeros((0, 300))
+
       obj_classes = []
       hscores = []
       oscores = []
@@ -381,6 +388,12 @@ if __name__ == '__main__':
                       pose_map_raw = pose_map_raw[np.newaxis, :, :, :]
                       pose_maps_raw = np.concatenate((pose_maps_raw, pose_map_raw))
 
+                      # original object id(1 base) --hoi--> our object id(0 base)
+                      obj_class_id = obj2ind[hoi_classes[org_obj2hoi[object_det[4]]].object_name()]
+                      obj_vec_raw = obj2vec[obj_class_id]
+                      obj_vec_raw = obj_vec_raw[np.newaxis, :]
+                      obj_vecs_raw = np.concatenate((obj_vecs_raw, obj_vec_raw))
+
                       hboxes_raw = np.concatenate((hboxes_raw, hbox))
                       oboxes_raw = np.concatenate((oboxes_raw, obox))
                       iboxes_raw = np.concatenate((iboxes_raw, ibox))
@@ -402,6 +415,8 @@ if __name__ == '__main__':
 
       spa_maps_raw = spa_maps_raw[np.newaxis, :, :, :, :]
       pose_maps_raw = pose_maps_raw[np.newaxis, :, :, :, :]
+      obj_vecs_raw = obj_vecs_raw[np.newaxis, :, :]
+
 
       hboxes_t = torch.from_numpy(hboxes_raw * im_scales[0])
       oboxes_t = torch.from_numpy(oboxes_raw * im_scales[0])
@@ -411,6 +426,8 @@ if __name__ == '__main__':
 
       spa_maps_t = torch.from_numpy(spa_maps_raw)
       pose_maps_t = torch.from_numpy(pose_maps_raw)
+      obj_vecs_t = torch.from_numpy(obj_vecs_raw)
+
 
       hboxes.data.resize_(hboxes_t.size()).copy_(hboxes_t)
       oboxes.data.resize_(oboxes_t.size()).copy_(oboxes_t)
@@ -420,6 +437,7 @@ if __name__ == '__main__':
 
       spa_maps.data.resize_(spa_maps_t.size()).copy_(spa_maps_t)
       pose_maps.data.resize_(pose_maps_t.size()).copy_(pose_maps_t)
+      obj_vecs.data.resize_(obj_vecs_t.size()).copy_(obj_vecs_t)
 
       assert len(im_scales) == 1, "Only single-image batch implemented"
       im_info_np = np.array([[im_blobs.shape[1], im_blobs.shape[2], im_scales[0]]], dtype=np.float32)
@@ -452,6 +470,7 @@ if __name__ == '__main__':
                              hoi_masks,
                              spa_maps[:, k:k+batch_size],
                              pose_maps[:, k:k+batch_size],
+                             obj_vecs[:, k:k+batch_size],
                              num_hois)
 
           curr_batch_size = vrb_prob.shape[1]

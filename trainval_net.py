@@ -198,7 +198,7 @@ if __name__ == '__main__':
   sampler_batch = sampler(train_size, args.batch_size)
 
   dataset = roibatchLoader(roidb, ratio_list, ratio_index, args.batch_size, \
-                           imdb.num_classes, training=True)
+                           imdb.num_classes, imdb.obj2vec, training=True)
 
   dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size,
                             sampler=sampler_batch, num_workers=args.num_workers)
@@ -220,6 +220,7 @@ if __name__ == '__main__':
   vrb_masks = torch.FloatTensor(1)
   spa_maps = torch.FloatTensor(1)
   pose_maps = torch.FloatTensor(1)
+  obj_vecs = torch.FloatTensor(1)
 
   # ship to cuda
   if args.cuda:
@@ -239,6 +240,7 @@ if __name__ == '__main__':
     vrb_masks = vrb_masks.cuda()
     spa_maps = spa_maps.cuda()
     pose_maps = pose_maps.cuda()
+    obj_vecs = obj_vecs.cuda()
 
   # make variable
   im_data = Variable(im_data)
@@ -257,6 +259,7 @@ if __name__ == '__main__':
   vrb_masks = Variable(vrb_masks)
   spa_maps = Variable(spa_maps)
   pose_maps = Variable(pose_maps)
+  obj_vecs = Variable(obj_vecs)
 
   if args.cuda:
     cfg.CUDA = True
@@ -302,7 +305,7 @@ if __name__ == '__main__':
 
   if args.resume:
     load_name = os.path.join(output_dir,
-      'ho_spa_rcnn3_lf_no_nis_vrb_sft_glb_part_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
+      'ho_spa_rcnn3_lf_no_nis_vrb_sft_glb_part_w2v_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
     print("loading checkpoint %s" % (load_name))
     checkpoint = torch.load(load_name)
     args.session = checkpoint['session']
@@ -360,7 +363,8 @@ if __name__ == '__main__':
       vrb_masks.resize_(data[12].size()).copy_(data[12])
       spa_maps.data.resize_(data[13].size()).copy_(data[13])
       pose_maps.data.resize_(data[14].size()).copy_(data[14])
-      num_hois.data.resize_(data[15].size()).copy_(data[15])
+      obj_vecs.data.resize_(data[15].size()).copy_(data[15])
+      num_hois.data.resize_(data[16].size()).copy_(data[16])
       ld_end = time.time()
       ld_time += (ld_end-ld_start)
 
@@ -373,7 +377,8 @@ if __name__ == '__main__':
                      hboxes, oboxes, iboxes,
                      pboxes, sboxes,
                      vrb_classes, bin_classes, vrb_masks,
-                     spa_maps, pose_maps, num_hois)
+                     spa_maps, pose_maps,
+                     obj_vecs, num_hois)
 
       loss = RCNN_loss_cls.mean()
 
@@ -424,7 +429,7 @@ if __name__ == '__main__':
         start = time.time() 
         ld_time = 0
 
-    save_name = os.path.join(output_dir, 'ho_spa_rcnn3_lf_no_nis_vrb_sft_glb_part_{}_{}_{}.pth'.format(args.session, epoch, step))
+    save_name = os.path.join(output_dir, 'ho_spa_rcnn3_lf_no_nis_vrb_sft_glb_part_w2v_{}_{}_{}.pth'.format(args.session, epoch, step))
     save_checkpoint({
       'session': args.session,
       'epoch': epoch + 1,

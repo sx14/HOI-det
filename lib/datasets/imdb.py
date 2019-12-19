@@ -65,6 +65,10 @@ class imdb(object):
     self.roidb_handler = method
 
   @property
+  def obj2vec(self):
+    raise NotImplementedError
+
+  @property
   def roidb(self):
     # A roidb is a list of dictionaries, each with the following keys:
     #   boxes

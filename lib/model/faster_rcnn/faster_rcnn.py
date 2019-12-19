@@ -66,10 +66,17 @@ class _fasterRCNN(nn.Module):
             nn.Dropout(p=0.5),
             nn.Linear(1024, self.n_classes))
 
+        self.obj_cls_score = nn.Sequential(
+            nn.Linear(300, 512),
+            nn.LeakyReLU(),
+            nn.Linear(512, self.n_classes))
+
     def forward(self, im_data, de_data, im_info,
-                hboxes, oboxes, iboxes, pboxes, sboxes,
+                hboxes, oboxes, iboxes,
+                pboxes, sboxes,
                 hoi_classes, bin_classes, hoi_masks,
-                spa_maps, pose_maps, num_hois):
+                spa_maps, pose_maps,
+                obj_vecs, num_hois):
 
         batch_size = im_data.size(0)
 
@@ -104,7 +111,6 @@ class _fasterRCNN(nn.Module):
         prois = Variable(torch.zeros(pboxes.shape[0], pboxes.shape[1] * pboxes.shape[2], pboxes.shape[3] + 1))
         srois = Variable(torch.zeros(sboxes.shape[0], sboxes.shape[1], sboxes.shape[2] + 1))
 
-
         if im_data.is_cuda:
             hrois = hrois.cuda()
             orois = orois.cuda()
@@ -112,98 +118,33 @@ class _fasterRCNN(nn.Module):
             prois = prois.cuda()
             srois = srois.cuda()
 
-
         hrois[:, :, 1:] = hboxes
         orois[:, :, 1:] = oboxes
         irois[:, :, 1:] = iboxes
         prois[:, :, 1:] = pboxes.view(pboxes.shape[0], -1, pboxes.shape[3])
         srois[:, :, 1:] = sboxes
 
-
-        # do roi pooling based on predicted rois
-        if cfg.POOLING_MODE == 'crop':
-            # pdb.set_trace()
-            # pooled_feat_anchor = _crop_pool_layer(base_feat, rois.view(-1, 5))
-            grid_xy = _affine_grid_gen(irois.view(-1, 5), base_feat.size()[2:], self.grid_size)
-            grid_yx = torch.stack([grid_xy.data[:, :, :, 1], grid_xy.data[:, :, :, 0]], 3).contiguous()
-            iroi_pooled_feat = self.RCNN_roi_crop(base_feat, Variable(grid_yx).detach())
-            if cfg.CROP_RESIZE_WITH_MAX_POOL:
-                iroi_pooled_feat = F.max_pool2d(iroi_pooled_feat, 2, 2)
-        elif cfg.POOLING_MODE == 'align':
-            iroi_pooled_feat = self.RCNN_roi_align(base_feat, irois.view(-1, 5))
-        elif cfg.POOLING_MODE == 'pool':
-            iroi_pooled_feat = self.RCNN_roi_pool(base_feat, irois.view(-1, 5))
-
-        # # feed pooled features to top  model
+        iroi_pooled_feat = self.RCNN_roi_align(base_feat, irois.view(-1, 5))
         iroi_pooled_feat = self._ihead_to_tail(iroi_pooled_feat, pose_maps[0])
 
-        if cfg.POOLING_MODE == 'crop':
-            # pdb.set_trace()
-            # pooled_feat_anchor = _crop_pool_layer(base_feat, rois.view(-1, 5))
-            grid_xy = _affine_grid_gen(hrois.view(-1, 5), base_feat.size()[2:], self.grid_size)
-            grid_yx = torch.stack([grid_xy.data[:, :, :, 1], grid_xy.data[:, :, :, 0]], 3).contiguous()
-            hroi_pooled_feat = self.RCNN_roi_crop(base_feat, Variable(grid_yx).detach())
-            if cfg.CROP_RESIZE_WITH_MAX_POOL:
-                hroi_pooled_feat = F.max_pool2d(hroi_pooled_feat, 2, 2)
-        elif cfg.POOLING_MODE == 'align':
-            hroi_pooled_feat = self.RCNN_roi_align(base_feat, hrois.view(-1, 5))
-        elif cfg.POOLING_MODE == 'pool':
-            hroi_pooled_feat = self.RCNN_roi_pool(base_feat, hrois.view(-1, 5))
-
-        # feed pooled features to top  model
+        hroi_pooled_feat = self.RCNN_roi_align(base_feat, hrois.view(-1, 5))
         hroi_pooled_feat = self._hhead_to_tail(hroi_pooled_feat)
 
-        if cfg.POOLING_MODE == 'crop':
-            # pdb.set_trace()
-            # pooled_feat_anchor = _crop_pool_layer(base_feat, rois.view(-1, 5))
-            grid_xy = _affine_grid_gen(orois.view(-1, 5), base_feat.size()[2:], self.grid_size)
-            grid_yx = torch.stack([grid_xy.data[:, :, :, 1], grid_xy.data[:, :, :, 0]], 3).contiguous()
-            oroi_pooled_feat = self.RCNN_roi_crop(base_feat, Variable(grid_yx).detach())
-            if cfg.CROP_RESIZE_WITH_MAX_POOL:
-                oroi_pooled_feat = F.max_pool2d(oroi_pooled_feat, 2, 2)
-        elif cfg.POOLING_MODE == 'align':
-            oroi_pooled_feat = self.RCNN_roi_align(base_feat, orois.view(-1, 5))
-        elif cfg.POOLING_MODE == 'pool':
-            oroi_pooled_feat = self.RCNN_roi_pool(base_feat, orois.view(-1, 5))
-
-        # feed pooled features to top  model
+        oroi_pooled_feat = self.RCNN_roi_align(base_feat, orois.view(-1, 5))
         oroi_pooled_feat = self._ohead_to_tail(oroi_pooled_feat)
 
-        if cfg.POOLING_MODE == 'crop':
-            # pdb.set_trace()
-            # pooled_feat_anchor = _crop_pool_layer(base_feat, rois.view(-1, 5))
-            grid_xy = _affine_grid_gen(prois.view(-1, 5), base_feat.size()[2:], self.grid_size)
-            grid_yx = torch.stack([grid_xy.data[:, :, :, 1], grid_xy.data[:, :, :, 0]], 3).contiguous()
-            proi_pooled_feat = self.RCNN_roi_crop(base_feat, Variable(grid_yx).detach())
-            if cfg.CROP_RESIZE_WITH_MAX_POOL:
-                proi_pooled_feat = F.max_pool2d(proi_pooled_feat, 2, 2)
-        elif cfg.POOLING_MODE == 'align':
-            proi_pooled_feat = self.RCNN_roi_align(base_feat, prois.view(-1, 5))
-        elif cfg.POOLING_MODE == 'pool':
-            proi_pooled_feat = self.RCNN_roi_pool(base_feat, prois.view(-1, 5))
-
-        # feed pooled features to top  model
+        proi_pooled_feat = self.RCNN_roi_align(base_feat, prois.view(-1, 5))
         proi_pooled_feat = self._phead_to_tail(proi_pooled_feat)
 
-        if cfg.POOLING_MODE == 'crop':
-            # pdb.set_trace()
-            # pooled_feat_anchor = _crop_pool_layer(base_feat, rois.view(-1, 5))
-            grid_xy = _affine_grid_gen(srois.view(-1, 5), base_feat.size()[2:], self.grid_size)
-            grid_yx = torch.stack([grid_xy.data[:, :, :, 1], grid_xy.data[:, :, :, 0]], 3).contiguous()
-            sroi_pooled_feat = self.RCNN_roi_crop(base_feat, Variable(grid_yx).detach())
-            if cfg.CROP_RESIZE_WITH_MAX_POOL:
-                sroi_pooled_feat = F.max_pool2d(sroi_pooled_feat, 2, 2)
-        elif cfg.POOLING_MODE == 'align':
-            sroi_pooled_feat = self.RCNN_roi_align(base_feat, srois.view(-1, 5))
-        elif cfg.POOLING_MODE == 'pool':
-            sroi_pooled_feat = self.RCNN_roi_pool(base_feat, srois.view(-1, 5))
-
-        # feed pooled features to top  model
+        sroi_pooled_feat = self.RCNN_roi_align(base_feat, srois.view(-1, 5))
         sroi_pooled_feat = self._shead_to_tail(sroi_pooled_feat)
 
         spa_feat = self.spaCNN(spa_maps[0])
         scls_score = self.spa_cls_score(spa_feat)
         scls_prob = F.sigmoid(scls_score)
+
+        vcls_score = self.obj_cls_score(obj_vecs[0])
+        vcls_prob = F.sigmoid(vcls_score)
 
         # compute object classification probability
         icls_score = self.iRCNN_cls_score(iroi_pooled_feat)
@@ -222,7 +163,7 @@ class _fasterRCNN(nn.Module):
         ccls_prob = F.sigmoid(ccls_score)
         ccls_prob = ccls_prob.repeat((icls_prob.shape[0], 1))
 
-        cls_prob = (icls_prob + hcls_prob + ocls_prob + pcls_prob + ccls_prob) * scls_prob
+        cls_prob = (icls_prob + hcls_prob + ocls_prob + pcls_prob + ccls_prob) * scls_prob * vcls_prob
 
         RCNN_loss_cls = 0
         RCNN_loss_bin = 0
@@ -236,8 +177,9 @@ class _fasterRCNN(nn.Module):
             ocls_loss = F.binary_cross_entropy(ocls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
             pcls_loss = F.binary_cross_entropy(pcls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
             ccls_loss = F.binary_cross_entropy(ccls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
+            vcls_loss = F.binary_cross_entropy(vcls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
 
-            RCNN_loss_cls = scls_loss + icls_loss + hcls_loss + ocls_loss + pcls_loss + ccls_loss
+            RCNN_loss_cls = scls_loss + icls_loss + hcls_loss + ocls_loss + pcls_loss + ccls_loss + vcls_loss
 
         cls_prob = cls_prob.view(batch_size, irois.size(1), -1)
         bin_prob = Variable(torch.zeros(batch_size, irois.size(1), 2)).cuda()
