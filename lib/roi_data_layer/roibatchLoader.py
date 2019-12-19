@@ -284,6 +284,16 @@ class roibatchLoader(data.Dataset):
         gt_vrb_masks = gt_vrb_masks[keep]
         gt_pose_maps = gt_pose_maps[keep]
 
+        data_height = im_data[0].shape[0]
+        data_width = im_data[0].shape[1]
+        gt_sboxes = [
+            [0, 0, data_width, data_height],
+            [0, 0, data_width / 2, data_height / 2],
+            [data_width / 2, 0, data_width, data_height / 2],
+            [0, data_height / 2, data_width / 2, data_height],
+            [data_width / 2, data_height / 2, data_width, data_height]
+        ]
+
         gt_num_boxes = int(gt_boxes.size(0) / 3)
         assert gt_num_boxes * 3 == gt_boxes.size(0)
 
@@ -292,6 +302,7 @@ class roibatchLoader(data.Dataset):
         oboxes_padding = gt_boxes[gt_num_boxes * 1: gt_num_boxes * 1 + num_boxes]
         iboxes_padding = gt_boxes[gt_num_boxes * 2: gt_num_boxes * 2 + num_boxes]
 
+        sboxes_padding = np.array(gt_sboxes)
         pboxes_padding = gt_pboxes[:num_boxes]
         hoi_classes_padding = gt_classes[:num_boxes]
         vrb_classes_padding = gt_verbs[:num_boxes]
@@ -304,6 +315,7 @@ class roibatchLoader(data.Dataset):
         hboxes_padding = torch.FloatTensor(1, gt_boxes.size(1)).zero_()
         oboxes_padding = torch.FloatTensor(1, gt_boxes.size(1)).zero_()
         iboxes_padding = torch.FloatTensor(1, gt_boxes.size(1)).zero_()
+        sboxes_padding = torch.FloatTensor(1, gt_boxes.size(1)).zero_()
         pboxes_padding = torch.FloatTensor(1, gt_pboxes.size(1), gt_pboxes.size(2)).zero_()
         hoi_classes_padding = torch.FloatTensor(1, gt_classes.size(1)).zero_()
         vrb_classes_padding = torch.FloatTensor(1, gt_verbs.size(1)).zero_()
@@ -320,7 +332,8 @@ class roibatchLoader(data.Dataset):
     im_info = im_info.view(3)
 
     return padding_im_data, padding_dp_data, im_info, \
-           hboxes_padding, oboxes_padding, iboxes_padding, pboxes_padding, \
+           hboxes_padding, oboxes_padding, iboxes_padding, \
+           pboxes_padding, sboxes_padding, \
            hoi_classes_padding, vrb_classes_padding, bin_classes_padding, \
            hoi_masks_padding, vrb_masks_padding, \
            spa_maps_padding, pose_maps_padding, num_boxes

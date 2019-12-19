@@ -224,6 +224,7 @@ if __name__ == '__main__':
   oboxes = torch.FloatTensor(1)
   iboxes = torch.FloatTensor(1)
   pboxes = torch.FloatTensor(1)
+  sboxes = torch.FloatTensor(1)
   # hoi_classes = torch.FloatTensor(1)
   vrb_classes = torch.FloatTensor(1)
   bin_classes = torch.FloatTensor(1)
@@ -241,6 +242,7 @@ if __name__ == '__main__':
     oboxes = oboxes.cuda()
     iboxes = iboxes.cuda()
     pboxes = pboxes.cuda()
+    sboxes = sboxes.cuda()
     # hoi_classes = hoi_classes.cuda()
     vrb_classes = vrb_classes.cuda()
     bin_classes = bin_classes.cuda()
@@ -258,6 +260,7 @@ if __name__ == '__main__':
       oboxes = Variable(oboxes)
       iboxes = Variable(iboxes)
       pboxes = Variable(pboxes)
+      sboxes = Variable(sboxes)
       # hoi_classes = Variable(hoi_classes)
       vrb_classes = Variable(vrb_classes)
       bin_classes = Variable(bin_classes)
@@ -305,6 +308,18 @@ if __name__ == '__main__':
       oboxes_raw = np.zeros((0, 4))
       iboxes_raw = np.zeros((0, 4))
       pboxes_raw = np.zeros((0, 6, 5))
+
+      data_height = im_in.shape[0]
+      data_width = im_in.shape[1]
+      gt_sboxes = [
+          [0, 0, data_width, data_height],
+          [0, 0, data_width / 2, data_height / 2],
+          [data_width / 2, 0, data_width, data_height / 2],
+          [0, data_height / 2, data_width / 2, data_height],
+          [data_width / 2, data_height / 2, data_width, data_height]
+      ]
+      sboxes_raw = np.array(gt_sboxes)
+
       spa_maps_raw = np.zeros((0, 2, 64, 64))
       pose_maps_raw = np.zeros((0, 8, 224, 224))
       obj_classes = []
@@ -383,6 +398,7 @@ if __name__ == '__main__':
       oboxes_raw = oboxes_raw[np.newaxis, :, :]
       iboxes_raw = iboxes_raw[np.newaxis, :, :]
       pboxes_raw = pboxes_raw[np.newaxis, :, :, :4]
+      sboxes_raw = sboxes_raw[np.newaxis, :, :]
 
       spa_maps_raw = spa_maps_raw[np.newaxis, :, :, :, :]
       pose_maps_raw = pose_maps_raw[np.newaxis, :, :, :, :]
@@ -391,6 +407,7 @@ if __name__ == '__main__':
       oboxes_t = torch.from_numpy(oboxes_raw * im_scales[0])
       iboxes_t = torch.from_numpy(iboxes_raw * im_scales[0])
       pboxes_t = torch.from_numpy(pboxes_raw * im_scales[0])
+      sboxes_t = torch.from_numpy(sboxes_raw * im_scales[0])
 
       spa_maps_t = torch.from_numpy(spa_maps_raw)
       pose_maps_t = torch.from_numpy(pose_maps_raw)
@@ -399,6 +416,7 @@ if __name__ == '__main__':
       oboxes.data.resize_(oboxes_t.size()).copy_(oboxes_t)
       iboxes.data.resize_(iboxes_t.size()).copy_(iboxes_t)
       pboxes.data.resize_(pboxes_t.size()).copy_(pboxes_t)
+      sboxes.data.resize_(sboxes_t.size()).copy_(sboxes_t)
 
       spa_maps.data.resize_(spa_maps_t.size()).copy_(spa_maps_t)
       pose_maps.data.resize_(pose_maps_t.size()).copy_(pose_maps_t)
@@ -428,6 +446,7 @@ if __name__ == '__main__':
                              oboxes[:, k:k+batch_size],
                              iboxes[:, k:k+batch_size],
                              pboxes[:, k:k+batch_size],
+                             sboxes,
                              vrb_classes,
                              bin_classes,
                              hoi_masks,
