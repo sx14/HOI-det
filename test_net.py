@@ -27,7 +27,7 @@ import torchvision.datasets as dset
 from scipy.misc import imread
 from roi_data_layer.roidb import combined_roidb
 from roi_data_layer.roibatchLoader import roibatchLoader, gen_spatial_map
-from roi_data_layer.pose_map import gen_pose_obj_map
+from roi_data_layer.pose_map import gen_pose_obj_map, gen_pose_obj_map1
 from model.utils.config import cfg, cfg_from_file, cfg_from_list, get_output_dir
 from model.rpn.bbox_transform import clip_boxes
 from model.nms.nms_wrapper import nms
@@ -40,7 +40,7 @@ from generate_HICO_detection import generate_HICO_detection
 
 from datasets.hico2 import hico2
 from datasets.hico2 import refine_human_box_with_skeleton
-from datasets.pose_map import gen_part_boxes, est_part_boxes
+from datasets.pose_map import est_part_boxes, gen_part_boxes, gen_part_boxes1
 import pdb
 
 try:
@@ -308,7 +308,7 @@ if __name__ == '__main__':
               hboxes_raw = np.zeros((0, 4))
               oboxes_raw = np.zeros((0, 4))
               iboxes_raw = np.zeros((0, 4))
-              pboxes_raw = np.zeros((0, 6, 4))
+              pboxes_raw = np.zeros((0, 6, 5))
 
               spa_maps_raw = np.zeros((0, 2, 64, 64))
               pose_maps_raw = np.zeros((0, 8, 224, 224))
@@ -319,9 +319,10 @@ if __name__ == '__main__':
 
               raw_key_points = human_det[6]
               if raw_key_points is None or len(raw_key_points) != 51:
-                  raw_key_points = [-1] * 51
-              key_points = np.array(raw_key_points)
-              key_points = np.reshape(key_points, (17, 3))
+                  key_points = None
+              else:
+                  key_points = np.array(raw_key_points)
+                  key_points = np.reshape(key_points, (17, 3))
 
               hbox = [human_det[2][0],
                       human_det[2][1],
@@ -331,7 +332,7 @@ if __name__ == '__main__':
                       max(0, hbox[2]), max(0, hbox[3])]
               hbox = [min(im_w - 1, hbox[0]), min(im_h - 1, hbox[1]),
                       min(im_w - 1, hbox[2]), min(im_h - 1, hbox[3])]
-              hbox = refine_human_box_with_skeleton(hbox, key_points, [im_h, im_w])
+              hbox = refine_human_box_with_skeleton(hbox, key_points)
               hbox = np.array(hbox).reshape(1, 4)
 
               for object_det in det_db[im_id]:
@@ -347,19 +348,20 @@ if __name__ == '__main__':
                                        max(hbox[0, 2], obox[0, 2]),
                                        max(hbox[0, 3], obox[0, 3])]).reshape(1, 4)
 
-                      raw_key_points = human_det[6]
-                      if raw_key_points != None and len(raw_key_points) == 51:
-                          pbox = gen_part_boxes(hbox[0], raw_key_points, im_in.shape[:2])
-                      else:
-                          pbox = est_part_boxes(hbox[0])
+                      pbox = gen_part_boxes(hbox[0], key_points, im_in.shape[:2])
+                      pbox1 = gen_part_boxes1(hbox[0], key_points)
+
                       pbox = np.array(pbox)
-                      pbox = pbox.reshape((1, 6, 4))[np.newaxis, :, :]
+                      pbox = pbox.reshape((1, 6, 5))
+
+                      pbox1 = np.array(pbox1)
+                      pbox1 = pbox1.reshape((1, 6, 5))
 
                       spa_map_raw = gen_spatial_map(human_det[2], object_det[2])
                       spa_map_raw = spa_map_raw[np.newaxis, : ,: ,:]
                       spa_maps_raw = np.concatenate((spa_maps_raw, spa_map_raw))
 
-                      pose_map_raw = gen_pose_obj_map(hbox[0].tolist(), obox[0].tolist(), ibox[0].tolist(), key_points)
+                      pose_map_raw = gen_pose_obj_map1(hbox[0].tolist(), obox[0].tolist(), ibox[0].tolist(), pbox1[0])
                       pose_map_raw = pose_map_raw[np.newaxis, :, :, :]
                       pose_maps_raw = np.concatenate((pose_maps_raw, pose_map_raw))
 
@@ -379,7 +381,7 @@ if __name__ == '__main__':
               hboxes_raw = hboxes_raw[np.newaxis, :, :]
               oboxes_raw = oboxes_raw[np.newaxis, :, :]
               iboxes_raw = iboxes_raw[np.newaxis, :, :]
-              pboxes_raw = pboxes_raw[np.newaxis, :, :]
+              pboxes_raw = pboxes_raw[np.newaxis, :, :, :4]
 
               spa_maps_raw = spa_maps_raw[np.newaxis, :, :, :, :]
               pose_maps_raw = pose_maps_raw[np.newaxis, :, :, :, :]
