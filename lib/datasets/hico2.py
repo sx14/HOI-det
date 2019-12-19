@@ -215,6 +215,7 @@ class hico2(imdb):
         """
         Construct an image path from the image's "index" identifier.
         """
+        index = index.split('_')[0]
         image_path = os.path.join(self._data_path, 'images', self._image_set + '2015',
                                   index + self._image_ext)
         assert os.path.exists(image_path), \
@@ -407,7 +408,6 @@ class hico2(imdb):
                           'width': self._all_image_info[image_name][0],
                           'height': self._all_image_info[image_name][1],
                           'flipped': False}
-            all_annos[image_name] = image_anno
 
             for pn, hois in enumerate([img_pos_hois, img_neg_hois]):
                 for raw_hoi in hois:
@@ -518,6 +518,40 @@ class hico2(imdb):
                 for i, ins_verbs in enumerate(vrb_masks):
                     for vrb_id in ins_verbs:
                         image_anno['vrb_masks'][i, vrb_id] = 1
+
+            batch_size = 35
+            ins_num = len(image_anno['hboxes'])
+            if ins_num > batch_size:
+                ins_inds = np.array(range(ins_num))
+                np.random.shuffle(ins_inds)
+                image_anno['hboxes'] = image_anno['hboxes'][ins_inds]
+                image_anno['oboxes'] = image_anno['oboxes'][ins_inds]
+                image_anno['iboxes'] = image_anno['iboxes'][ins_inds]
+                image_anno['pbox_lists'] = image_anno['pbox_lists'][ins_inds]
+                image_anno['pbox_lists1'] = image_anno['pbox_lists1'][ins_inds]
+                image_anno['obj_classes'] = image_anno['obj_classes'][ins_inds]
+                image_anno['bin_classes'] = image_anno['bin_classes'][ins_inds]
+                image_anno['hoi_classes'] = image_anno['hoi_classes'][ins_inds]
+                image_anno['vrb_classes'] = image_anno['vrb_classes'][ins_inds]
+                image_anno['hoi_masks'] = image_anno['hoi_masks'][ins_inds]
+                image_anno['vrb_masks'] = image_anno['vrb_masks'][ins_inds]
+
+                for b in range(int(ins_num / batch_size)):
+                    image_anno1 = dict()
+                    image_anno1['hboxes'] = image_anno['hboxes'][b*batch_size:(b+1)*batch_size]
+                    image_anno1['oboxes'] = image_anno['oboxes'][b*batch_size:(b+1)*batch_size]
+                    image_anno1['iboxes'] = image_anno['iboxes'][b*batch_size:(b+1)*batch_size]
+                    image_anno1['pbox_lists'] = image_anno['pbox_lists'][b*batch_size:(b+1)*batch_size]
+                    image_anno1['pbox_lists1'] = image_anno['pbox_lists1'][b*batch_size:(b+1)*batch_size]
+                    image_anno1['obj_classes'] = image_anno['obj_classes'][b*batch_size:(b+1)*batch_size]
+                    image_anno1['bin_classes'] = image_anno['bin_classes'][b*batch_size:(b+1)*batch_size]
+                    image_anno1['hoi_classes'] = image_anno['hoi_classes'][b*batch_size:(b+1)*batch_size]
+                    image_anno1['vrb_classes'] = image_anno['vrb_classes'][b*batch_size:(b+1)*batch_size]
+                    image_anno1['hoi_masks'] = image_anno['hoi_masks'][b*batch_size:(b+1)*batch_size]
+                    image_anno1['vrb_masks'] = image_anno['vrb_masks'][b*batch_size:(b+1)*batch_size]
+                    all_annos[image_name+'_%d' % b] = image_anno1
+            else:
+                all_annos[image_name] = image_anno
 
         return all_annos
 
