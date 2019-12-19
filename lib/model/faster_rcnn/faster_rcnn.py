@@ -146,7 +146,7 @@ class _fasterRCNN(nn.Module):
         ocls_score = self.oRCNN_cls_score(oroi_pooled_feat)
         ocls_prob = F.sigmoid(ocls_score)
 
-        obj_att = self.obj_attention(obj_vecs)
+        obj_att = self.obj_attention(obj_vecs[0])
         part_att_feats = []
         for i in range(obj_att.shape[1]):
             part_att = obj_att[:, i:i+1]
