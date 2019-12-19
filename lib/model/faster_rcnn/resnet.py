@@ -276,7 +276,6 @@ class resnet(_fasterRCNN):
       nn.Dropout(p=0.5),
       nn.Linear(4096, self.n_classes))
 
-
     # Fix blocks
     for p in self.RCNN_base[0].parameters(): p.requires_grad=False
     for p in self.RCNN_base[1].parameters(): p.requires_grad=False
