@@ -153,7 +153,7 @@ class _fasterRCNN(nn.Module):
             part_feat = proi_pooled_feat[:, i*2048:(i+1)*2048]
             part_att_feat = part_att * part_feat
             part_att_feats.append(part_att_feat)
-        att_proi_pooled_feat = torch.stack(part_att_feats, dim=1)
+        att_proi_pooled_feat = torch.cat(part_att_feats, dim=1)
         att_proi_pooled_feat = Variable(att_proi_pooled_feat.cuda())
         att_proi_pooled_feat = att_proi_pooled_feat + proi_pooled_feat
 
