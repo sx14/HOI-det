@@ -215,7 +215,7 @@ class hico2(imdb):
         """
         Construct an image path from the image's "index" identifier.
         """
-        index = index.split('_')[0]
+        index = index.split('&')[0]
         image_path = os.path.join(self._data_path, 'images', self._image_set + '2015',
                                   index + self._image_ext)
         assert os.path.exists(image_path), \
@@ -232,7 +232,7 @@ class hico2(imdb):
         """
         Construct an image path from the image's "index" identifier.
         """
-        index = index.split('_')[0]
+        index = index.split('&')[0]
         depth_path = os.path.join(self._data_path, 'humans', self._image_set + '2015',
                                   index + self._depth_ext)
         assert os.path.exists(depth_path), \
@@ -550,7 +550,10 @@ class hico2(imdb):
                     image_anno1['vrb_classes'] = image_anno['vrb_classes'][b*batch_size:(b+1)*batch_size]
                     image_anno1['hoi_masks'] = image_anno['hoi_masks'][b*batch_size:(b+1)*batch_size]
                     image_anno1['vrb_masks'] = image_anno['vrb_masks'][b*batch_size:(b+1)*batch_size]
-                    all_annos[image_name+'_%d' % b] = image_anno1
+                    image_anno1['width'] = image_anno['width']
+                    image_anno1['height'] = image_anno['height']
+                    image_anno1['flipped'] = image_anno['flipped']
+                    all_annos[image_name+'&%d' % b] = image_anno1
             else:
                 all_annos[image_name] = image_anno
 
