@@ -403,7 +403,7 @@ class hico2(imdb):
                         key_points = np.array(raw_key_points).reshape((17, 3))
                         image_anno['pbox_lists'].append(gen_part_boxes(hbox, key_points, image_hw))
 
-                    image_anno['key_points'] = raw_key_points
+                    image_anno['key_points'].append(raw_key_points)
 
                     if pn == 0:
                         # positive - 0
