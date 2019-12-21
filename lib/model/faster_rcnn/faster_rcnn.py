@@ -109,87 +109,19 @@ class _fasterRCNN(nn.Module):
         prois[:, :, 1:] = pboxes.view(pboxes.shape[0], -1, pboxes.shape[3])
         srois[:, :, 1:] = sboxes
 
-
-        # do roi pooling based on predicted rois
-        if cfg.POOLING_MODE == 'crop':
-            # pdb.set_trace()
-            # pooled_feat_anchor = _crop_pool_layer(base_feat, rois.view(-1, 5))
-            grid_xy = _affine_grid_gen(irois.view(-1, 5), base_feat.size()[2:], self.grid_size)
-            grid_yx = torch.stack([grid_xy.data[:, :, :, 1], grid_xy.data[:, :, :, 0]], 3).contiguous()
-            iroi_pooled_feat = self.RCNN_roi_crop(base_feat, Variable(grid_yx).detach())
-            if cfg.CROP_RESIZE_WITH_MAX_POOL:
-                iroi_pooled_feat = F.max_pool2d(iroi_pooled_feat, 2, 2)
-        elif cfg.POOLING_MODE == 'align':
-            iroi_pooled_feat = self.RCNN_roi_align(base_feat, irois.view(-1, 5))
-        elif cfg.POOLING_MODE == 'pool':
-            iroi_pooled_feat = self.RCNN_roi_pool(base_feat, irois.view(-1, 5))
-
-        # feed pooled features to top  model
+        iroi_pooled_feat = self.RCNN_roi_align(base_feat, irois.view(-1, 5))
         iroi_pooled_feat = self._ihead_to_tail(iroi_pooled_feat)
 
-        if cfg.POOLING_MODE == 'crop':
-            # pdb.set_trace()
-            # pooled_feat_anchor = _crop_pool_layer(base_feat, rois.view(-1, 5))
-            grid_xy = _affine_grid_gen(hrois.view(-1, 5), base_feat.size()[2:], self.grid_size)
-            grid_yx = torch.stack([grid_xy.data[:, :, :, 1], grid_xy.data[:, :, :, 0]], 3).contiguous()
-            hroi_pooled_feat = self.RCNN_roi_crop(base_feat, Variable(grid_yx).detach())
-            if cfg.CROP_RESIZE_WITH_MAX_POOL:
-                hroi_pooled_feat = F.max_pool2d(hroi_pooled_feat, 2, 2)
-        elif cfg.POOLING_MODE == 'align':
-            hroi_pooled_feat = self.RCNN_roi_align(base_feat, hrois.view(-1, 5))
-        elif cfg.POOLING_MODE == 'pool':
-            hroi_pooled_feat = self.RCNN_roi_pool(base_feat, hrois.view(-1, 5))
-
-        # feed pooled features to top  model
+        hroi_pooled_feat = self.RCNN_roi_align(base_feat, hrois.view(-1, 5))
         hroi_pooled_feat = self._hhead_to_tail(hroi_pooled_feat)
 
-        if cfg.POOLING_MODE == 'crop':
-            # pdb.set_trace()
-            # pooled_feat_anchor = _crop_pool_layer(base_feat, rois.view(-1, 5))
-            grid_xy = _affine_grid_gen(orois.view(-1, 5), base_feat.size()[2:], self.grid_size)
-            grid_yx = torch.stack([grid_xy.data[:, :, :, 1], grid_xy.data[:, :, :, 0]], 3).contiguous()
-            oroi_pooled_feat = self.RCNN_roi_crop(base_feat, Variable(grid_yx).detach())
-            if cfg.CROP_RESIZE_WITH_MAX_POOL:
-                oroi_pooled_feat = F.max_pool2d(oroi_pooled_feat, 2, 2)
-        elif cfg.POOLING_MODE == 'align':
-            oroi_pooled_feat = self.RCNN_roi_align(base_feat, orois.view(-1, 5))
-        elif cfg.POOLING_MODE == 'pool':
-            oroi_pooled_feat = self.RCNN_roi_pool(base_feat, orois.view(-1, 5))
-
-        # feed pooled features to top  model
+        oroi_pooled_feat = self.RCNN_roi_align(base_feat, orois.view(-1, 5))
         oroi_pooled_feat = self._ohead_to_tail(oroi_pooled_feat)
 
-        if cfg.POOLING_MODE == 'crop':
-            # pdb.set_trace()
-            # pooled_feat_anchor = _crop_pool_layer(base_feat, rois.view(-1, 5))
-            grid_xy = _affine_grid_gen(prois.view(-1, 5), base_feat.size()[2:], self.grid_size)
-            grid_yx = torch.stack([grid_xy.data[:, :, :, 1], grid_xy.data[:, :, :, 0]], 3).contiguous()
-            proi_pooled_feat = self.RCNN_roi_crop(base_feat, Variable(grid_yx).detach())
-            if cfg.CROP_RESIZE_WITH_MAX_POOL:
-                proi_pooled_feat = F.max_pool2d(proi_pooled_feat, 2, 2)
-        elif cfg.POOLING_MODE == 'align':
-            proi_pooled_feat = self.RCNN_roi_align(base_feat, prois.view(-1, 5))
-        elif cfg.POOLING_MODE == 'pool':
-            proi_pooled_feat = self.RCNN_roi_pool(base_feat, prois.view(-1, 5))
-
-        # feed pooled features to top  model
+        proi_pooled_feat = self.RCNN_roi_align(base_feat, prois.view(-1, 5))
         proi_pooled_feat = self._phead_to_tail(proi_pooled_feat)
 
-
-        if cfg.POOLING_MODE == 'crop':
-            # pdb.set_trace()
-            # pooled_feat_anchor = _crop_pool_layer(base_feat, rois.view(-1, 5))
-            grid_xy = _affine_grid_gen(srois.view(-1, 5), base_feat.size()[2:], self.grid_size)
-            grid_yx = torch.stack([grid_xy.data[:, :, :, 1], grid_xy.data[:, :, :, 0]], 3).contiguous()
-            sroi_pooled_feat = self.RCNN_roi_crop(base_feat, Variable(grid_yx).detach())
-            if cfg.CROP_RESIZE_WITH_MAX_POOL:
-                sroi_pooled_feat = F.max_pool2d(sroi_pooled_feat, 2, 2)
-        elif cfg.POOLING_MODE == 'align':
-            sroi_pooled_feat = self.RCNN_roi_align(base_feat, srois.view(-1, 5))
-        elif cfg.POOLING_MODE == 'pool':
-            sroi_pooled_feat = self.RCNN_roi_pool(base_feat, srois.view(-1, 5))
-
-        # feed pooled features to top  model
+        sroi_pooled_feat = self.RCNN_roi_align(base_feat, srois.view(-1, 5))
         sroi_pooled_feat = self._shead_to_tail(sroi_pooled_feat)
 
         spa_feat = self.spaCNN(spa_maps[0])
