@@ -68,13 +68,17 @@ class _fasterRCNN(nn.Module):
             nn.Dropout(p=0.5),
             nn.Linear(1024, self.n_classes))
 
-        self.obj_cls_score = nn.Sequential(
-            nn.Linear(300, 512),
-            nn.LeakyReLU(),
-            nn.Linear(512, self.n_classes))
+        self.obj_hidden = nn.Linear(300, 512)
+        self.skt_hidden = nn.Linear(17 * 2 * 5, 512)
 
-        self.obj_attention = nn.Sequential(
-            nn.Linear(300, 512),
+        self.obj_skt_cls_score = nn.Sequential(
+            nn.Linear(1024, 1024),
+            nn.LeakyReLU(),
+            nn.Dropout(p=0.5),
+            nn.Linear(1024, self.n_classes))
+
+        self.obj_skt_attention = nn.Sequential(
+            nn.Linear(1024, 512),
             nn.LeakyReLU(),
             nn.Linear(512, 6))
 
@@ -83,7 +87,7 @@ class _fasterRCNN(nn.Module):
                 pboxes, sboxes,
                 hoi_classes, bin_classes,
                 hoi_masks, spa_maps,
-                obj_vecs, num_hois):
+                obj_vecs, skt_feats, num_hois):
 
         batch_size = im_data.size(0)
         im_info = im_info.data
@@ -133,7 +137,10 @@ class _fasterRCNN(nn.Module):
         scls_score = self.spa_cls_score(spa_feat)
         scls_prob = F.sigmoid(scls_score)
 
-        vcls_score = self.obj_cls_score(obj_vecs[0])
+        obj_hidden = self.obj_hidden(obj_vecs[0])
+        skt_hidden = self.skt_hidden(skt_feats[0])
+        obj_skt_hidden = torch.cat([obj_hidden, skt_hidden], dim=1)
+        vcls_score = self.obj_skt_cls_score(obj_skt_hidden)
         vcls_prob = F.sigmoid(vcls_score)
 
         # compute object classification probability
@@ -146,7 +153,7 @@ class _fasterRCNN(nn.Module):
         ocls_score = self.oRCNN_cls_score(oroi_pooled_feat)
         ocls_prob = F.sigmoid(ocls_score)
 
-        obj_att = self.obj_attention(obj_vecs[0])
+        obj_att = self.obj_skt_attention(obj_skt_hidden)
         part_att_feats = []
         for i in range(obj_att.shape[1]):
             part_att = obj_att[:, i:i+1]

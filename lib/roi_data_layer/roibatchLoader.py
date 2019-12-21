@@ -13,6 +13,7 @@ import torch
 from model.utils.config import cfg
 from roi_data_layer.minibatch import get_minibatch, get_minibatch
 from model.rpn.bbox_transform import bbox_transform_inv, clip_boxes
+from roi_data_layer.pose_map import ext_skeleton_feature
 
 import numpy as np
 import random
@@ -173,6 +174,7 @@ class roibatchLoader(data.Dataset):
 
     blobs['hoi_masks'] = blobs['hoi_masks'][hoi_inds]
     blobs['vrb_masks'] = blobs['vrb_masks'][hoi_inds]
+    blobs['key_points'] = blobs['key_points'][hoi_inds]
 
     gt_boxes = np.concatenate((blobs['hboxes'], blobs['oboxes'], blobs['iboxes']))
     gt_boxes = torch.from_numpy(gt_boxes)
@@ -195,6 +197,15 @@ class roibatchLoader(data.Dataset):
 
     gt_vrb_masks = np.tile(blobs['vrb_masks'], (3, 1))
     gt_vrb_masks = torch.from_numpy(gt_vrb_masks)
+
+    gt_skt_feats = np.zeros((blobs['key_points'].shape[0], 17 * 2 * 5))
+    for kkk in range(blobs['key_points'].shape[0]):
+        skt_feat = ext_skeleton_feature(blobs['key_points'][kkk],
+                                        blobs['oboxes'][kkk],
+                                        blobs['hboxes'][kkk])
+        gt_skt_feats[kkk] = skt_feat
+    gt_skt_feats = np.tile(gt_skt_feats, (3, 1))
+    gt_skt_feats = torch.from_numpy(gt_skt_feats)
 
     raw_spa_maps = np.zeros((num_hoi, 2, 64, 64))
     for i in range(num_hoi):
@@ -358,6 +369,7 @@ class roibatchLoader(data.Dataset):
         gt_hoi_masks = gt_hoi_masks[keep]
         gt_vrb_masks = gt_vrb_masks[keep]
         gt_obj_vecs = gt_obj_vecs[keep]
+        gt_skt_feats = gt_skt_feats[keep]
 
         data_height = data[0].shape[0]
         data_width = data[0].shape[1]
@@ -387,6 +399,7 @@ class roibatchLoader(data.Dataset):
         hoi_masks_padding = gt_hoi_masks[:num_boxes]
         vrb_masks_padding = gt_vrb_masks[:num_boxes]
         obj_vecs_padding = gt_obj_vecs[:num_boxes]
+        skt_feats_padding = gt_skt_feats[:num_boxes]
     else:
         pboxes_padding = torch.FloatTensor(1, gt_pboxes.size(1), gt_pboxes.size(2)).zero_()
         hboxes_padding = torch.FloatTensor(1, gt_boxes.size(1)).zero_()
@@ -401,6 +414,7 @@ class roibatchLoader(data.Dataset):
         hoi_masks_padding = torch.LongTensor(1, gt_classes.size(1)).zero_()
         vrb_masks_padding = torch.LongTensor(1, gt_verbs.size(1)).zero_()
         obj_vecs_padding = torch.FloatTensor(1, self._obj2vec.shape[1]).zero_()
+        skt_feats_padding = torch.FloatTensor(1, 17 * 2 * 5).zero_()
         num_boxes = 0
 
         # permute trim_data to adapt to downstream processing
@@ -412,7 +426,7 @@ class roibatchLoader(data.Dataset):
            pboxes_padding, sboxes_padding, \
            hoi_classes_padding, vrb_classes_padding, bin_classes_padding, \
            hoi_masks_padding, vrb_masks_padding, spa_maps_padding, \
-           obj_vecs_padding, num_boxes
+           obj_vecs_padding, skt_feats_padding, num_boxes
 
   def __len__(self):
     return len(self._roidb)

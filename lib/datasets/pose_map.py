@@ -31,6 +31,35 @@ all_part_kps = {
 }
 
 
+def ext_skeleton_feature(key_points, obox, hbox):
+    if key_points is None:
+        return [0] * (17 * 2 * 5)
+
+    human_w = hbox[2] - hbox[0] + 1
+    human_h = hbox[3] - hbox[1] + 1
+    human_norm = (human_w + human_h) / 2.0
+    ox1, oy1, ox2, oy2 = obox
+    lf_top = [ox1, oy1]
+    lf_bot = [ox1, oy2]
+    rt_top = [ox2, oy1]
+    rt_bot = [ox2, oy2]
+    center = [(ox1+ox2)/2.0,
+              (oy1+oy2)/2.0]
+    box_pts = np.array([lf_top, lf_bot, rt_top, rt_bot, center])
+    key_point_xys = key_points[:, :2]
+    feat = []
+    for i in range(box_pts.shape[0]):
+        box_pt = box_pts[i:i+1]
+        curr_feat = (key_point_xys - box_pt) / human_norm
+        feat += curr_feat.reshape(-1).tolist()
+    return feat
+
+
+
+
+
+
+
 def est_part_boxes(hbox):
     # xmin, ymin, xmax, ymax = hbox
     # width = xmax - xmin + 1
