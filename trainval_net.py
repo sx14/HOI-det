@@ -219,6 +219,7 @@ if __name__ == '__main__':
   vrb_masks = torch.FloatTensor(1)
   spa_maps = torch.FloatTensor(1)
   obj_vecs = torch.FloatTensor(1)
+  key_feats = torch.FloatTensor(1)
 
   # ship to cuda
   if args.cuda:
@@ -237,6 +238,7 @@ if __name__ == '__main__':
     vrb_masks = vrb_masks.cuda()
     spa_maps = spa_maps.cuda()
     obj_vecs = obj_vecs.cuda()
+    key_feats = key_feats.cuda()
 
   # make variable
   im_data = Variable(im_data)
@@ -254,6 +256,7 @@ if __name__ == '__main__':
   vrb_masks = Variable(vrb_masks)
   spa_maps = Variable(spa_maps)
   obj_vecs = Variable(obj_vecs)
+  key_feats = Variable(key_feats)
 
   if args.cuda:
     cfg.CUDA = True
@@ -353,7 +356,8 @@ if __name__ == '__main__':
       vrb_masks.resize_(data[11].size()).copy_(data[11])
       spa_maps.data.resize_(data[12].size()).copy_(data[12])
       obj_vecs.data.resize_(data[13].size()).copy_(data[13])
-      num_hois.data.resize_(data[14].size()).copy_(data[14])
+      key_feats.data.resize_(data[14].size()).copy_(data[14])
+      num_hois.data.resize_(data[15].size()).copy_(data[15])
 
       if num_hois.data.item() == 0:
           continue
@@ -365,7 +369,7 @@ if __name__ == '__main__':
                      pboxes, sboxes,
                      vrb_classes, bin_classes,
                      vrb_masks, spa_maps,
-                     obj_vecs, num_hois)
+                     obj_vecs, key_feats, num_hois)
 
       # loss = RCNN_loss_cls.mean() + RCNN_loss_bin.mean()
       loss = RCNN_loss_cls.mean()

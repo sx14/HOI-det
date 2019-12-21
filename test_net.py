@@ -25,6 +25,7 @@ import torch.optim as optim
 import torchvision.transforms as transforms
 import torchvision.datasets as dset
 from scipy.misc import imread
+from roi_data_layer.pose_map import ext_skeleton_feature
 from roi_data_layer.roidb import combined_roidb
 from roi_data_layer.roibatchLoader import roibatchLoader, gen_spatial_map
 from model.utils.config import cfg, cfg_from_file, cfg_from_list, get_output_dir
@@ -221,6 +222,7 @@ if __name__ == '__main__':
   hoi_masks = torch.FloatTensor(1)
   spa_maps = torch.FloatTensor(1)
   obj_vecs = torch.FloatTensor(1)
+  skt_feats = torch.FloatTensor(1)
 
   # ship to cuda
   if args.cuda > 0:
@@ -238,6 +240,7 @@ if __name__ == '__main__':
     hoi_masks = hoi_masks.cuda()
     spa_maps = spa_maps.cuda()
     obj_vecs = obj_vecs.cuda()
+    skt_feats = skt_feats.cuda()
 
   # make variable
   with torch.no_grad():
@@ -254,6 +257,7 @@ if __name__ == '__main__':
       hoi_masks = Variable(hoi_masks)
       spa_maps = Variable(spa_maps)
       obj_vecs = Variable(obj_vecs)
+      skt_feats = Variable(skt_feats)
 
   if args.cuda > 0:
     cfg.CUDA = True
@@ -286,6 +290,7 @@ if __name__ == '__main__':
       oboxes_raw = np.zeros((0, 4))
       iboxes_raw = np.zeros((0, 4))
       pboxes_raw = np.zeros((0, 6, 4))
+      skt_feats_raw = np.zeros((0, 17 * 2 * 5))
 
       data_height = im_in.shape[0]
       data_width = im_in.shape[1]
@@ -333,6 +338,10 @@ if __name__ == '__main__':
                           pbox = gen_part_boxes(hbox[0], key_points, im_in.shape[:2])
                       else:
                           pbox = est_part_boxes(hbox[0])
+                          raw_key_points = [0] * 51
+
+                      skt_feat = ext_skeleton_feature(raw_key_points, obox, hbox)
+                      skt_feat = np.array(skt_feat)[np.newaxis, :]
 
                       pbox = np.array(pbox)
                       pbox = pbox.reshape((6, 4))[np.newaxis, :, :]
@@ -350,11 +359,13 @@ if __name__ == '__main__':
                       oboxes_raw = np.concatenate((oboxes_raw, obox))
                       iboxes_raw = np.concatenate((iboxes_raw, ibox))
                       pboxes_raw = np.concatenate((pboxes_raw, pbox))
+                      skt_feats_raw = np.concatenate((skt_feats_raw, skt_feat))
 
                       obj_classes.append(object_det[4])
                       hscores.append(human_det[5])
                       oscores.append(object_det[5])
                       num_cand += 1
+
       if num_cand == 0:
           all_results[im_id] = im_results
           continue
@@ -366,6 +377,7 @@ if __name__ == '__main__':
       sboxes_raw = sboxes_raw[np.newaxis, :, :]
       spa_maps_raw = spa_maps_raw[np.newaxis, :, :, :, :]
       obj_vecs_raw = obj_vecs_raw[np.newaxis, :, :]
+      skt_feats_raw = skt_feats_raw[np.newaxis, :, :]
       hboxes_t = torch.from_numpy(hboxes_raw * im_scales[0])
       oboxes_t = torch.from_numpy(oboxes_raw * im_scales[0])
       iboxes_t = torch.from_numpy(iboxes_raw * im_scales[0])
@@ -373,6 +385,8 @@ if __name__ == '__main__':
       sboxes_t = torch.from_numpy(sboxes_raw * im_scales[0])
       spa_maps_t = torch.from_numpy(spa_maps_raw)
       obj_vecs_t = torch.from_numpy(obj_vecs_raw)
+      skt_feats_t = torch.from_numpy(skt_feats_raw)
+
 
       hboxes.data.resize_(hboxes_t.size()).copy_(hboxes_t)
       oboxes.data.resize_(oboxes_t.size()).copy_(oboxes_t)
@@ -382,6 +396,7 @@ if __name__ == '__main__':
 
       spa_maps.data.resize_(spa_maps_t.size()).copy_(spa_maps_t)
       obj_vecs.data.resize_(obj_vecs_t.size()).copy_(obj_vecs_t)
+      skt_feats.data.resize_(skt_feats_t.size()).copy_(skt_feats_t)
 
       assert len(im_scales) == 1, "Only single-image batch implemented"
       im_blob = blobs
@@ -411,6 +426,7 @@ if __name__ == '__main__':
                              hoi_masks,
                              spa_maps[:, k:k+batch_size],
                              obj_vecs[:, k:k+batch_size],
+                             skt_feats[:, k:k+batch_size],
                              num_hois)
           curr_batch_size = vrb_prob.shape[1]
           hoi_prob = np.zeros((1, curr_batch_size, len(hoi_classes)))
