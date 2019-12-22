@@ -241,10 +241,16 @@ class resnet(_fasterRCNN):
 
     import copy
     self.iRCNN_top = nn.Sequential(resnet.layer4)
-    self.hRCNN_top = nn.Sequential(copy.deepcopy(resnet.layer4))
-    self.oRCNN_top = nn.Sequential(copy.deepcopy(resnet.layer4))
-    self.pRCNN_top = nn.Sequential(copy.deepcopy(resnet.layer4))
-    self.sRCNN_top = nn.Sequential(copy.deepcopy(resnet.layer4))
+    self.hRCNN_top = copy.deepcopy(resnet.layer4)
+    self.oRCNN_top = copy.deepcopy(resnet.layer4)
+    self.sRCNN_top = copy.deepcopy(resnet.layer4)
+
+    self.pRCNN_tops = [copy.deepcopy(resnet.layer4),
+                       copy.deepcopy(resnet.layer4),
+                       copy.deepcopy(resnet.layer4),
+                       copy.deepcopy(resnet.layer4),
+                       copy.deepcopy(resnet.layer4),
+                       copy.deepcopy(resnet.layer4)]
 
     self.iRCNN_cls_score = nn.Sequential(
       nn.Linear(2048, 2048),
@@ -334,8 +340,18 @@ class resnet(_fasterRCNN):
     return fc7
 
   def _phead_to_tail(self, pool5):
-    fc7_all = self.pRCNN_top(pool5).mean(3).mean(2)
-    fc7 = fc7_all.view(-1, fc7_all.shape[1] * 6)
+    # (insN x 6) x 1024 x 14 x 14
+    # insN x 6 x 1024 x 14 x 14
+    pool5 = pool5.view((-1, 6, pool5.shape[1], pool5.shape[2], pool5.shape[3]))
+    pool5s = []
+    for i in range(pool5.shape[1]):
+      # insN x 1024 x 14 x 14
+      pool5p = pool5[:, i, :, :, :]
+      pRCNN_top = self.pRCNN_tops[i]
+      # insN x 2048 x 7 x 7
+      # insN x 2048
+      pool5s.append(pRCNN_top(pool5p).mean(3).mean(2))
+    fc7 = torch.cat(pool5s, dim=1)
     return fc7
 
   def _shead_to_tail(self, pool5):
