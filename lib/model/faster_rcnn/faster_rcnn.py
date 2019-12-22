@@ -137,17 +137,16 @@ class _fasterRCNN(nn.Module):
         vcls_prob = F.sigmoid(vcls_score)
 
         # compute object classification probability
-        # icls_score = self.iRCNN_cls_score(iroi_pooled_feat)
-        # icls_prob = F.sigmoid(icls_score)
+        icls_score = self.iRCNN_cls_score(iroi_pooled_feat)
+        icls_prob = F.sigmoid(icls_score)
         icls_prob = F.sigmoid(iroi_pooled_feat)
 
-
-        # hcls_score = self.hRCNN_cls_score(hroi_pooled_feat)
-        # hcls_prob = F.sigmoid(hcls_score)
+        hcls_score = self.hRCNN_cls_score(hroi_pooled_feat)
+        hcls_prob = F.sigmoid(hcls_score)
         hcls_prob = F.sigmoid(hroi_pooled_feat)
 
-        # ocls_score = self.oRCNN_cls_score(oroi_pooled_feat)
-        # ocls_prob = F.sigmoid(ocls_score)
+        ocls_score = self.oRCNN_cls_score(oroi_pooled_feat)
+        ocls_prob = F.sigmoid(ocls_score)
         ocls_prob = F.sigmoid(oroi_pooled_feat)
 
 
