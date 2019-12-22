@@ -21,9 +21,9 @@ class SFTLayer(nn.Module):
     def forward(self, feat, objvec):
         # x[0]: fea; x[1]: cond
         scale = self.SFT_scale_conv1(F.leaky_relu(self.SFT_scale_conv0(objvec), 0.1, inplace=True))
-        scale = scale.view((-1, 1, 1, 2048))
+        scale = scale.view((-1, 2048, 1, 1))
         shift = self.SFT_shift_conv1(F.leaky_relu(self.SFT_shift_conv0(objvec), 0.1, inplace=True))
-        shift = shift.view((-1, 1, 1, 2048))
+        shift = shift.view((-1, 2048, 1, 1))
         return (feat * scale + shift) + feat
 
 

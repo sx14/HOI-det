@@ -328,7 +328,7 @@ class resnet(_fasterRCNN):
       self.sRCNN_top.apply(set_bn_eval)
 
   def _ihead_to_tail(self, pool5, objvec):
-    fc7 = self.iRCNN_top(pool5) # 7x7x2048
+    fc7 = self.iRCNN_top(pool5) # 2048x7x7
     fc7_sft = self.iRCNN_sft(fc7, objvec).mean(3).mean(2)
     return fc7_sft
 
