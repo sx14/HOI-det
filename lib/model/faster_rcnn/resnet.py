@@ -255,30 +255,23 @@ class resnet(_fasterRCNN):
     self.oRCNN_top_att_b = nn.Conv2d(2048, 1, (1, 1))
     self.oRCNN_top_att_k = nn.Conv2d(2048, self.n_classes, (1, 1))
 
-    self.pRCNN_top_att_b = nn.Conv2d(2048, 1, (1, 1))
-    self.pRCNN_top_att_k = nn.Conv2d(2048, self.n_classes, (1, 1))
-
-    self.sRCNN_top_att_b = nn.Conv2d(2048, 1, (1, 1))
-    self.sRCNN_top_att_k = nn.Conv2d(2048, self.n_classes, (1, 1))
-
-
-    self.iRCNN_cls_score = nn.Sequential(
-      nn.Linear(2048, 2048),
-      nn.LeakyReLU(),
-      nn.Dropout(p=0.5),
-      nn.Linear(2048, self.n_classes))
-
-    self.hRCNN_cls_score = nn.Sequential(
-      nn.Linear(2048, 2048),
-      nn.LeakyReLU(),
-      nn.Dropout(p=0.5),
-      nn.Linear(2048, self.n_classes))
-
-    self.oRCNN_cls_score = nn.Sequential(
-      nn.Linear(2048, 2048),
-      nn.LeakyReLU(),
-      nn.Dropout(p=0.5),
-      nn.Linear(2048, self.n_classes))
+    # self.iRCNN_cls_score = nn.Sequential(
+    #   nn.Linear(2048, 2048),
+    #   nn.LeakyReLU(),
+    #   nn.Dropout(p=0.5),
+    #   nn.Linear(2048, self.n_classes))
+    #
+    # self.hRCNN_cls_score = nn.Sequential(
+    #   nn.Linear(2048, 2048),
+    #   nn.LeakyReLU(),
+    #   nn.Dropout(p=0.5),
+    #   nn.Linear(2048, self.n_classes))
+    #
+    # self.oRCNN_cls_score = nn.Sequential(
+    #   nn.Linear(2048, 2048),
+    #   nn.LeakyReLU(),
+    #   nn.Dropout(p=0.5),
+    #   nn.Linear(2048, self.n_classes))
 
     self.pRCNN_cls_score = nn.Sequential(
       nn.Linear(2048 * 6, 4096),
@@ -340,34 +333,28 @@ class resnet(_fasterRCNN):
   def _ihead_to_tail(self, pool5):
     pool5 = self.iRCNN_top(pool5)     # 7x7x2048
     xh = self.iRCNN_top_att_b(pool5)  # 7x7x1
-    xk = self.iRCNN_cls_att_k(pool5)  # 7x7xk
+    xk = self.iRCNN_top_att_k(pool5)  # 7x7xk
     fc7 = (xk * xh).mean(3).mean(2)   # k
     return fc7
 
   def _hhead_to_tail(self, pool5):
     pool5 = self.hRCNN_top(pool5)     # 7x7x2048
     xh = self.hRCNN_top_att_b(pool5)  # 7x7x1
-    xk = self.hRCNN_cls_att_k(pool5)  # 7x7xk
+    xk = self.hRCNN_top_att_k(pool5)  # 7x7xk
     fc7 = (xk * xh).mean(3).mean(2)   # k
     return fc7
 
   def _ohead_to_tail(self, pool5):
     pool5 = self.oRCNN_top(pool5)     # 7x7x2048
     xh = self.oRCNN_top_att_b(pool5)  # 7x7x1
-    xk = self.oRCNN_cls_att_k(pool5)  # 7x7xk
+    xk = self.oRCNN_top_att_k(pool5)  # 7x7xk
     fc7 = (xk * xh).mean(3).mean(2)   # k
     return fc7
 
   def _phead_to_tail(self, pool5):
-    pool5 = self.pRCNN_top(pool5)     # 7x7x2048
-    xh = self.pRCNN_top_att_b(pool5)  # 7x7x1
-    xk = self.pRCNN_cls_att_k(pool5)  # 7x7xk
-    fc7 = (xk * xh).mean(3).mean(2)   # k
+    fc7 = self.pRCNN_top(pool5).mean(3).mean(2)   # k
     return fc7
 
   def _shead_to_tail(self, pool5):
-    pool5 = self.sRCNN_top(pool5)     # 7x7x2048
-    xh = self.sRCNN_top_att_b(pool5)  # 7x7x1
-    xk = self.sRCNN_cls_att_k(pool5)  # 7x7xk
-    fc7 = (xk * xh).mean(3).mean(2)   # k
+    fc7 = self.sRCNN_top(pool5).mean(3).mean(2)
     return fc7

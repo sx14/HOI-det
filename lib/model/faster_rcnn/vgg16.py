@@ -16,6 +16,7 @@ import torchvision.models as models
 from model.faster_rcnn.faster_rcnn import _fasterRCNN
 import pdb
 
+
 class vgg16(_fasterRCNN):
   def __init__(self, classes, pretrained=False, class_agnostic=False):
     self.model_path = 'data/pretrained_model/vgg16_caffe.pth'
