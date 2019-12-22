@@ -52,9 +52,6 @@ class _fasterRCNN(nn.Module):
         self.n_classes = len(classes)
         self.class_agnostic = class_agnostic
 
-        # define rpn
-        # self.RCNN_rpn = _RPN(self.dout_base_model)
-        # self.RCNN_proposal_target = _ProposalTargetLayer(self.n_classes)
         self.RCNN_roi_pool = _RoIPooling(cfg.POOLING_SIZE, cfg.POOLING_SIZE, 1.0 / 16.0)
         self.RCNN_roi_align = RoIAlignAvg(cfg.POOLING_SIZE, cfg.POOLING_SIZE, 1.0 / 16.0)
 
@@ -90,6 +87,8 @@ class _fasterRCNN(nn.Module):
         hboxes = hboxes.data
         oboxes = oboxes.data
         iboxes = iboxes.data
+        pboxes = pboxes.data
+        sboxes = sboxes.data
         num_hois = num_hois.data
 
         # feed image data to base model to obtain base feature map
@@ -137,13 +136,13 @@ class _fasterRCNN(nn.Module):
         vcls_prob = F.sigmoid(vcls_score)
 
         # compute object classification probability
-        icls_score = self.iRCNN_cls_score(iroi_pooled_feat)
+        icls_score = self.iRCNN_cls_score(iroi_pooled_feat, obj_vecs[0])
         icls_prob = F.sigmoid(icls_score)
 
-        hcls_score = self.hRCNN_cls_score(hroi_pooled_feat)
+        hcls_score = self.hRCNN_cls_score(hroi_pooled_feat, obj_vecs[0])
         hcls_prob = F.sigmoid(hcls_score)
 
-        ocls_score = self.oRCNN_cls_score(oroi_pooled_feat)
+        ocls_score = self.oRCNN_cls_score(oroi_pooled_feat, obj_vecs[0])
         ocls_prob = F.sigmoid(ocls_score)
 
         obj_att = self.obj_attention(obj_vecs[0])

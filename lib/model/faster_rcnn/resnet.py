@@ -4,14 +4,16 @@ from __future__ import print_function
 
 from model.utils.config import cfg
 from model.faster_rcnn.faster_rcnn import _fasterRCNN
+from model.faster_rcnn.SFT_layer import SFTLayer
 
+import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
-import math
 import torch.utils.model_zoo as model_zoo
-import pdb
+
+
 
 __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
        'resnet152']
@@ -246,6 +248,10 @@ class resnet(_fasterRCNN):
     self.pRCNN_top = nn.Sequential(copy.deepcopy(resnet.layer4))
     self.sRCNN_top = nn.Sequential(copy.deepcopy(resnet.layer4))
 
+    self.iRCNN_sft = SFTLayer()
+    self.hRCNN_sft = SFTLayer()
+    self.oRCNN_sft = SFTLayer()
+
     self.iRCNN_cls_score = nn.Sequential(
       nn.Linear(2048, 2048),
       nn.LeakyReLU(),
@@ -321,17 +327,20 @@ class resnet(_fasterRCNN):
       self.pRCNN_top.apply(set_bn_eval)
       self.sRCNN_top.apply(set_bn_eval)
 
-  def _ihead_to_tail(self, pool5):
-    fc7 = self.iRCNN_top(pool5).mean(3).mean(2)
-    return fc7
+  def _ihead_to_tail(self, pool5, objvec):
+    fc7 = self.iRCNN_top(pool5) # 7x7x2048
+    fc7_sft = self.iRCNN_sft(fc7, objvec).mean(3).mean(2)
+    return fc7_sft
 
-  def _hhead_to_tail(self, pool5):
-    fc7 = self.hRCNN_top(pool5).mean(3).mean(2)
-    return fc7
+  def _hhead_to_tail(self, pool5, objvec):
+    fc7 = self.hRCNN_top(pool5)
+    fc7_sft = self.hRCNN_sft(fc7, objvec).mean(3).mean(2)
+    return fc7_sft
 
-  def _ohead_to_tail(self, pool5):
-    fc7 = self.oRCNN_top(pool5).mean(3).mean(2)
-    return fc7
+  def _ohead_to_tail(self, pool5, objvec):
+    fc7 = self.oRCNN_top(pool5)
+    fc7_sft = self.oRCNN_sft(fc7, objvec).mean(3).mean(2)
+    return fc7_sft
 
   def _phead_to_tail(self, pool5):
     fc7_all = self.pRCNN_top(pool5).mean(3).mean(2)
