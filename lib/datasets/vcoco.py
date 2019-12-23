@@ -11,6 +11,7 @@ import xml.dom.minidom as minidom
 
 import os
 # import PIL
+import cv2
 import numpy as np
 import scipy.sparse
 import subprocess
@@ -30,6 +31,7 @@ from datasets.pose_map import est_part_boxes, gen_part_boxes
 # TODO: make fast_rcnn irrelevant
 # >>>> obsolete, because it depends on sth outside of this project
 from model.utils.config import cfg
+from tqdm import tqdm
 
 try:
     xrange          # Python 2
@@ -67,22 +69,6 @@ def iou(box1, box2):
         iou = 0
 
     return iou
-
-
-class hoi_class:
-    def __init__(self, object_name, verb_name, hoi_id):
-        self._object_name = object_name
-        self._verb_name = verb_name
-        self._hoi_id = hoi_id
-
-    def object_name(self):
-        return self._object_name
-
-    def verb_name(self):
-        return self._verb_name
-
-    def hoi_name(self):
-        return self._verb_name + ' ' + self._object_name
 
 
 class vcoco(imdb):
@@ -167,7 +153,7 @@ class vcoco(imdb):
         """
         Construct an image path from the image's "index" identifier.
         """
-        image_path = os.path.join(self._data_path, 'images', self._image_set + '2015',
+        image_path = os.path.join(self._data_path, self._image_set,
                                   index + self._image_ext)
         assert os.path.exists(image_path), \
             'Path does not exist: {}'.format(image_path)
@@ -175,15 +161,25 @@ class vcoco(imdb):
 
     def _load_image_set_info(self):
         print('Loading image set info ...')
-        all_image_info = {}
+        image_set_info_path = os.path.join(self._data_path, 'image_set_info.pkl')
+        if os.path.exists(image_set_info_path):
+            print(image_set_info_path + ' is found!')
+            all_image_info = pickle.load(image_set_info_path)
+        else:
+            all_image_info = {}
+            image_root = os.path.join(self._data_path, self._image_set)
+            for image_name in tqdm(os.listdir(image_root)):
+                image_path = os.path.join(image_root, image_name)
 
-        mat_anno_db = sio.loadmat(os.path.join(self._data_path, 'anno_bbox_%s.mat' % self._version))
-        mat_anno_db = mat_anno_db['bbox_' + self._image_set]
+                im = cv2.imread(image_path)
+                im_height = im.shape[0]
+                im_width = im.shape[1]
 
-        for mat_anno in mat_anno_db[0, :]:
-            image_id = mat_anno['filename'][0].split('.')[0]
-            all_image_info[image_id] = [mat_anno['size']['width'][0, 0][0, 0], mat_anno['size']['height'][0, 0][0, 0]]
-
+                image_id = image_name.split('.')[0]
+                all_image_info[image_id] = [im_width, im_height]
+            with open(image_set_info_path, 'wb') as f:
+                pickle.dump(all_image_info, f)
+            print('Saved at ' + image_set_info_path)
         return all_image_info
 
     def _get_default_path(self):
@@ -262,7 +258,6 @@ class vcoco(imdb):
     def augment_hoi_instances(self, raw_hois, im_hw):
         new_hois = []
         for raw_hoi in raw_hois:
-
             hbox = raw_hoi[2]
             obox = raw_hoi[3]
             aug_hboxes = self.augment_box(hbox, im_hw)
@@ -272,25 +267,30 @@ class vcoco(imdb):
             aug_oboxes = aug_oboxes[:min(len(aug_hboxes), len(aug_oboxes))]
 
             for i in range(aug_hboxes.shape[0]):
-                aug_cls_ids = raw_hoi[1]
+                aug_im_id = raw_hoi[0]
+                aug_vrb_ids = raw_hoi[1]
                 aug_hbox = aug_hboxes[i]
                 aug_obox = aug_oboxes[i]
-                new_hois.append([0,             # stub
-                                 aug_cls_ids,
+                aug_vrb_mask_ids = raw_hoi[4]
+                aug_key_points = raw_hoi[5]
+                aug_obj_id = raw_hoi[6]
+
+                new_hois.append([aug_im_id,              # stub
+                                 aug_vrb_ids,
                                  aug_hbox,
                                  aug_obox,
-                                 0,             # stub
-                                 0,             # stub
-                                 0,             # stub
-                                 raw_hoi[5]])
+                                 aug_vrb_mask_ids,       # stub
+                                 aug_obj_id,             # stub
+                                 1,                      # stub
+                                 aug_key_points])
         return new_hois
 
     def _load_all_annotations(self):
         all_annos = {}
 
         print('Loading annotations ...')
-        anno_ng_db = pickle.load(open(os.path.join(self._data_path, '%s_NG_HICO_with_pose.pkl' % self._image_set)))
-        anno_gt_tmp = pickle.load(open(os.path.join(self._data_path, '%s_GT_HICO_with_pose.pkl' % self._image_set)))
+        anno_ng_db = pickle.load(open(os.path.join(self._data_path, '%s_NG_VCOCO_with_pose.pkl' % self._image_set)))
+        anno_gt_tmp = pickle.load(open(os.path.join(self._data_path, '%s_GT_VCOCO_with_pose.pkl' % self._image_set)))
 
         print('Processing annotations ...')
         anno_gt_db = {}
@@ -301,9 +301,9 @@ class vcoco(imdb):
             else:
                 anno_gt_db[image_id] = [hoi_ins_gt]
 
-        image_id_template = 'HICO_train2015_%s'
+        image_id_template = 'COCO_train2014_%s'
         for image_id, img_pos_hois in anno_gt_db.items():
-            image_name = image_id_template % str(image_id).zfill(8)
+            image_name = image_id_template % str(image_id).zfill(12)
 
             # augment positive instances
             image_hw = [self._all_image_info[image_name][1],
@@ -345,27 +345,29 @@ class vcoco(imdb):
             for pn, hois in enumerate([img_pos_hois, img_neg_hois]):
                 for raw_hoi in hois:
 
-                    hoi_class_ids = raw_hoi[1]
-                    if isinstance(hoi_class_ids, int):
-                        hoi_class_ids = [hoi_class_ids]
-                    hoi_classes = [self.hoi_classes[class_id] for class_id in hoi_class_ids]
-                    obj_class_name = hoi_classes[0].object_name()
-                    obj_class_id = self.obj_class2ind[obj_class_name]
 
                     hbox = raw_hoi[2]
                     obox = raw_hoi[3]
                     ibox = [min(hbox[0], obox[0]), min(hbox[1], obox[1]),
                             max(hbox[2], obox[2]), max(hbox[3], obox[3])]
+                    obj_class = raw_hoi[5]
+                    vrb_classes = raw_hoi[1]
+                    if sum(vrb_classes) == 0:
+                        vrb_classes = []
+                    else:
+                        vrb_classes = vrb_classes.astype(np.int)
+                    vrb_maskes = raw_hoi[4]
+                    if vrb_maskes is None:
+                        vrb_maskes = []
+
                     image_anno['hboxes'].append(hbox)
                     image_anno['oboxes'].append(obox)
                     image_anno['iboxes'].append(ibox)
-                    image_anno['hoi_classes'].append(hoi_class_ids)
-                    image_anno['vrb_classes'].append([self.hoi2vrb[hoi_id] for hoi_id in hoi_class_ids])
-                    image_anno['obj_classes'].append(obj_class_id)
-                    image_anno['hoi_masks'].append(self.obj2int[obj_class_name])
-                    image_anno['vrb_masks'].append([self.hoi2vrb[hoi]
-                                                    for hoi in range(self.obj2int[obj_class_name][0],
-                                                                     self.obj2int[obj_class_name][1]+1)])
+                    image_anno['hoi_classes'].append(-1)
+                    image_anno['vrb_classes'].append(vrb_classes)
+                    image_anno['obj_classes'].append(obj_class)
+                    image_anno['hoi_masks'].append(-1)
+                    image_anno['vrb_masks'].append(vrb_maskes)
 
                     raw_key_points = raw_hoi[7]
                     if raw_key_points is None or len(raw_key_points) != 51:
@@ -387,11 +389,11 @@ class vcoco(imdb):
                 image_anno['oboxes'] = np.zeros((0, 4))
                 image_anno['iboxes'] = np.zeros((0, 4))
                 image_anno['pbox_lists'] = np.zeros((0, 6*4))
+                image_anno['hoi_classes'] = np.zeros((0, 2))
                 image_anno['obj_classes'] = np.zeros(0)
                 image_anno['bin_classes'] = np.zeros(0, 2)
-                image_anno['hoi_classes'] = np.zeros((0, len(self.hoi_classes)))
                 image_anno['vrb_classes'] = np.zeros((0, len(self.vrb_classes)))
-                image_anno['hoi_masks'] = np.ones((0, len(self.hoi_classes)))
+                image_anno['hoi_masks'] = np.ones((0, 2))
                 image_anno['vrb_masks'] = np.ones((0, len(self.vrb_classes)))
             else:
                 image_anno['hboxes'] = np.array(image_anno['hboxes'])
@@ -399,22 +401,13 @@ class vcoco(imdb):
                 image_anno['iboxes'] = np.array(image_anno['iboxes'])
                 image_anno['obj_classes'] = np.array(image_anno['obj_classes'])
                 image_anno['pbox_lists'] = np.array(image_anno['pbox_lists'])
+                image_anno['hoi_classes'] = np.zeros((len(image_anno['hboxes']), 2))
+                image_anno['hoi_masks'] = np.zeros((len(image_anno['hboxes']), 2))
 
                 bin_classes = image_anno['bin_classes']
                 image_anno['bin_classes'] = np.zeros((len(bin_classes), 2))
                 for i, ins_class in enumerate(bin_classes):
                     image_anno['bin_classes'][i, ins_class] = 1
-
-                hoi_classes = image_anno['hoi_classes']
-                image_anno['hoi_classes'] = np.zeros((len(hoi_classes), len(self.hoi_classes)))
-                for i, ins_classes in enumerate(hoi_classes):
-                    for cls in ins_classes:
-                        image_anno['hoi_classes'][i, cls] = 1
-
-                hoi_intervals = image_anno['hoi_masks']
-                image_anno['hoi_masks'] = np.zeros((len(hoi_intervals), len(self.hoi_classes)))
-                for i, ins_interval in enumerate(hoi_intervals):
-                    image_anno['hoi_masks'][i, ins_interval[0]:ins_interval[1]+1] = 1
 
                 vrb_classes = image_anno['vrb_classes']
                 image_anno['vrb_classes'] = np.zeros((len(vrb_classes), len(self.vrb_classes)))
@@ -460,112 +453,3 @@ class vcoco(imdb):
 
             self.roidb.append(new_entry)
         self._image_index = self._image_index * 2
-
-    def _get_widths(self):
-        mat_anno_db = sio.loadmat(os.path.join(self._data_path, 'anno_bbox_%s.mat' % self._version))
-        mat_anno_db = mat_anno_db['bbox_' + self._image_set]
-        all_widths = []
-        for image_id, image_anno in enumerate(mat_anno_db[0, :]):
-            image_name = image_anno['filename'][0].split('.')[0]
-            assert self._image_index[image_id] == image_name
-            all_widths.append(image_anno['size']['width'][0, 0][0, 0])     # image width
-        return all_widths
-
-
-    def _get_voc_results_file_template(self):
-        # hico/results/<hoi_det_test_walk_dog.txt
-        filename = 'hoi_det_' + self._image_set + '_{:s}.txt'
-        filedir = os.path.join(self._data_path, 'results')
-        if not os.path.exists(filedir):
-            os.makedirs(filedir)
-        path = os.path.join(filedir, filename)
-        return path
-
-    def _write_voc_results_file(self, all_boxes):
-        for cls_ind, cls in enumerate(self.classes):
-            print('Writing {} HICO results file'.format(cls))
-            filename = self._get_voc_results_file_template().format(cls)
-            with open(filename, 'wt') as f:
-                for im_ind, index in enumerate(self.image_index):
-                    dets = all_boxes[cls_ind][im_ind]
-                    if dets == []:
-                        continue
-                    # the VOCdevkit expects 1-based indices
-                    for k in xrange(dets.shape[0]):
-                        f.write('{:s} {:.3f} {:.1f} {:.1f} {:.1f} {:.1f}\n'.
-                                format(index, dets[k, -1],
-                                       dets[k, 0] + 1, dets[k, 1] + 1,
-                                       dets[k, 2] + 1, dets[k, 3] + 1))
-
-    def _do_python_eval(self, output_dir='output'):
-        annopath = os.path.join(
-            self._devkit_path,
-            'VOC' + self._version,
-            'Annotations',
-            '{:s}.xml')
-        imagesetfile = os.path.join(
-            self._devkit_path,
-            'VOC' + self._version,
-            'ImageSets',
-            'Main',
-            self._image_set + '.txt')
-        cachedir = os.path.join(self._devkit_path, 'annotations_cache')
-        aps = []
-        # The PASCAL VOC metric changed in 2010
-        use_07_metric = True if int(self._version) < 2010 else False
-        print('VOC07 metric? ' + ('Yes' if use_07_metric else 'No'))
-        if not os.path.isdir(output_dir):
-            os.mkdir(output_dir)
-        for i, cls in enumerate(self._classes):
-            if cls == '__background__':
-                continue
-            filename = self._get_voc_results_file_template().format(cls)
-            rec, prec, ap = voc_eval(
-                filename, annopath, imagesetfile, cls, cachedir, ovthresh=0.5,
-                use_07_metric=use_07_metric)
-            aps += [ap]
-            print('AP for {} = {:.4f}'.format(cls, ap))
-            with open(os.path.join(output_dir, cls + '_pr.pkl'), 'wb') as f:
-                pickle.dump({'rec': rec, 'prec': prec, 'ap': ap}, f)
-        print('Mean AP = {:.4f}'.format(np.mean(aps)))
-        print('~~~~~~~~')
-        print('Results:')
-        for ap in aps:
-            print('{:.3f}'.format(ap))
-        print('{:.3f}'.format(np.mean(aps)))
-        print('~~~~~~~~')
-        print('')
-        print('--------------------------------------------------------------')
-        print('Results computed with the **unofficial** Python eval code.')
-        print('Results should be very close to the official MATLAB eval code.')
-        print('Recompute with `./tools/reval.py --matlab ...` for your paper.')
-        print('-- Thanks, The Management')
-        print('--------------------------------------------------------------')
-
-    def _do_matlab_eval(self, output_dir='output'):
-        print('-----------------------------------------------------')
-        print('Computing results with the official MATLAB eval code.')
-        print('-----------------------------------------------------')
-        path = os.path.join(cfg.ROOT_DIR, 'lib', 'datasets',
-                            'VOCdevkit-matlab-wrapper')
-        cmd = 'cd {} && '.format(path)
-        cmd += '{:s} -nodisplay -nodesktop '.format(cfg.MATLAB)
-        cmd += '-r "dbstop if error; '
-        cmd += 'voc_eval(\'{:s}\',\'{:s}\',\'{:s}\',\'{:s}\'); quit;"' \
-            .format(self._devkit_path, self._get_comp_id(),
-                    self._image_set, output_dir)
-        print('Running:\n{}'.format(cmd))
-        status = subprocess.call(cmd, shell=True)
-
-    def evaluate_detections(self, all_boxes, output_dir):
-        self._write_voc_results_file(all_boxes)
-        self._do_python_eval(output_dir)
-        if self.config['matlab_eval']:
-            self._do_matlab_eval(output_dir)
-        if self.config['cleanup']:
-            for cls in self._classes:
-                if cls == '__background__':
-                    continue
-                filename = self._get_voc_results_file_template().format(cls)
-                os.remove(filename)
-

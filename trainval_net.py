@@ -41,7 +41,7 @@ def parse_args():
   parser = argparse.ArgumentParser(description='Train a Fast R-CNN network')
   parser.add_argument('--dataset', dest='dataset',
                       help='training dataset',
-                      default='hico_full', type=str)
+                      default='vcoco_full', type=str)
   parser.add_argument('--net', dest='net',
                       help='vgg16, res101',
                       default='res101', type=str)
@@ -164,8 +164,12 @@ if __name__ == '__main__':
       args.imdb_name = "hico2_full_train"
       args.imdbval_name = "hico_full_test"
       args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '75']
+  elif args.dataset == "vcoco_full":
+      args.imdb_name = "vcoco_full_trainval"
+      args.imdbval_name = "vcoco_full_test"
+      args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '75']
   else:
-      print('Only support HICO-DET dataset now.')
+      print('Only support HICO-DET and V-COCO dataset now.')
 
   args.cfg_file = "cfgs/{}_ls.yml".format(args.net) if args.large_scale else "cfgs/{}.yml".format(args.net)
 

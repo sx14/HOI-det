@@ -11,7 +11,7 @@ from __future__ import division
 from __future__ import print_function
 
 __sets = {}
-from datasets.hico import hico
+from datasets.vcoco import vcoco
 from datasets.hico2 import hico2
 import numpy as np
 
@@ -20,6 +20,13 @@ for version in ['full', 'mini']:
   for split in ['train', 'test']:
     name = 'hico2_{}_{}'.format(version, split)
     __sets[name] = (lambda split=split, version=version: hico2(split, version))
+
+# Set up hico_<year>_<split>
+for version in ['full']:
+  for split in ['trainval', 'test']:
+    name = 'vcoco_{}_{}'.format(version, split)
+    __sets[name] = (lambda split=split, version=version: vcoco(split, version))
+
 
 
 def get_imdb(name):
