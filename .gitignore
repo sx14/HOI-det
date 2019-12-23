@@ -3,6 +3,7 @@ models/
 output/
 logs/
 *.mat
+*.json
 
 # READ THIS BEFORE YOU REFACTOR ME
 #
