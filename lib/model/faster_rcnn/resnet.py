@@ -245,12 +245,19 @@ class resnet(_fasterRCNN):
     self.oRCNN_top = copy.deepcopy(resnet.layer4)
     self.sRCNN_top = copy.deepcopy(resnet.layer4)
 
-    self.pRCNN_tops = [copy.deepcopy(resnet.layer4),
-                       copy.deepcopy(resnet.layer4),
-                       copy.deepcopy(resnet.layer4),
-                       copy.deepcopy(resnet.layer4),
-                       copy.deepcopy(resnet.layer4),
-                       copy.deepcopy(resnet.layer4)]
+    self.p1RCNN_top = copy.deepcopy(resnet.layer4)
+    self.p2RCNN_top = copy.deepcopy(resnet.layer4)
+    self.p3RCNN_top = copy.deepcopy(resnet.layer4)
+    self.p4RCNN_top = copy.deepcopy(resnet.layer4)
+    self.p5RCNN_top = copy.deepcopy(resnet.layer4)
+    self.p6RCNN_top = copy.deepcopy(resnet.layer4)
+
+    self.pRCNN_tops = [self.p1RCNN_top,
+                       self.p2RCNN_top,
+                       self.p3RCNN_top,
+                       self.p4RCNN_top,
+                       self.p5RCNN_top,
+                       self.p6RCNN_top]
 
     self.iRCNN_cls_score = nn.Sequential(
       nn.Linear(2048, 2048),
@@ -303,8 +310,9 @@ class resnet(_fasterRCNN):
     self.iRCNN_top.apply(set_bn_fix)
     self.hRCNN_top.apply(set_bn_fix)
     self.oRCNN_top.apply(set_bn_fix)
-    self.pRCNN_top.apply(set_bn_fix)
     self.sRCNN_top.apply(set_bn_fix)
+    for pRCNN_top in self.pRCNN_tops:
+      pRCNN_top.apply(set_bn_fix)
 
   def train(self, mode=True):
     # Override train so that the training mode is set as we want
@@ -324,8 +332,9 @@ class resnet(_fasterRCNN):
       self.iRCNN_top.apply(set_bn_eval)
       self.hRCNN_top.apply(set_bn_eval)
       self.oRCNN_top.apply(set_bn_eval)
-      self.pRCNN_top.apply(set_bn_eval)
       self.sRCNN_top.apply(set_bn_eval)
+      for pRCNN_top in self.pRCNN_tops:
+        pRCNN_top.apply(set_bn_eval)
 
   def _ihead_to_tail(self, pool5):
     fc7 = self.iRCNN_top(pool5).mean(3).mean(2)
@@ -340,12 +349,12 @@ class resnet(_fasterRCNN):
     return fc7
 
   def _phead_to_tail(self, pool5):
-    # (insN x 6) x 1024 x 14 x 14
-    # insN x 6 x 1024 x 14 x 14
+    # (insN x 6) x 2048 x 7 x 7
+    # insN x 6 x 2048 x 7 x 7
     pool5 = pool5.view((-1, 6, pool5.shape[1], pool5.shape[2], pool5.shape[3]))
     pool5s = []
     for i in range(pool5.shape[1]):
-      # insN x 1024 x 14 x 14
+      # insN x 2048 x 7 x 7
       pool5p = pool5[:, i, :, :, :]
       pRCNN_top = self.pRCNN_tops[i]
       # insN x 2048 x 7 x 7
@@ -355,6 +364,6 @@ class resnet(_fasterRCNN):
     return fc7
 
   def _shead_to_tail(self, pool5):
-    fc7_all = self.pRCNN_top(pool5).mean(3).mean(2)
+    fc7_all = self.sRCNN_top(pool5).mean(3).mean(2)
     fc7 = fc7_all.view(-1)
     return fc7
