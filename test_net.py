@@ -171,7 +171,7 @@ if __name__ == '__main__':
   if not os.path.exists(input_dir):
     raise Exception('There is no input directory for loading network from ' + input_dir)
   load_name = os.path.join(input_dir,
-    'ho_spa_rcnn3_lf_no_nis_3b_vrb_obj_att_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
+    'ho_spa_rcnn3_lf_no_nis_3b_vrb_obj_skt_att_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
 
   hoi_classes, obj_classes, vrb_classes, obj2int, hoi2vrb, vrb2hoi = hico2.load_hoi_classes(cfg.DATA_DIR + '/hico')
   obj2ind = dict(zip(obj_classes, range(len(obj_classes))))
@@ -338,9 +338,9 @@ if __name__ == '__main__':
                           pbox = gen_part_boxes(hbox[0], key_points, im_in.shape[:2])
                       else:
                           pbox = est_part_boxes(hbox[0])
-                          raw_key_points = [0] * 51
+                          key_points = np.array([0] * 51).reshape((17, 3))
 
-                      skt_feat = ext_skeleton_feature(raw_key_points, obox, hbox)
+                      skt_feat = ext_skeleton_feature(key_points, obox[0], hbox[0])
                       skt_feat = np.array(skt_feat)[np.newaxis, :]
 
                       pbox = np.array(pbox)
