@@ -26,7 +26,6 @@ import pickle
 from .imdb import imdb
 from .imdb import ROOT_DIR
 from . import ds_utils
-from .voc_eval import voc_eval
 from datasets.pose_map import est_part_boxes, gen_part_boxes
 # TODO: make fast_rcnn irrelevant
 # >>>> obsolete, because it depends on sth outside of this project

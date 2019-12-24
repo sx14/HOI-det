@@ -277,6 +277,7 @@ if __name__ == '__main__':
           [data_width / 2, data_height / 2, data_width, data_height]
       ]
       sboxes_raw = np.array(gt_sboxes)
+      sboxes_raw = sboxes_raw[np.newaxis, :, :]
 
       im_results = []
       for human_det in det_db[im_id]:
@@ -356,7 +357,7 @@ if __name__ == '__main__':
               oboxes_raw = oboxes_raw[np.newaxis, :, :]
               iboxes_raw = iboxes_raw[np.newaxis, :, :]
               pboxes_raw = pboxes_raw[np.newaxis, :, :]
-              sboxes_raw = sboxes_raw[np.newaxis, :, :]
+
               spa_maps_raw = spa_maps_raw[np.newaxis, :, :, :, :]
               obj_vecs_raw = obj_vecs_raw[np.newaxis, :, :]
 

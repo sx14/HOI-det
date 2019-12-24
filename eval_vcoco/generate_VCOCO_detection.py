@@ -112,7 +112,7 @@ def generate_pkl(test_result, prior_mask, Action_dic_inv, prior_flag=3):
         class_O = np.array(dic['object_class'])
         det_O = dic['object_score']
         score_HO = np.array(dic['action_score'])
-        length = len(bbox_O)
+        length = len(score_HO)
 
         if length == 0:
             continue
@@ -125,9 +125,8 @@ def generate_pkl(test_result, prior_mask, Action_dic_inv, prior_flag=3):
 
         ########################################################################################################################################
 
-        # Predict actrion using human and object appearance
+        # Predict action using human and object appearance
         Score_obj = np.empty((0, 4 + 29), dtype=np.float32)
-
 
         for i in range(length):
 
@@ -162,7 +161,8 @@ def generate_pkl(test_result, prior_mask, Action_dic_inv, prior_flag=3):
             # cut
             if i == 2:
                 agent_name = 'cut_agent'
-                dic_new[agent_name] = det_H * max(Score_obj[max_idx[2]][4 + 2], Score_obj[max_idx[4]][4 + 4])
+                dic_new[agent_name] = det_H * max(Score_obj[max_idx[2]][4 + 2],
+                                                  Score_obj[max_idx[4]][4 + 4])
                 continue
             if i == 4:
                 continue
@@ -170,7 +170,8 @@ def generate_pkl(test_result, prior_mask, Action_dic_inv, prior_flag=3):
                 # eat
             if i == 9:
                 agent_name = 'eat_agent'
-                dic_new[agent_name] = det_H * max(Score_obj[max_idx[9]][4 + 9], Score_obj[max_idx[16]][4 + 16])
+                dic_new[agent_name] = det_H * max(Score_obj[max_idx[9]][4 + 9],
+                                                  Score_obj[max_idx[16]][4 + 16])
                 continue
             if i == 16:
                 continue
@@ -178,7 +179,8 @@ def generate_pkl(test_result, prior_mask, Action_dic_inv, prior_flag=3):
             # hit
             if i == 19:
                 agent_name = 'hit_agent'
-                dic_new[agent_name] = det_H * max(Score_obj[max_idx[19]][4 + 19], Score_obj[max_idx[20]][4 + 20])
+                dic_new[agent_name] = det_H * max(Score_obj[max_idx[19]][4 + 19],
+                                                  Score_obj[max_idx[20]][4 + 20])
                 continue
             if i == 20:
                 continue
@@ -201,11 +203,10 @@ def generate_pkl(test_result, prior_mask, Action_dic_inv, prior_flag=3):
 
         # role mAP
         for i in range(29):
-            this_index = class_O[max_idx[i]]
-
             # walk, smile, run, stand. Won't contribute to role mAP
             if (i == 3) or (i == 17) or (i == 22) or (i == 27):
-                dic_new[Action_dic_inv[i]] = np.append(np.full(4, np.nan).reshape(1, 4), det_H * prediction_H[0][0][i])
+                dic_new[Action_dic_inv[i]] = np.append(np.full(4, np.nan).reshape(1, 4),
+                                                       det_H * Score_obj[max_idx[i]][4 + i])
                 continue
 
             # Impossible to perform this action
@@ -213,12 +214,10 @@ def generate_pkl(test_result, prior_mask, Action_dic_inv, prior_flag=3):
                 dic_new[Action_dic_inv[i]] = np.append(np.full(4, np.nan).reshape(1, 4),
                                                        det_H * Score_obj[max_idx[i]][4 + i])
             else:
-                dic_new[Action_dic_inv[i]] = np.append(Score_obj[max_idx[i]][:4], det_H * Score_obj[max_idx[i]][4 + i])
+                dic_new[Action_dic_inv[i]] = np.append(Score_obj[max_idx[i]][:4],
+                                                       det_H * Score_obj[max_idx[i]][4 + i])
 
         generate_result.append(dic_new)
-
-    ########################################################################################################################################
-
     return generate_result
 
 

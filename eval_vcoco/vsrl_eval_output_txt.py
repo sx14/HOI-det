@@ -21,7 +21,6 @@ from pycocotools.coco import COCO
 import os, json
 import copy
 import pickle
-import ipdb
 
 class VCOCOeval(object):
 
