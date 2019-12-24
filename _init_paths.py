@@ -11,5 +11,8 @@ this_dir = osp.dirname(__file__)
 lib_path = osp.join(this_dir, 'lib')
 add_path(lib_path)
 
-coco_path = osp.join(this_dir, 'data', 'coco', 'PythonAPI')
-add_path(coco_path)
+hico_path = osp.join(this_dir, 'eval_hico')
+add_path(hico_path)
+
+vcoco_path = osp.join(this_dir, 'eval_vcoco')
+add_path(vcoco_path)

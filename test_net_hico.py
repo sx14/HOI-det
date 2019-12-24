@@ -157,8 +157,8 @@ if __name__ == '__main__':
       print('Loading test results ...')
       with open(output_path) as f:
           HICO = pickle.load(f)
-      generate_HICO_detection(HICO, 'output/results', 1.0, 0.0)
-      os.chdir('benchmark')
+      generate_HICO_detection(HICO, output_dir, 1.0, 0.0)
+      os.chdir('eval_hico')
       os.system('matlab -nodesktop -nosplash -r "Generate_detection ' + '../output/results/' + '/;quit;"')
       exit(0)
 
@@ -433,11 +433,11 @@ if __name__ == '__main__':
 
       all_results[im_id] = im_results
 
-  if not os.path.exists(args.output_dir):
-      os.mkdir(args.output_dir)
+  if not os.path.exists(output_dir):
+      os.makedirs(output_dir)
 
-  generate_HICO_detection(all_results, 'output/results', 1.0, 0.0)
-  os.chdir('benchmark')
+  generate_HICO_detection(all_results, output_dir, 1.0, 0.0)
+  os.chdir('eval_hico')
   os.system('matlab -nodesktop -nosplash -r "Generate_detection ' + '../output/results/' + '/;quit;"')
   os.chdir('..')
 

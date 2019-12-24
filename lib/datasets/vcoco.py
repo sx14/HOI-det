@@ -354,9 +354,8 @@ class vcoco(imdb):
                         vrb_classes = []
                     else:
                         vrb_classes = vrb_classes.astype(np.int)
-                    vrb_maskes = raw_hoi[4]
-                    if vrb_maskes is None:
-                        vrb_maskes = []
+
+                    vrb_maskes = range(len(self.vrb_classes))
 
                     image_anno['hboxes'].append(hbox)
                     image_anno['oboxes'].append(obox)
