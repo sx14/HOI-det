@@ -155,8 +155,7 @@ class vcoco(imdb):
         """
         image_path = os.path.join(self._data_path, self._image_set,
                                   index + self._image_ext)
-        assert os.path.exists(image_path), \
-            'Path does not exist: {}'.format(image_path)
+        assert os.path.exists(image_path), 'Path does not exist: {}'.format(image_path)
         return image_path
 
     def _load_image_set_info(self):
@@ -268,19 +267,19 @@ class vcoco(imdb):
 
             for i in range(aug_hboxes.shape[0]):
                 aug_im_id = raw_hoi[0]
-                aug_vrb_ids = raw_hoi[1]
+                aug_vrb_cls_ids = raw_hoi[1]
                 aug_hbox = aug_hboxes[i]
                 aug_obox = aug_oboxes[i]
                 aug_vrb_mask_ids = raw_hoi[4]
                 aug_key_points = raw_hoi[5]
-                aug_obj_id = raw_hoi[6]
+                aug_obj_cls_id = raw_hoi[6]
 
                 new_hois.append([aug_im_id,              # stub
-                                 aug_vrb_ids,
+                                 aug_vrb_cls_ids,
                                  aug_hbox,
                                  aug_obox,
                                  aug_vrb_mask_ids,       # stub
-                                 aug_obj_id,             # stub
+                                 aug_obj_cls_id,             # stub
                                  1,                      # stub
                                  aug_key_points])
         return new_hois
@@ -301,9 +300,9 @@ class vcoco(imdb):
             else:
                 anno_gt_db[image_id] = [hoi_ins_gt]
 
-        image_id_template = 'COCO_train2014_%s'
+        image_id_template = 'COCO_%s2014_%s'
         for image_id, img_pos_hois in anno_gt_db.items():
-            image_name = image_id_template % str(image_id).zfill(12)
+            image_name = image_id_template % (self._image_set, str(image_id).zfill(12))
 
             # augment positive instances
             image_hw = [self._all_image_info[image_name][1],
@@ -344,7 +343,6 @@ class vcoco(imdb):
 
             for pn, hois in enumerate([img_pos_hois, img_neg_hois]):
                 for raw_hoi in hois:
-
 
                     hbox = raw_hoi[2]
                     obox = raw_hoi[3]

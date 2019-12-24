@@ -153,8 +153,12 @@ if __name__ == '__main__':
   output_dir = os.path.join(args.output_dir, args.dataset)
   output_path = os.path.join(output_dir, 'all_hoi_detections.pkl')
   if os.path.exists(output_path):
-      # TODO: eval
-      pass
+      print('Test results found!')
+      print('Loading test results ...')
+      with open(output_path) as f:
+          all_results = pickle.load(f)
+      # TODO: generate json output
+      # TODO: call vcoco eval function
 
   print('Loading object detections ...')
   det_path = 'data/hico/Test_Faster_RCNN_R-50-PFN_2x_VCOCO_DET_with_pose.pkl'
@@ -344,6 +348,7 @@ if __name__ == '__main__':
                       hscores.append(human_det[5])
                       oscores.append(object_det[5])
                       num_cand += 1
+
       if num_cand == 0:
           all_results[im_id] = im_results
           continue
@@ -404,24 +409,27 @@ if __name__ == '__main__':
           curr_batch_size = vrb_prob.shape[1]
           vrb_prob = vrb_prob.data.cpu().numpy()
 
-
-          # TODO: generate json output
-          # TODO: call vcoco eval function
           for j in range(curr_batch_size):
               temp = []
-              temp.append(hboxes_raw[0, k+j])  # Human box
-              temp.append(oboxes_raw[0, k+j])  # Object box
-              temp.append(obj_classes[k+j])    # Object class
-              temp.append(vrb_prob[0, j].tolist())  # Score (600)
-              temp.append(hscores[k+j])  # Human score
-              temp.append(oscores[k+j])  # Object score
-              temp.append(bin_prob.cpu().data.numpy()[0, j].tolist())  # binary score
+              temp.append(hboxes_raw[0, k+j])       # Human box
+              temp.append(oboxes_raw[0, k+j])       # Object box
+              temp.append(obj_classes[k+j])         # Object class
+              temp.append(vrb_prob[0, j].tolist())  # Score (29)
+              temp.append(hscores[k+j])             # Human score
+              temp.append(oscores[k+j])             # Object score
               im_results.append(temp)
 
       all_results[im_id] = im_results
 
   if not os.path.exists(args.output_dir):
       os.mkdir(args.output_dir)
+
+  # TODO: generate json output
+  # TODO: call vcoco eval function
+
+  print('Saving results ...')
+  with open(output_path, 'wb') as f:
+      pickle.dump(all_results, f)
 
 
 

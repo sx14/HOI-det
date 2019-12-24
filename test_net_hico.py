@@ -150,7 +150,8 @@ if __name__ == '__main__':
   pprint.pprint(cfg)
   np.random.seed(cfg.RNG_SEED)
 
-  output_path = os.path.join(args.output_dir, 'all_hoi_detections.pkl')
+  output_dir = os.path.join(args.output_dir, args.dataset)
+  output_path = os.path.join(output_dir, 'all_hoi_detections.pkl')
   if os.path.exists(output_path):
       print('Test results found!')
       print('Loading test results ...')
