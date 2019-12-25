@@ -114,13 +114,13 @@ class _fasterRCNN(nn.Module):
         srois[:, :, 1:] = sboxes
 
         iroi_pooled_feat = self.RCNN_roi_align(base_feat, irois.view(-1, 5))
-        iroi_pooled_feat = self._ihead_to_tail(iroi_pooled_feat)
+        iroi_pooled_feat = self._ihead_to_tail(iroi_pooled_feat, obj_vecs[0])
 
         hroi_pooled_feat = self.RCNN_roi_align(base_feat, hrois.view(-1, 5))
-        hroi_pooled_feat = self._hhead_to_tail(hroi_pooled_feat)
+        hroi_pooled_feat = self._hhead_to_tail(hroi_pooled_feat, obj_vecs[0])
 
         oroi_pooled_feat = self.RCNN_roi_align(base_feat, orois.view(-1, 5))
-        oroi_pooled_feat = self._ohead_to_tail(oroi_pooled_feat)
+        oroi_pooled_feat = self._ohead_to_tail(oroi_pooled_feat, obj_vecs[0])
 
         proi_pooled_feat = self.RCNN_roi_align(base_feat, prois.view(-1, 5))
         proi_pooled_feat = self._phead_to_tail(proi_pooled_feat)
@@ -136,13 +136,13 @@ class _fasterRCNN(nn.Module):
         vcls_prob = F.sigmoid(vcls_score)
 
         # compute object classification probability
-        icls_score = self.iRCNN_cls_score(iroi_pooled_feat, obj_vecs[0])
+        icls_score = self.iRCNN_cls_score(iroi_pooled_feat)
         icls_prob = F.sigmoid(icls_score)
 
-        hcls_score = self.hRCNN_cls_score(hroi_pooled_feat, obj_vecs[0])
+        hcls_score = self.hRCNN_cls_score(hroi_pooled_feat)
         hcls_prob = F.sigmoid(hcls_score)
 
-        ocls_score = self.oRCNN_cls_score(oroi_pooled_feat, obj_vecs[0])
+        ocls_score = self.oRCNN_cls_score(oroi_pooled_feat)
         ocls_prob = F.sigmoid(ocls_score)
 
         obj_att = self.obj_attention(obj_vecs[0])
