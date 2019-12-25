@@ -173,7 +173,7 @@ class vcoco(imdb):
         """
         Construct an image path from the image's "index" identifier.
         """
-        image_path = os.path.join(self._data_path, self._image_set,
+        image_path = os.path.join(self._data_path, 'images', self._image_set,
                                   index + self._image_ext)
         assert os.path.exists(image_path), 'Path does not exist: {}'.format(image_path)
         return image_path
@@ -183,10 +183,11 @@ class vcoco(imdb):
         image_set_info_path = os.path.join(self._data_path, 'image_set_info.pkl')
         if os.path.exists(image_set_info_path):
             print(image_set_info_path + ' is found!')
-            all_image_info = pickle.load(image_set_info_path)
+            with open(image_set_info_path) as f:
+                all_image_info = pickle.load(f)
         else:
             all_image_info = {}
-            image_root = os.path.join(self._data_path, self._image_set)
+            image_root = os.path.join(self._data_path, 'images', self._image_set)
             for image_name in tqdm(os.listdir(image_root)):
                 image_path = os.path.join(image_root, image_name)
 
@@ -320,9 +321,9 @@ class vcoco(imdb):
             else:
                 anno_gt_db[image_id] = [hoi_ins_gt]
 
-        image_id_template = 'COCO_%s2014_%s'
+        image_id_template = 'COCO_train2014_%s'
         for image_id, img_pos_hois in anno_gt_db.items():
-            image_name = image_id_template % (self._image_set, str(image_id).zfill(12))
+            image_name = image_id_template % str(image_id).zfill(12)
 
             # augment positive instances
             image_hw = [self._all_image_info[image_name][1],
