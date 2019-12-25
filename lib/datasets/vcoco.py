@@ -88,11 +88,32 @@ class vcoco(imdb):
             for vrb in vrb2ind:
                 vrb_list[vrb2ind[vrb]] = vrb
 
-        with open(os.path.join(data_path, 'object_list.txt')) as f:
-            obj_list = f.readlines()
-            obj2ind = {zip(obj_list, range(len(obj_list)))}
+        with open(os.path.join(data_path, 'object_index.json')) as f:
+            obj2ind = json.load(f)
+            obj_list = [0] * len(obj2ind)
+            for obj in obj2ind:
+                obj_list[obj2ind[obj]] = obj
 
         return obj_list, vrb_list, obj2ind, vrb2ind
+
+    @staticmethod
+    def load_object_class_map(data_path):
+
+        with open(os.path.join(data_path, 'object_index.json')) as f:
+            obj2ind = json.load(f)
+            obj_list = [0] * len(obj2ind)
+            for obj in obj2ind:
+                obj_list[obj2ind[obj]] = obj
+
+        with open(os.path.join(data_path, 'coco_object_list.txt')) as f:
+            coco_obj_list = f.readlines()
+            coco_obj2ind = dict(zip(coco_obj_list, range(len(coco_obj_list))))
+
+        our2coco = {}
+        for obj in obj2ind:
+            our2coco[obj2ind[obj]] = coco_obj2ind[obj]
+
+        return our2coco
 
     def __init__(self, image_set, version):
         imdb.__init__(self, 'vcoco_' + version + '_' + image_set)

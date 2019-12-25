@@ -164,6 +164,8 @@ if __name__ == '__main__':
     'ho_spa_rcnn3_lf_no_nis_3b_vrb_obj_att_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
 
   obj_classes, vrb_classes, obj2ind, vrb2ind = vcoco.load_hoi_classes(cfg.DATA_DIR + '/vcoco')
+  obj_class_map = vcoco.load_object_class_map(cfg.DATA_DIR + '/vcoco')
+
   obj2vec = vcoco.load_obj2vec(cfg.DATA_DIR + '/vcoco')
 
   # initilize the network here.
@@ -346,7 +348,7 @@ if __name__ == '__main__':
                       pboxes_raw = np.concatenate((pboxes_raw, pbox))
 
                       object_bboxes.append(object_det[2])
-                      object_classes.append(object_det[4])
+                      object_classes.append(obj_class_map[object_det[4]])
                       object_scores.append(object_det[5])
                       num_cand += 1
 
