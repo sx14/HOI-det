@@ -328,19 +328,19 @@ class resnet(_fasterRCNN):
       self.sRCNN_top.apply(set_bn_eval)
 
   def _ihead_to_tail(self, pool5, objvec):
-    fc7 = self.iRCNN_top(pool5) # 2048x7x7
-    fc7_sft = self.iRCNN_sft(fc7, objvec).mean(3).mean(2)
-    return fc7_sft
+    pool5_sft = self.iRCNN_sft(pool5, objvec)
+    fc7 = self.iRCNN_top(pool5_sft).mean(3).mean(2)
+    return fc7
 
   def _hhead_to_tail(self, pool5, objvec):
-    fc7 = self.hRCNN_top(pool5)
-    fc7_sft = self.hRCNN_sft(fc7, objvec).mean(3).mean(2)
-    return fc7_sft
+    pool5_sft = self.hRCNN_sft(pool5, objvec)
+    fc7 = self.hRCNN_top(pool5_sft).mean(3).mean(2)
+    return fc7
 
   def _ohead_to_tail(self, pool5, objvec):
-    fc7 = self.oRCNN_top(pool5)
-    fc7_sft = self.oRCNN_sft(fc7, objvec).mean(3).mean(2)
-    return fc7_sft
+    pool5_sft = self.oRCNN_sft(pool5, objvec)
+    fc7 = self.oRCNN_top(pool5_sft).mean(3).mean(2)
+    return fc7
 
   def _phead_to_tail(self, pool5):
     fc7_all = self.pRCNN_top(pool5).mean(3).mean(2)
