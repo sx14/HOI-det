@@ -372,10 +372,11 @@ if __name__ == '__main__':
                                        max(hbox[0, 3], obox[0, 3])]).reshape(1, 4)
 
                       pbox = gen_part_boxes(hbox[0], key_points, [im_h, im_w])
+                      pbox1 = gen_part_boxes1(hbox[0], key_points)
+
                       pbox = np.array(pbox)
                       pbox = pbox.reshape((1, 6, 5))
 
-                      pbox1 = gen_part_boxes1(hbox[0], key_points)
                       pbox1 = np.array(pbox1)
                       pbox1 = pbox1.reshape((1, 6, 5))
 

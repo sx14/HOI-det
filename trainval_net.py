@@ -50,7 +50,7 @@ def parse_args():
                       default=1, type=int)
   parser.add_argument('--epochs', dest='max_epochs',
                       help='number of epochs to train',
-                      default=6, type=int)
+                      default=8, type=int)
   parser.add_argument('--disp_interval', dest='disp_interval',
                       help='number of iterations to display',
                       default=100, type=int)
@@ -70,7 +70,7 @@ def parse_args():
                       action='store_true')
   parser.add_argument('--ls', dest='large_scale',
                       help='whether use large imag scale',
-                      action='store_true')                      
+                      action='store_true')
   parser.add_argument('--mGPUs', dest='mGPUs',
                       help='whether use multiple GPUs',
                       action='store_true')
@@ -109,10 +109,10 @@ def parse_args():
                       default=1, type=int)
   parser.add_argument('--checkepoch', dest='checkepoch',
                       help='checkepoch to load model',
-                      default=1, type=int)
+                      default=6, type=int)
   parser.add_argument('--checkpoint', dest='checkpoint',
                       help='checkpoint to load model',
-                      default=0, type=int)
+                      default=91451, type=int)
 # log and display
   parser.add_argument('--use_tfb', dest='use_tfboard',
                       help='whether use tensorboard',
@@ -426,7 +426,7 @@ if __name__ == '__main__':
         loss_temp = 0
         loss_cls_temp = 0
         loss_bin_temp = 0
-        start = time.time() 
+        start = time.time()
         ld_time = 0
 
     save_name = os.path.join(output_dir, 'ho_spa_rcnn3_lf_no_nis_vrb_sft_glb_part_w2v_{}_{}_{}.pth'.format(args.session, epoch, step))

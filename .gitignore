@@ -3,6 +3,7 @@ models/
 output/
 logs/
 *.mat
+eval_vcoco/
 
 # READ THIS BEFORE YOU REFACTOR ME
 #
