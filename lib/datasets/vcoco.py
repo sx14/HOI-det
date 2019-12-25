@@ -107,10 +107,14 @@ class vcoco(imdb):
 
         with open(os.path.join(data_path, 'coco_object_list.txt')) as f:
             coco_obj_list = f.readlines()
+            coco_obj_list = [line.strip() for line in coco_obj_list]
             coco_obj2ind = dict(zip(coco_obj_list, range(len(coco_obj_list))))
 
         our2coco = {}
         for obj in obj2ind:
+            if obj not in coco_obj2ind:
+                print(obj)
+                continue
             our2coco[obj2ind[obj]] = coco_obj2ind[obj]
 
         return our2coco

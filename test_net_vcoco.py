@@ -83,7 +83,7 @@ def parse_args():
                       default=6, type=int)
   parser.add_argument('--checkpoint', dest='checkpoint',
                       help='checkpoint to load network',
-                      default=75265, type=int)
+                      default=9941, type=int)
 
 
   args = parser.parse_args()
@@ -153,7 +153,7 @@ if __name__ == '__main__':
       generate_VCOCO_detection_and_eval(cfg.DATA_DIR + '/vcoco', output_dir, all_results)
 
   print('Loading object detections ...')
-  det_path = 'data/hico/Test_Faster_RCNN_R-50-PFN_2x_VCOCO_DET_with_pose.pkl'
+  det_path = 'data/vcoco/Test_Faster_RCNN_R-50-PFN_2x_VCOCO_with_pose.pkl'
   with open(det_path) as f:
       det_db = pickle.load(f)
 
@@ -258,7 +258,7 @@ if __name__ == '__main__':
   print('Loaded Photo: {} images.'.format(num_images))
 
   all_results = []
-  image_path_template = 'data/vcoco/test/COCO_test2014_%s.jpg'
+  image_path_template = 'data/vcoco/images/test/COCO_val2014_%s.jpg'
   for i, im_id in enumerate(det_db):
       print('test [%d/%d]' % (i + 1, num_images))
       im_file = image_path_template % str(im_id).zfill(12)
@@ -336,7 +336,6 @@ if __name__ == '__main__':
                       spa_map_raw = spa_map_raw[np.newaxis, : ,: ,:]
                       spa_maps_raw = np.concatenate((spa_maps_raw, spa_map_raw))
 
-                      # original object id(1 base) --hoi--> our object id(0 base)
                       obj_class_id = object_det[4]
                       obj_vec_raw = obj2vec[obj_class_id]
                       obj_vec_raw = obj_vec_raw[np.newaxis, :]
@@ -420,11 +419,13 @@ if __name__ == '__main__':
   if not os.path.exists(output_dir):
       os.makedirs(output_dir)
 
-  generate_VCOCO_detection_and_eval(cfg.DATA_DIR + '/vcoco', output_dir, all_results)
-
   print('Saving results ...')
   with open(output_path, 'wb') as f:
       pickle.dump(all_results, f)
+
+  generate_VCOCO_detection_and_eval(cfg.DATA_DIR + '/vcoco', output_dir, all_results)
+
+
 
 
 
