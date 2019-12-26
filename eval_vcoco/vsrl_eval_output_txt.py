@@ -465,7 +465,7 @@ class VCOCOeval(object):
     f.close()
 
 def _load_vcoco(vcoco_file):
-  print('loading vcoco annotations...')
+  print('Loading vcoco annotations...')
   with open(vcoco_file, 'r') as f:
     vsrl_data = json.load(f)
   for i in range(len(vsrl_data)):

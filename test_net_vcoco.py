@@ -151,6 +151,7 @@ if __name__ == '__main__':
       with open(output_path) as f:
           all_results = pickle.load(f)
       generate_VCOCO_detection_and_eval(cfg.DATA_DIR + '/vcoco', output_dir, all_results)
+      exit(0)
 
   print('Loading object detections ...')
   det_path = 'data/vcoco/Test_Faster_RCNN_R-50-PFN_2x_VCOCO_with_pose.pkl'
@@ -302,7 +303,6 @@ if __name__ == '__main__':
               object_bboxes = []
               object_classes = []
               object_scores = []
-              action_scores = []
 
               # This is a valid human
               hbox = np.array([human_det[2][0],
@@ -406,14 +406,12 @@ if __name__ == '__main__':
                                  obj_vecs,
                                  num_hois)
 
-              curr_batch_size = vrb_prob.shape[1]
               vrb_prob = vrb_prob.data.cpu().numpy()
-              action_scores.append(vrb_prob[0].tolist())
 
               det['object_box'] = object_bboxes
               det['object_class'] = object_classes
               det['object_score'] = object_scores
-              det['action_score'] = action_scores
+              det['action_score'] = vrb_prob[0].tolist()
               all_results.append(det)
 
   if not os.path.exists(output_dir):

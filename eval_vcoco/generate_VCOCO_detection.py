@@ -19,82 +19,82 @@ from vsrl_eval_output_txt import VCOCOeval
 
 def apply_prior(Object_class, prediction):
     if Object_class != 32:  # not a snowboard, then the action is impossible to be snowboard
-        prediction[0][0][21] = 0
+        prediction[21] = 0
 
     if Object_class != 74:  # not a book, then the action is impossible to be read
-        prediction[0][0][24] = 0
+        prediction[24] = 0
 
     if Object_class != 33:  # not a sports ball, then the action is impossible to be kick
-        prediction[0][0][7] = 0
+        prediction[7] = 0
 
     if (Object_class != 41) and (Object_class != 40) and (Object_class != 42) and (
             Object_class != 46):  # not 'wine glass', 'bottle', 'cup', 'bowl', then the action is impossible to be drink
-        prediction[0][0][13] = 0
+        prediction[13] = 0
 
     if Object_class != 37:  # not a skateboard, then the action is impossible to be skateboard
-        prediction[0][0][26] = 0
+        prediction[26] = 0
 
     if Object_class != 38:  # not a surfboard, then the action is impossible to be surfboard
-        prediction[0][0][0] = 0
+        prediction[0] = 0
 
     if Object_class != 31:  # not a ski, then the action is impossible to be ski
-        prediction[0][0][1] = 0
+        prediction[1] = 0
 
     if Object_class != 64:  # not a laptop, then the action is impossible to be work on computer
-        prediction[0][0][8] = 0
+        prediction[8] = 0
 
     if (Object_class != 77) and (Object_class != 43) and (
             Object_class != 44):  # not 'scissors', 'fork', 'knife', then the action is impossible to be cur instr
-        prediction[0][0][2] = 0
+        prediction[2] = 0
 
     if (Object_class != 33) and (
             Object_class != 30):  # not 'sports ball', 'frisbee', then the action is impossible to be throw and catch
-        prediction[0][0][15] = 0
-        prediction[0][0][28] = 0
+        prediction[15] = 0
+        prediction[28] = 0
 
     if Object_class != 68:  # not a cellphone, then the action is impossible to be talk_on_phone
-        prediction[0][0][6] = 0
+        prediction[6] = 0
 
     if (Object_class != 14) and (Object_class != 61) and (Object_class != 62) and (Object_class != 60) and (
             Object_class != 58) and (
             Object_class != 57):  # not 'bench', 'dining table', 'toilet', 'bed', 'couch', 'chair', then the action is impossible to be lay
-        prediction[0][0][12] = 0
+        prediction[12] = 0
 
     if (Object_class != 32) and (Object_class != 31) and (Object_class != 37) and (
             Object_class != 38):  # not 'snowboard', 'skis', 'skateboard', 'surfboard', then the action is impossible to be jump
-        prediction[0][0][11] = 0
+        prediction[11] = 0
 
     if (Object_class != 47) and (Object_class != 48) and (Object_class != 49) and (Object_class != 50) and (
             Object_class != 51) and (Object_class != 52) and (Object_class != 53) and (Object_class != 54) and (
             Object_class != 55) and (
             Object_class != 56):  # not ''banana', 'apple', 'sandwich', 'orange', 'carrot', 'broccoli', 'hot dog', 'pizza', 'cake', 'donut', then the action is impossible to be eat_obj
-        prediction[0][0][9] = 0
+        prediction[9] = 0
 
     if (Object_class != 43) and (Object_class != 44) and (
             Object_class != 45):  # not 'fork', 'knife', 'spoon', then the action is impossible to be eat_instr
-        prediction[0][0][16] = 0
+        prediction[16] = 0
 
     if (Object_class != 39) and (
             Object_class != 35):  # not 'tennis racket', 'baseball bat', then the action is impossible to be hit_instr
-        prediction[0][0][19] = 0
+        prediction[19] = 0
 
     if (Object_class != 33):  # not 'sports ball, then the action is impossible to be hit_obj
-        prediction[0][0][20] = 0
+        prediction[20] = 0
 
     if (Object_class != 2) and (Object_class != 4) and (Object_class != 6) and (Object_class != 8) and (
             Object_class != 9) and (Object_class != 7) and (Object_class != 5) and (Object_class != 3) and (
             Object_class != 18) and (
             Object_class != 21):  # not 'bicycle', 'motorcycle', 'bus', 'truck', 'boat', 'train', 'airplane', 'car', 'horse', 'elephant', then the action is impossible to be ride
-        prediction[0][0][5] = 0
+        prediction[5] = 0
 
     if (Object_class != 2) and (Object_class != 4) and (Object_class != 18) and (Object_class != 21) and (
             Object_class != 14) and (Object_class != 57) and (Object_class != 58) and (Object_class != 60) and (
             Object_class != 62) and (Object_class != 61) and (Object_class != 29) and (Object_class != 27) and (
             Object_class != 25):  # not 'bicycle', 'motorcycle', 'horse', 'elephant', 'bench', 'chair', 'couch', 'bed', 'toilet', 'dining table', 'suitcase', 'handbag', 'backpack', then the action is impossible to be sit
-        prediction[0][0][10] = 0
+        prediction[10] = 0
 
     if (Object_class == 1):
-        prediction[0][0][4] = 0
+        prediction[4] = 0
 
     return prediction
 
@@ -138,12 +138,12 @@ def generate_pkl(test_result, prior_mask, Action_dic_inv, prior_flag=3):
             if prior_flag == 1:
                 prediction_HO = apply_prior(class_id, prediction_HO)
             if prior_flag == 2:
-                prediction_HO = prediction_HO * prior_mask[:, class_id].reshape(1, 29)
+                prediction_HO = prediction_HO * prior_mask[:, class_id]
             if prior_flag == 3:
                 prediction_HO = apply_prior(class_id, prediction_HO)
-                prediction_HO = prediction_HO * prior_mask[:, class_id].reshape(1, 29)
+                prediction_HO = prediction_HO * prior_mask[:, class_id]
 
-            This_Score_obj = np.concatenate((O_bbox.reshape(1, 4), prediction_HO[0] * O_det), axis=1)
+            This_Score_obj = np.concatenate((O_bbox.reshape(1, 4), (prediction_HO * O_det).reshape(1, -1)), axis=1)
             Score_obj = np.concatenate((Score_obj, This_Score_obj), axis=0)
 
         # Find out the object box associated with highest action score
@@ -227,9 +227,9 @@ def generate_VCOCO_detection_and_eval(data_root, output_root, all_results):
     Action_dic = json.load(open(data_root + '/' + 'action_index.json'))
     Action_dic_inv = {y: x for x, y in Action_dic.iteritems()}
 
-    vcocoeval = VCOCOeval(data_root + '/' + 'v-coco/data/vcoco/vcoco_test.json',
-                          data_root + '/' + 'v-coco/data/instances_vcoco_all_2014.json',
-                          data_root + '/' + 'v-coco/data/splits/vcoco_test.ids')
+    vcocoeval = VCOCOeval(data_root + '/' + 'annotations/vcoco_test.json',
+                          data_root + '/' + 'annotations/instances_vcoco_all_2014.json',
+                          data_root + '/' + 'annotations/vcoco_test.ids')
 
     if not os.path.exists(output_root):
         os.makedirs(output_root)
