@@ -305,7 +305,7 @@ if __name__ == '__main__':
 
   if args.resume:
     load_name = os.path.join(output_dir,
-      'ho_spa_rcnn3_lf_no_nis_vrb_sft_glb_part_scene_att_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
+      'ho_spa_rcnn3_lf_no_nis_vrb_sft_glb_part_scene_att_exp_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
     print("loading checkpoint %s" % (load_name))
     checkpoint = torch.load(load_name)
     args.session = checkpoint['session']
@@ -429,7 +429,7 @@ if __name__ == '__main__':
         start = time.time()
         ld_time = 0
 
-    save_name = os.path.join(output_dir, 'ho_spa_rcnn3_lf_no_nis_vrb_sft_glb_part_scene_att_{}_{}_{}.pth'.format(args.session, epoch, step))
+    save_name = os.path.join(output_dir, 'ho_spa_rcnn3_lf_no_nis_vrb_sft_glb_part_scene_att_exp_{}_{}_{}.pth'.format(args.session, epoch, step))
     save_checkpoint({
       'session': args.session,
       'epoch': epoch + 1,

@@ -4,7 +4,7 @@ from __future__ import print_function
 
 from model.utils.config import cfg
 from model.faster_rcnn.faster_rcnn import _fasterRCNN
-from model.faster_rcnn.SFT_layer import ResBlock_SFT
+from model.faster_rcnn.SFT_layer import SFTLayer
 
 import torch
 import torch.nn as nn
@@ -305,15 +305,15 @@ class resnet(_fasterRCNN):
     self.cond_layer2 = cond_net.cond_layer2
     self.cond_layer3 = cond_net.cond_layer3
 
-    self.sft_base = ResBlock_SFT(64)
-    self.sft_layer1 = ResBlock_SFT(256)
-    self.sft_layer2 = ResBlock_SFT(512)
-    self.sft_layer3 = ResBlock_SFT(1024)
+    self.sft_base = SFTLayer(64)
+    self.sft_layer1 = SFTLayer(256)
+    self.sft_layer2 = SFTLayer(512)
+    self.sft_layer3 = SFTLayer(1024)
 
     self.cond_net = ROICond()
 
     import copy
-    self.iRCNN_SFT = ResBlock_SFT()
+    self.iRCNN_SFT = SFTLayer()
     self.iRCNN_top = nn.Sequential(resnet.layer4)
     self.hRCNN_top = nn.Sequential(copy.deepcopy(resnet.layer4))
     self.oRCNN_top = nn.Sequential(copy.deepcopy(resnet.layer4))
