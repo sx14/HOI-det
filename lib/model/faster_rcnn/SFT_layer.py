@@ -35,10 +35,10 @@ class ResBlock_SFT(nn.Module):
         self.sft1 = SFTLayer()
         self.conv1 = nn.Conv2d(channel, channel, 3, 1, 1)
 
-    def forward(self, x):
+    def forward(self, feat, cond):
         # x[0]: fea; x[1]: cond
-        fea = self.sft0(x)
-        fea = F.relu(self.conv0(fea), inplace=True)
-        fea = self.sft1((fea, x[1]))
-        fea = self.conv1(fea)
-        return x[0] + fea
+        feat_sft = self.sft0(feat, cond)
+        feat_sft = F.relu(self.conv0(feat_sft), inplace=True)
+        feat_sft = self.sft1(feat_sft, cond)
+        feat_sft = self.conv1(feat_sft)
+        return feat + feat_sft
