@@ -392,8 +392,6 @@ class vcoco(imdb):
                     vrb_classes = raw_hoi[1]
                     if sum(vrb_classes) == 0:
                         vrb_classes = []
-                    else:
-                        vrb_classes = vrb_classes.astype(np.int)
 
                     vrb_maskes = range(len(self.vrb_classes))
 
