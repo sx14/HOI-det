@@ -133,8 +133,8 @@ class _fasterRCNN(nn.Module):
         scls_score = self.spa_cls_score(spa_feat)
         scls_prob = F.sigmoid(scls_score)
 
-        vcls_score = self.obj_cls_score(obj_vecs[0])
-        vcls_prob = F.sigmoid(vcls_score)
+        # vcls_score = self.obj_cls_score(obj_vecs[0])
+        # vcls_prob = F.sigmoid(vcls_score)
 
         # compute object classification probability
         icls_score = self.iRCNN_cls_score(iroi_pooled_feat)
@@ -165,7 +165,8 @@ class _fasterRCNN(nn.Module):
         ccls_prob = F.sigmoid(ccls_score)
         ccls_prob = ccls_prob.repeat((icls_prob.shape[0], 1))
 
-        cls_prob = (icls_prob + hcls_prob + ocls_prob + pcls_prob + ccls_prob) * scls_prob * vcls_prob
+        # cls_prob = (icls_prob + hcls_prob + ocls_prob + pcls_prob + ccls_prob) * scls_prob * vcls_prob
+        cls_prob = (icls_prob + hcls_prob + ocls_prob + pcls_prob + ccls_prob) * scls_prob
 
         RCNN_loss_cls = 0
         RCNN_loss_bin = 0
@@ -178,10 +179,11 @@ class _fasterRCNN(nn.Module):
             icls_loss = F.binary_cross_entropy(icls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
             hcls_loss = F.binary_cross_entropy(hcls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
             ocls_loss = F.binary_cross_entropy(ocls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
-            vcls_loss = F.binary_cross_entropy(vcls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
+            # vcls_loss = F.binary_cross_entropy(vcls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
             pcls_loss = F.binary_cross_entropy(pcls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
             ccls_loss = F.binary_cross_entropy(ccls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
-            RCNN_loss_cls = scls_loss + icls_loss + hcls_loss + ocls_loss + vcls_loss + pcls_loss + ccls_loss
+            # RCNN_loss_cls = scls_loss + icls_loss + hcls_loss + ocls_loss + vcls_loss + pcls_loss + ccls_loss
+            RCNN_loss_cls = scls_loss + icls_loss + hcls_loss + ocls_loss + pcls_loss + ccls_loss
 
         cls_prob = cls_prob.view(batch_size, irois.size(1), -1)
         bin_prob = Variable(torch.zeros(batch_size, irois.size(1), 2)).cuda()
