@@ -41,7 +41,7 @@ def parse_args():
   parser = argparse.ArgumentParser(description='Train a Fast R-CNN network')
   parser.add_argument('--dataset', dest='dataset',
                       help='training dataset',
-                      default='hico_full', type=str)
+                      default='vcoco_full', type=str)
   parser.add_argument('--net', dest='net',
                       help='vgg16, res101',
                       default='res101', type=str)
@@ -50,7 +50,7 @@ def parse_args():
                       default=1, type=int)
   parser.add_argument('--epochs', dest='max_epochs',
                       help='number of epochs to train',
-                      default=8, type=int)
+                      default=6, type=int)
   parser.add_argument('--disp_interval', dest='disp_interval',
                       help='number of iterations to display',
                       default=100, type=int)
@@ -156,6 +156,7 @@ if __name__ == '__main__':
   print('Called with args:')
   print(args)
 
+
   if args.dataset == "hico_mini":
       args.imdb_name = "hico2_mini_train"
       args.imdbval_name = "hico2_mini_test"
@@ -164,8 +165,12 @@ if __name__ == '__main__':
       args.imdb_name = "hico2_full_train"
       args.imdbval_name = "hico_full_test"
       args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '75']
+  elif args.dataset == "vcoco_full":
+      args.imdb_name = "vcoco_full_trainval"
+      args.imdbval_name = "vcoco_full_test"
+      args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '75']
   else:
-      print('Only support HICO-DET dataset now.')
+      print('Only support HICO-DET and V-COCO dataset now.')
 
   args.cfg_file = "cfgs/{}_ls.yml".format(args.net) if args.large_scale else "cfgs/{}.yml".format(args.net)
 
