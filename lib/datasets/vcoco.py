@@ -26,7 +26,7 @@ import pickle
 from .imdb import imdb
 from .imdb import ROOT_DIR
 from . import ds_utils
-from datasets.pose_map import est_part_boxes, gen_part_boxes
+from datasets.pose_map import est_part_boxes, gen_part_boxes, gen_part_boxes1
 # TODO: make fast_rcnn irrelevant
 # >>>> obsolete, because it depends on sth outside of this project
 from model.utils.config import cfg
@@ -68,6 +68,23 @@ def iou(box1, box2):
         iou = 0
 
     return iou
+
+
+def refine_human_box_with_skeleton(box, skeleton, conf_thr=0.01):
+    if skeleton is None:
+        return box
+
+    xmin, ymin, xmax, ymax = box
+    for i in range(len(skeleton)):
+        pt_x = skeleton[i, 0]
+        pt_y = skeleton[i, 1]
+        pt_s = skeleton[i, 2]
+        if pt_s > conf_thr:
+            xmin = min(xmin, pt_x)
+            xmax = max(xmax, pt_x)
+            ymin = min(ymin, pt_y)
+            ymax = max(ymax, pt_y)
+    return [xmin, ymin, xmax, ymax]
 
 
 class vcoco(imdb):
@@ -130,6 +147,7 @@ class vcoco(imdb):
 
         self._class_to_ind = dict(zip(self._classes, xrange(len(self._classes))))
         self._image_ext = '.jpg'
+        self._depth_ext = '.npy'
         self._all_image_info = self._load_image_set_info()
         self._obj2vec = None
         self._image_index = None
@@ -177,10 +195,28 @@ class vcoco(imdb):
         """
         Construct an image path from the image's "index" identifier.
         """
+        index = index.split('&')[0]
         image_path = os.path.join(self._data_path, 'images', self._image_set,
                                   index + self._image_ext)
         assert os.path.exists(image_path), 'Path does not exist: {}'.format(image_path)
         return image_path
+
+    def depth_path_at(self, i):
+        """
+        Return the absolute path to image i in the image sequence.
+        """
+        return self.depth_path_from_index(self._image_index[i])
+
+    def depth_path_from_index(self, index):
+        """
+        Construct an image path from the image's "index" identifier.
+        """
+        index = index.split('&')[0]
+        depth_path = os.path.join(self._data_path, 'humans', self._image_set,
+                                  index + self._depth_ext)
+        assert os.path.exists(depth_path), \
+            'Path does not exist: {}'.format(depth_path)
+        return depth_path
 
     def _load_image_set_info(self):
         print('Loading image set info ...')
@@ -330,8 +366,9 @@ class vcoco(imdb):
             image_name = image_id_template % str(image_id).zfill(12)
 
             # augment positive instances
-            image_hw = [self._all_image_info[image_name][1],
-                        self._all_image_info[image_name][0]]
+            im_w = self._all_image_info[image_name][0]
+            im_h = self._all_image_info[image_name][1]
+            image_hw = [im_h, im_w]
             img_pos_hois = self.augment_hoi_instances(img_pos_hois, image_hw)
 
             # select negative instances
@@ -355,6 +392,7 @@ class vcoco(imdb):
                           'oboxes': [],
                           'iboxes': [],
                           'pbox_lists': [],
+                          'pbox_lists1': [],
                           'hoi_classes': [],
                           'obj_classes': [],
                           'vrb_classes': [],
@@ -364,15 +402,41 @@ class vcoco(imdb):
                           'width': self._all_image_info[image_name][0],
                           'height': self._all_image_info[image_name][1],
                           'flipped': False}
-            all_annos[image_name] = image_anno
 
             for pn, hois in enumerate([img_pos_hois, img_neg_hois]):
                 for raw_hoi in hois:
 
+                    raw_key_points = raw_hoi[7]
+                    if raw_key_points is not None and len(raw_key_points) == 51:
+                        # valid skeleton key points
+                        key_points = np.array(raw_key_points)
+                        key_points = np.reshape(key_points, (17, 3))
+                        # check x,y
+                        key_points[:, :2][key_points[:, :2] < 0] = 0
+                        key_points[:, 0][key_points[:, 0] >= im_w] = im_w - 1
+                        key_points[:, 1][key_points[:, 1] >= im_h] = im_h - 1
+                    else:
+                        key_points = None
+
+                    # load and check hbox
                     hbox = raw_hoi[2]
+                    hbox = [max(0, hbox[0]), max(0, hbox[1]),
+                            max(0, hbox[2]), max(0, hbox[3])]
+                    hbox = [min(im_w-1, hbox[0]), min(im_h-1, hbox[1]),
+                            min(im_w-1, hbox[2]), min(im_h-1, hbox[3])]
+                    hbox = refine_human_box_with_skeleton(hbox, key_points)
+
+                    # load and check obox
                     obox = raw_hoi[3]
+                    obox = [max(0, obox[0]), max(0, obox[1]),
+                            max(0, obox[2]), max(0, obox[3])]
+                    obox = [min(im_w - 1, obox[0]), min(im_h - 1, obox[1]),
+                            min(im_w - 1, obox[2]), min(im_h - 1, obox[3])]
+
+                    # generate union box
                     ibox = [min(hbox[0], obox[0]), min(hbox[1], obox[1]),
                             max(hbox[2], obox[2]), max(hbox[3], obox[3])]
+
                     obj_class = raw_hoi[5]
                     vrb_classes = raw_hoi[1]
                     if sum(vrb_classes) == 0:
@@ -390,13 +454,8 @@ class vcoco(imdb):
                     image_anno['obj_classes'].append(obj_class)
                     image_anno['hoi_masks'].append(-1)
                     image_anno['vrb_masks'].append(vrb_maskes)
-
-                    raw_key_points = raw_hoi[7]
-                    if raw_key_points is None or len(raw_key_points) != 51:
-                        image_anno['pbox_lists'].append(est_part_boxes(hbox))
-                    else:
-                        key_points = np.array(raw_key_points).reshape((17, 3))
-                        image_anno['pbox_lists'].append(gen_part_boxes(hbox, key_points, image_hw))
+                    image_anno['pbox_lists'].append(gen_part_boxes(hbox, key_points, image_hw))
+                    image_anno['pbox_lists1'].append(gen_part_boxes1(hbox, key_points))
 
                     if pn == 0:
                         # positive - 0
@@ -410,7 +469,8 @@ class vcoco(imdb):
                 image_anno['hboxes'] = np.zeros((0, 4))
                 image_anno['oboxes'] = np.zeros((0, 4))
                 image_anno['iboxes'] = np.zeros((0, 4))
-                image_anno['pbox_lists'] = np.zeros((0, 6*4))
+                image_anno['pbox_lists'] = np.zeros((0, 6, 5))
+                image_anno['pbox_lists1'] = np.zeros((0, 6, 5))
                 image_anno['hoi_classes'] = np.zeros((0, 2))
                 image_anno['obj_classes'] = np.zeros(0)
                 image_anno['bin_classes'] = np.zeros(0, 2)
@@ -423,6 +483,7 @@ class vcoco(imdb):
                 image_anno['iboxes'] = np.array(image_anno['iboxes'])
                 image_anno['obj_classes'] = np.array(image_anno['obj_classes'])
                 image_anno['pbox_lists'] = np.array(image_anno['pbox_lists'])
+                image_anno['pbox_lists1'] = np.array(image_anno['pbox_lists1'])
                 image_anno['hoi_classes'] = np.zeros((len(image_anno['hboxes']), 2))
                 image_anno['hoi_masks'] = np.zeros((len(image_anno['hboxes']), 2))
 
@@ -442,6 +503,43 @@ class vcoco(imdb):
                 for i, ins_verbs in enumerate(vrb_masks):
                     for vrb_id in ins_verbs:
                         image_anno['vrb_masks'][i, vrb_id] = 1
+
+            batch_size = 35
+            ins_num = len(image_anno['hboxes'])
+            if ins_num > batch_size:
+                ins_inds = np.array(range(ins_num))
+                np.random.shuffle(ins_inds)
+                image_anno['hboxes'] = image_anno['hboxes'][ins_inds]
+                image_anno['oboxes'] = image_anno['oboxes'][ins_inds]
+                image_anno['iboxes'] = image_anno['iboxes'][ins_inds]
+                image_anno['pbox_lists'] = image_anno['pbox_lists'][ins_inds]
+                image_anno['pbox_lists1'] = image_anno['pbox_lists1'][ins_inds]
+                image_anno['obj_classes'] = image_anno['obj_classes'][ins_inds]
+                image_anno['bin_classes'] = image_anno['bin_classes'][ins_inds]
+                image_anno['hoi_classes'] = image_anno['hoi_classes'][ins_inds]
+                image_anno['vrb_classes'] = image_anno['vrb_classes'][ins_inds]
+                image_anno['hoi_masks'] = image_anno['hoi_masks'][ins_inds]
+                image_anno['vrb_masks'] = image_anno['vrb_masks'][ins_inds]
+
+                for b in range(int(ins_num / batch_size)):
+                    image_anno1 = dict()
+                    image_anno1['hboxes'] = image_anno['hboxes'][b*batch_size:(b+1)*batch_size]
+                    image_anno1['oboxes'] = image_anno['oboxes'][b*batch_size:(b+1)*batch_size]
+                    image_anno1['iboxes'] = image_anno['iboxes'][b*batch_size:(b+1)*batch_size]
+                    image_anno1['pbox_lists'] = image_anno['pbox_lists'][b*batch_size:(b+1)*batch_size]
+                    image_anno1['pbox_lists1'] = image_anno['pbox_lists1'][b*batch_size:(b+1)*batch_size]
+                    image_anno1['obj_classes'] = image_anno['obj_classes'][b*batch_size:(b+1)*batch_size]
+                    image_anno1['bin_classes'] = image_anno['bin_classes'][b*batch_size:(b+1)*batch_size]
+                    image_anno1['hoi_classes'] = image_anno['hoi_classes'][b*batch_size:(b+1)*batch_size]
+                    image_anno1['vrb_classes'] = image_anno['vrb_classes'][b*batch_size:(b+1)*batch_size]
+                    image_anno1['hoi_masks'] = image_anno['hoi_masks'][b*batch_size:(b+1)*batch_size]
+                    image_anno1['vrb_masks'] = image_anno['vrb_masks'][b*batch_size:(b+1)*batch_size]
+                    image_anno1['width'] = image_anno['width']
+                    image_anno1['height'] = image_anno['height']
+                    image_anno1['flipped'] = image_anno['flipped']
+                    all_annos[image_name+'&%d' % b] = image_anno1
+            else:
+                all_annos[image_name] = image_anno
 
         return all_annos
 
