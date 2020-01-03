@@ -10,32 +10,25 @@ from __future__ import print_function
 import _init_paths
 import os
 import pickle
-import sys
 import numpy as np
 import argparse
 import pprint
-import pdb
 import time
 import cv2
 import torch
 from torch.autograd import Variable
-import torch.nn as nn
 import torch.optim as optim
 
 import torchvision.transforms as transforms
-import torchvision.datasets as dset
 from scipy.misc import imread
-from roi_data_layer.roidb import combined_roidb
-from roi_data_layer.roibatchLoader import roibatchLoader, gen_spatial_map
+from roi_data_layer.roibatchLoader import gen_spatial_map
 from model.utils.config import cfg, cfg_from_file, cfg_from_list, get_output_dir
-from model.rpn.bbox_transform import clip_boxes
 from model.nms.nms_wrapper import nms
 from model.rpn.bbox_transform import bbox_transform_inv
-from model.utils.net_utils import save_net, load_net, vis_detections
 from model.utils.blob import im_list_to_blob
 from model.faster_rcnn.vgg16 import vgg16
 from model.faster_rcnn.resnet import resnet
-from generate_HICO_detection import generate_HICO_detection, org_obj2hoi
+from generate_VCOCO_detection import generate_VCOCO_detection_and_eval
 from datasets.pose_map import gen_part_boxes, est_part_boxes
 from datasets.vcoco import vcoco
 import pdb
@@ -90,7 +83,7 @@ def parse_args():
                       default=6, type=int)
   parser.add_argument('--checkpoint', dest='checkpoint',
                       help='checkpoint to load network',
-                      default=75265, type=int)
+                      default=9941, type=int)
 
 
   args = parser.parse_args()
@@ -157,11 +150,11 @@ if __name__ == '__main__':
       print('Loading test results ...')
       with open(output_path) as f:
           all_results = pickle.load(f)
-      # TODO: generate json output
-      # TODO: call vcoco eval function
+      generate_VCOCO_detection_and_eval(cfg.DATA_DIR + '/vcoco', output_dir, all_results)
+      exit(0)
 
   print('Loading object detections ...')
-  det_path = 'data/hico/Test_Faster_RCNN_R-50-PFN_2x_VCOCO_DET_with_pose.pkl'
+  det_path = 'data/vcoco/Test_Faster_RCNN_R-50-PFN_2x_VCOCO_with_pose.pkl'
   with open(det_path) as f:
       det_db = pickle.load(f)
 
@@ -172,6 +165,8 @@ if __name__ == '__main__':
     'ho_spa_rcnn3_lf_no_nis_3b_vrb_obj_att_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
 
   obj_classes, vrb_classes, obj2ind, vrb2ind = vcoco.load_hoi_classes(cfg.DATA_DIR + '/vcoco')
+  obj_class_map = vcoco.load_object_class_map(cfg.DATA_DIR + '/vcoco')
+
   obj2vec = vcoco.load_obj2vec(cfg.DATA_DIR + '/vcoco')
 
   # initilize the network here.
@@ -263,8 +258,8 @@ if __name__ == '__main__':
   num_images = len(det_db)
   print('Loaded Photo: {} images.'.format(num_images))
 
-  all_results = {}
-  image_path_template = 'data/vcoco/test/COCO_test2014_%s.jpg'
+  all_results = []
+  image_path_template = 'data/vcoco/images/test/COCO_val2014_%s.jpg'
   for i, im_id in enumerate(det_db):
       print('test [%d/%d]' % (i + 1, num_images))
       im_file = image_path_template % str(im_id).zfill(12)
@@ -274,11 +269,6 @@ if __name__ == '__main__':
           im_in = np.concatenate((im_in, im_in, im_in), axis=2)
       im_in = im_in[:, :, ::-1]     # rgb -> bgr
       blobs, im_scales = _get_image_blob(im_in)
-
-      hboxes_raw = np.zeros((0, 4))
-      oboxes_raw = np.zeros((0, 4))
-      iboxes_raw = np.zeros((0, 4))
-      pboxes_raw = np.zeros((0, 6, 4))
 
       data_height = im_in.shape[0]
       data_width = im_in.shape[1]
@@ -290,17 +280,30 @@ if __name__ == '__main__':
           [data_width / 2, data_height / 2, data_width, data_height]
       ]
       sboxes_raw = np.array(gt_sboxes)
+      sboxes_raw = sboxes_raw[np.newaxis, :, :]
 
-      spa_maps_raw = np.zeros((0, 2, 64, 64))
-      obj_vecs_raw = np.zeros((0, 300))
-      obj_classes = []
-      hscores = []
-      oscores = []
-
-      num_cand = 0
       im_results = []
       for human_det in det_db[im_id]:
           if (np.max(human_det[5]) > human_thres) and (human_det[1] == 'Human'):
+
+              hboxes_raw = np.zeros((0, 4))
+              oboxes_raw = np.zeros((0, 4))
+              iboxes_raw = np.zeros((0, 4))
+              pboxes_raw = np.zeros((0, 6, 4))
+              spa_maps_raw = np.zeros((0, 2, 64, 64))
+              obj_vecs_raw = np.zeros((0, 300))
+              num_cand = 0
+
+              # save image information
+              det = {}
+              det['image_id'] = im_id
+              det['human_box'] = human_det[2]
+              det['human_score'] = human_det[5]
+
+              object_bboxes = []
+              object_classes = []
+              object_scores = []
+
               # This is a valid human
               hbox = np.array([human_det[2][0],
                                human_det[2][1],
@@ -333,7 +336,6 @@ if __name__ == '__main__':
                       spa_map_raw = spa_map_raw[np.newaxis, : ,: ,:]
                       spa_maps_raw = np.concatenate((spa_maps_raw, spa_map_raw))
 
-                      # original object id(1 base) --hoi--> our object id(0 base)
                       obj_class_id = object_det[4]
                       obj_vec_raw = obj2vec[obj_class_id]
                       obj_vec_raw = obj_vec_raw[np.newaxis, :]
@@ -344,88 +346,84 @@ if __name__ == '__main__':
                       iboxes_raw = np.concatenate((iboxes_raw, ibox))
                       pboxes_raw = np.concatenate((pboxes_raw, pbox))
 
-                      obj_classes.append(object_det[4])
-                      hscores.append(human_det[5])
-                      oscores.append(object_det[5])
+                      object_bboxes.append(object_det[2])
+                      object_classes.append(obj_class_map[object_det[4]])
+                      object_scores.append(object_det[5])
                       num_cand += 1
-      if num_cand == 0:
-          all_results[im_id] = im_results
-          continue
 
-      hboxes_raw = hboxes_raw[np.newaxis, :, :]
-      oboxes_raw = oboxes_raw[np.newaxis, :, :]
-      iboxes_raw = iboxes_raw[np.newaxis, :, :]
-      pboxes_raw = pboxes_raw[np.newaxis, :, :]
-      sboxes_raw = sboxes_raw[np.newaxis, :, :]
-      spa_maps_raw = spa_maps_raw[np.newaxis, :, :, :, :]
-      obj_vecs_raw = obj_vecs_raw[np.newaxis, :, :]
-      hboxes_t = torch.from_numpy(hboxes_raw * im_scales[0])
-      oboxes_t = torch.from_numpy(oboxes_raw * im_scales[0])
-      iboxes_t = torch.from_numpy(iboxes_raw * im_scales[0])
-      pboxes_t = torch.from_numpy(pboxes_raw * im_scales[0])
-      sboxes_t = torch.from_numpy(sboxes_raw * im_scales[0])
-      spa_maps_t = torch.from_numpy(spa_maps_raw)
-      obj_vecs_t = torch.from_numpy(obj_vecs_raw)
+              if num_cand == 0:
+                  continue
 
-      hboxes.data.resize_(hboxes_t.size()).copy_(hboxes_t)
-      oboxes.data.resize_(oboxes_t.size()).copy_(oboxes_t)
-      iboxes.data.resize_(iboxes_t.size()).copy_(iboxes_t)
-      pboxes.data.resize_(pboxes_t.size()).copy_(pboxes_t)
-      sboxes.data.resize_(sboxes_t.size()).copy_(sboxes_t)
+              hboxes_raw = hboxes_raw[np.newaxis, :, :]
+              oboxes_raw = oboxes_raw[np.newaxis, :, :]
+              iboxes_raw = iboxes_raw[np.newaxis, :, :]
+              pboxes_raw = pboxes_raw[np.newaxis, :, :]
 
-      spa_maps.data.resize_(spa_maps_t.size()).copy_(spa_maps_t)
-      obj_vecs.data.resize_(obj_vecs_t.size()).copy_(obj_vecs_t)
+              spa_maps_raw = spa_maps_raw[np.newaxis, :, :, :, :]
+              obj_vecs_raw = obj_vecs_raw[np.newaxis, :, :]
 
-      assert len(im_scales) == 1, "Only single-image batch implemented"
-      im_blob = blobs
-      im_info_np = np.array([[im_blob.shape[1], im_blob.shape[2], im_scales[0]]], dtype=np.float32)
+              hboxes_t = torch.from_numpy(hboxes_raw * im_scales[0])
+              oboxes_t = torch.from_numpy(oboxes_raw * im_scales[0])
+              iboxes_t = torch.from_numpy(iboxes_raw * im_scales[0])
+              pboxes_t = torch.from_numpy(pboxes_raw * im_scales[0])
+              sboxes_t = torch.from_numpy(sboxes_raw * im_scales[0])
+              spa_maps_t = torch.from_numpy(spa_maps_raw)
+              obj_vecs_t = torch.from_numpy(obj_vecs_raw)
 
-      im_data_pt = torch.from_numpy(im_blob)
-      im_data_pt = im_data_pt.permute(0, 3, 1, 2)
-      im_info_pt = torch.from_numpy(im_info_np)
+              hboxes.data.resize_(hboxes_t.size()).copy_(hboxes_t)
+              oboxes.data.resize_(oboxes_t.size()).copy_(oboxes_t)
+              iboxes.data.resize_(iboxes_t.size()).copy_(iboxes_t)
+              pboxes.data.resize_(pboxes_t.size()).copy_(pboxes_t)
+              sboxes.data.resize_(sboxes_t.size()).copy_(sboxes_t)
+              spa_maps.data.resize_(spa_maps_t.size()).copy_(spa_maps_t)
+              obj_vecs.data.resize_(obj_vecs_t.size()).copy_(obj_vecs_t)
 
-      im_data.data.resize_(im_data_pt.size()).copy_(im_data_pt)
-      im_info.data.resize_(im_info_pt.size()).copy_(im_info_pt)
+              assert len(im_scales) == 1, "Only single-image batch implemented"
+              im_blob = blobs
+              im_info_np = np.array([[im_blob.shape[1], im_blob.shape[2], im_scales[0]]], dtype=np.float32)
 
-      det_tic = time.time()
+              im_data_pt = torch.from_numpy(im_blob)
+              im_data_pt = im_data_pt.permute(0, 3, 1, 2)
+              im_info_pt = torch.from_numpy(im_info_np)
 
-      batch_size = 75
-      for k in range(0, num_cand, batch_size):
-          with torch.no_grad():
-              vrb_prob, bin_prob, RCNN_loss_cls, RCNN_loss_bin = \
-                  fasterRCNN(im_data, im_info,
-                             hboxes[:, k:k+batch_size],
-                             oboxes[:, k:k+batch_size],
-                             iboxes[:, k:k+batch_size],
-                             pboxes[:, k:k+batch_size],
-                             sboxes,
-                             vrb_classes,
-                             bin_classes,
-                             hoi_masks,
-                             spa_maps[:, k:k+batch_size],
-                             obj_vecs[:, k:k+batch_size],
-                             num_hois)
-          curr_batch_size = vrb_prob.shape[1]
-          vrb_prob = vrb_prob.data.cpu().numpy()
+              im_data.data.resize_(im_data_pt.size()).copy_(im_data_pt)
+              im_info.data.resize_(im_info_pt.size()).copy_(im_info_pt)
+
+              det_tic = time.time()
+
+              with torch.no_grad():
+                  vrb_prob, bin_prob, RCNN_loss_cls, RCNN_loss_bin = \
+                      fasterRCNN(im_data, im_info,
+                                 hboxes,
+                                 oboxes,
+                                 iboxes,
+                                 pboxes,
+                                 sboxes,
+                                 vrb_classes,
+                                 bin_classes,
+                                 hoi_masks,
+                                 spa_maps,
+                                 obj_vecs,
+                                 num_hois)
+
+              vrb_prob = vrb_prob.data.cpu().numpy()
+
+              det['object_box'] = object_bboxes
+              det['object_class'] = object_classes
+              det['object_score'] = object_scores
+              det['action_score'] = vrb_prob[0].tolist()
+              all_results.append(det)
+
+  if not os.path.exists(output_dir):
+      os.makedirs(output_dir)
+
+  print('Saving results ...')
+  with open(output_path, 'wb') as f:
+      pickle.dump(all_results, f)
+
+  generate_VCOCO_detection_and_eval(cfg.DATA_DIR + '/vcoco', output_dir, all_results)
 
 
-          # TODO: generate json output
-          # TODO: call vcoco eval function
-          for j in range(curr_batch_size):
-              temp = []
-              temp.append(hboxes_raw[0, k+j])  # Human box
-              temp.append(oboxes_raw[0, k+j])  # Object box
-              temp.append(obj_classes[k+j])    # Object class
-              temp.append(vrb_prob[0, j].tolist())  # Score (600)
-              temp.append(hscores[k+j])  # Human score
-              temp.append(oscores[k+j])  # Object score
-              temp.append(bin_prob.cpu().data.numpy()[0, j].tolist())  # binary score
-              im_results.append(temp)
-
-      all_results[im_id] = im_results
-
-  if not os.path.exists(args.output_dir):
-      os.mkdir(args.output_dir)
 
 
 

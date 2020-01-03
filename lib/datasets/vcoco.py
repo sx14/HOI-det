@@ -26,7 +26,6 @@ import pickle
 from .imdb import imdb
 from .imdb import ROOT_DIR
 from . import ds_utils
-from .voc_eval import voc_eval
 from datasets.pose_map import est_part_boxes, gen_part_boxes
 # TODO: make fast_rcnn irrelevant
 # >>>> obsolete, because it depends on sth outside of this project
@@ -89,11 +88,36 @@ class vcoco(imdb):
             for vrb in vrb2ind:
                 vrb_list[vrb2ind[vrb]] = vrb
 
-        with open(os.path.join(data_path, 'object_list.txt')) as f:
-            obj_list = f.readlines()
-            obj2ind = {zip(obj_list, range(len(obj_list)))}
+        with open(os.path.join(data_path, 'object_index.json')) as f:
+            obj2ind = json.load(f)
+            obj_list = [0] * len(obj2ind)
+            for obj in obj2ind:
+                obj_list[obj2ind[obj]] = obj
 
         return obj_list, vrb_list, obj2ind, vrb2ind
+
+    @staticmethod
+    def load_object_class_map(data_path):
+
+        with open(os.path.join(data_path, 'object_index.json')) as f:
+            obj2ind = json.load(f)
+            obj_list = [0] * len(obj2ind)
+            for obj in obj2ind:
+                obj_list[obj2ind[obj]] = obj
+
+        with open(os.path.join(data_path, 'coco_object_list.txt')) as f:
+            coco_obj_list = f.readlines()
+            coco_obj_list = [line.strip() for line in coco_obj_list]
+            coco_obj2ind = dict(zip(coco_obj_list, range(len(coco_obj_list))))
+
+        our2coco = {}
+        for obj in obj2ind:
+            if obj not in coco_obj2ind:
+                print(obj)
+                continue
+            our2coco[obj2ind[obj]] = coco_obj2ind[obj]
+
+        return our2coco
 
     def __init__(self, image_set, version):
         imdb.__init__(self, 'vcoco_' + version + '_' + image_set)
@@ -153,7 +177,7 @@ class vcoco(imdb):
         """
         Construct an image path from the image's "index" identifier.
         """
-        image_path = os.path.join(self._data_path, self._image_set,
+        image_path = os.path.join(self._data_path, 'images', self._image_set,
                                   index + self._image_ext)
         assert os.path.exists(image_path), 'Path does not exist: {}'.format(image_path)
         return image_path
@@ -163,10 +187,11 @@ class vcoco(imdb):
         image_set_info_path = os.path.join(self._data_path, 'image_set_info.pkl')
         if os.path.exists(image_set_info_path):
             print(image_set_info_path + ' is found!')
-            all_image_info = pickle.load(image_set_info_path)
+            with open(image_set_info_path) as f:
+                all_image_info = pickle.load(f)
         else:
             all_image_info = {}
-            image_root = os.path.join(self._data_path, self._image_set)
+            image_root = os.path.join(self._data_path, 'images', self._image_set)
             for image_name in tqdm(os.listdir(image_root)):
                 image_path = os.path.join(image_root, image_name)
 
@@ -300,9 +325,9 @@ class vcoco(imdb):
             else:
                 anno_gt_db[image_id] = [hoi_ins_gt]
 
-        image_id_template = 'COCO_%s2014_%s'
+        image_id_template = 'COCO_train2014_%s'
         for image_id, img_pos_hois in anno_gt_db.items():
-            image_name = image_id_template % (self._image_set, str(image_id).zfill(12))
+            image_name = image_id_template % str(image_id).zfill(12)
 
             # augment positive instances
             image_hw = [self._all_image_info[image_name][1],
@@ -354,9 +379,8 @@ class vcoco(imdb):
                         vrb_classes = []
                     else:
                         vrb_classes = vrb_classes.astype(np.int)
-                    vrb_maskes = raw_hoi[4]
-                    if vrb_maskes is None:
-                        vrb_maskes = []
+
+                    vrb_maskes = range(len(self.vrb_classes))
 
                     image_anno['hboxes'].append(hbox)
                     image_anno['oboxes'].append(obox)

@@ -4,7 +4,6 @@ output/
 logs/
 *.mat
 *.json
-eval_vcoco/
 
 # READ THIS BEFORE YOU REFACTOR ME
 #
