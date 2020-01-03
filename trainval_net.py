@@ -50,7 +50,7 @@ def parse_args():
                       default=1, type=int)
   parser.add_argument('--epochs', dest='max_epochs',
                       help='number of epochs to train',
-                      default=8, type=int)
+                      default=6, type=int)
   parser.add_argument('--disp_interval', dest='disp_interval',
                       help='number of iterations to display',
                       default=100, type=int)
@@ -303,7 +303,7 @@ if __name__ == '__main__':
 
   if args.resume:
     load_name = os.path.join(output_dir,
-      'ho_spa_rcnn3_lf_no_nis_3b_vrb_obj_att_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
+      'base1_bpa_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
     print("loading checkpoint %s" % (load_name))
     checkpoint = torch.load(load_name)
     args.session = checkpoint['session']
@@ -423,7 +423,7 @@ if __name__ == '__main__':
         loss_bin_temp = 0
         start = time.time()
 
-    save_name = os.path.join(output_dir, 'ho_spa_rcnn3_lf_no_nis_3b_vrb_obj_att_{}_{}_{}.pth'.format(args.session, epoch, step))
+    save_name = os.path.join(output_dir, 'base1_bpa_{}_{}_{}.pth'.format(args.session, epoch, step))
     save_checkpoint({
       'session': args.session,
       'epoch': epoch + 1,

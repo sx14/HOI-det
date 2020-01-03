@@ -332,8 +332,8 @@ class vcoco(imdb):
             # augment positive instances
             image_hw = [self._all_image_info[image_name][1],
                         self._all_image_info[image_name][0]]
-            im_w = image_hw[1]
             im_h = image_hw[0]
+            im_w = image_hw[1]
             img_pos_hois = self.augment_hoi_instances(img_pos_hois, image_hw)
 
             # select negative instances
