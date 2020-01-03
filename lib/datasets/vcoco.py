@@ -441,8 +441,6 @@ class vcoco(imdb):
                     vrb_classes = raw_hoi[1]
                     if sum(vrb_classes) == 0:
                         vrb_classes = []
-                    else:
-                        vrb_classes = vrb_classes.astype(np.int)
 
                     vrb_maskes = range(len(self.vrb_classes))
 
@@ -561,15 +559,19 @@ class vcoco(imdb):
                 assert (boxes[:, 2] >= boxes[:, 0]).all()
                 new_entry[box_type] = boxes
 
-            pbox_lists = self.roidb[i]['pbox_lists'].copy()
-            pboxes = pbox_lists.reshape((-1, 4))
-            oldx1 = pboxes[:, 0].copy()
-            oldx2 = pboxes[:, 2].copy()
-            pboxes[:, 0] = widths[i] - oldx2 - 1
-            pboxes[:, 2] = widths[i] - oldx1 - 1
-            assert (pboxes[:, 2] >= pboxes[:, 0]).all()
-            pbox_lists = pboxes.reshape((-1, 6 * 4))
-            new_entry['pbox_lists'] = pbox_lists
+            box_types = ['pbox_lists', 'pbox_lists1']
+            for box_type in box_types:
+                box_lists = self.roidb[i][box_type].copy()
+                inst_num = box_lists.shape[0]
+                part_num = box_lists.shape[1]
+                boxes = box_lists.reshape((inst_num * part_num, -1))
+                oldx1 = boxes[:, 0].copy()
+                oldx2 = boxes[:, 2].copy()
+                boxes[:, 0] = widths[i] - oldx2 - 1
+                boxes[:, 2] = widths[i] - oldx1 - 1
+                assert (boxes[:, 2] >= boxes[:, 0]).all()
+                box_lists = boxes.reshape((inst_num, part_num, -1))
+                new_entry[box_type] = box_lists
 
             self.roidb.append(new_entry)
         self._image_index = self._image_index * 2
