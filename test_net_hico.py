@@ -7,6 +7,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import _init_paths
 import os
 import pickle
 import sys
@@ -19,21 +20,27 @@ import cv2
 import torch
 from torch.autograd import Variable
 import torch.nn as nn
+import torch.optim as optim
 
+import torchvision.transforms as transforms
 import torchvision.datasets as dset
 from scipy.misc import imread
+from roi_data_layer.roidb import combined_roidb
 from roi_data_layer.roibatchLoader import roibatchLoader, gen_spatial_map
-from roi_data_layer.pose_map import gen_pose_obj_map1
-from model.utils.config import cfg, cfg_from_file, cfg_from_list
+from roi_data_layer.pose_map import gen_pose_obj_map, gen_pose_obj_map1
+from model.utils.config import cfg, cfg_from_file, cfg_from_list, get_output_dir
+from model.rpn.bbox_transform import clip_boxes
+from model.nms.nms_wrapper import nms
 from model.rpn.bbox_transform import bbox_transform_inv
+from model.utils.net_utils import save_net, load_net, vis_detections
 from model.utils.blob import im_list_to_blob
 from model.faster_rcnn.vgg16 import vgg16
 from model.faster_rcnn.resnet import resnet
-from eval_hico.generate_HICO_detection import generate_HICO_detection, org_obj2hoi
+from generate_HICO_detection import generate_HICO_detection, org_obj2hoi
 
 from datasets.hico2 import hico2
 from datasets.hico2 import refine_human_box_with_skeleton
-from datasets.pose_map import gen_part_boxes, gen_part_boxes1
+from datasets.pose_map import est_part_boxes, gen_part_boxes, gen_part_boxes1
 import pdb
 
 try:

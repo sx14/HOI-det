@@ -22,6 +22,7 @@ import torch.optim as optim
 import torchvision.transforms as transforms
 from scipy.misc import imread
 from roi_data_layer.roibatchLoader import gen_spatial_map
+from roi_data_layer.pose_map import gen_pose_obj_map1
 from model.utils.config import cfg, cfg_from_file, cfg_from_list, get_output_dir
 from model.nms.nms_wrapper import nms
 from model.rpn.bbox_transform import bbox_transform_inv
@@ -29,7 +30,8 @@ from model.utils.blob import im_list_to_blob
 from model.faster_rcnn.vgg16 import vgg16
 from model.faster_rcnn.resnet import resnet
 from generate_VCOCO_detection import generate_VCOCO_detection_and_eval
-from datasets.pose_map import gen_part_boxes, est_part_boxes
+from datasets.vcoco import refine_human_box_with_skeleton
+from datasets.pose_map import gen_part_boxes, gen_part_boxes1
 from datasets.vcoco import vcoco
 import pdb
 
@@ -80,17 +82,17 @@ def parse_args():
                       default=1, type=int)
   parser.add_argument('--checkepoch', dest='checkepoch',
                       help='checkepoch to load network',
-                      default=6, type=int)
+                      default=3, type=int)
   parser.add_argument('--checkpoint', dest='checkpoint',
                       help='checkpoint to load network',
-                      default=9941, type=int)
+                      default=10051, type=int)
 
 
   args = parser.parse_args()
   return args
 
 
-def _get_image_blob(im):
+def _get_image_blob(im, dp):
   """Converts an image into a network input.
   Arguments:
     im (ndarray): a color image in BGR order
@@ -102,12 +104,16 @@ def _get_image_blob(im):
   im_orig = im.astype(np.float32, copy=True)
   im_orig -= cfg.PIXEL_MEANS
 
+  dp_orig = dp.astype(np.float32, copy=True)
+  dp_orig -= cfg.DEPTH_MEANS
+
   im_shape = im_orig.shape
   im_size_min = np.min(im_shape[0:2])
   im_size_max = np.max(im_shape[0:2])
 
+  im_scales = []
   processed_ims = []
-  im_scale_factors = []
+  processed_dps = []
 
   for target_size in cfg.TEST.SCALES:
     im_scale = float(target_size) / float(im_size_min)
@@ -116,13 +122,18 @@ def _get_image_blob(im):
       im_scale = float(cfg.TEST.MAX_SIZE) / float(im_size_max)
     im = cv2.resize(im_orig, None, None, fx=im_scale, fy=im_scale,
             interpolation=cv2.INTER_LINEAR)
-    im_scale_factors.append(im_scale)
+    dp = cv2.resize(dp_orig, None, None, fx=im_scale, fy=im_scale,
+            interpolation=cv2.INTER_LINEAR)
+
+    im_scales.append(im_scale)
     processed_ims.append(im)
+    processed_dps.append(dp)
 
   # Create a blob to hold the input images
-  blob = im_list_to_blob(processed_ims)
+  im_blob = im_list_to_blob(processed_ims, 3)
+  dp_blob = im_list_to_blob(processed_dps, 7)
 
-  return blob, np.array(im_scale_factors)
+  return im_blob, dp_blob, im_scales
 
 
 if __name__ == '__main__':
@@ -162,7 +173,7 @@ if __name__ == '__main__':
   if not os.path.exists(input_dir):
     raise Exception('There is no input directory for loading network from ' + input_dir)
   load_name = os.path.join(input_dir,
-    'ho_spa_rcnn3_lf_no_nis_3b_vrb_obj_att_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
+    'ho_spa_rcnn3_lf_no_nis_vrb_sft_glb_part_scene_att_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
 
   obj_classes, vrb_classes, obj2ind, vrb2ind = vcoco.load_hoi_classes(cfg.DATA_DIR + '/vcoco')
   obj_class_map = vcoco.load_object_class_map(cfg.DATA_DIR + '/vcoco')
@@ -197,6 +208,7 @@ if __name__ == '__main__':
 
   # initilize the tensor holder here.
   im_data = torch.FloatTensor(1)
+  dp_data = torch.FloatTensor(1)
   im_info = torch.FloatTensor(1)
   num_hois = torch.LongTensor(1)
   hboxes = torch.FloatTensor(1)
@@ -208,11 +220,13 @@ if __name__ == '__main__':
   bin_classes = torch.FloatTensor(1)
   hoi_masks = torch.FloatTensor(1)
   spa_maps = torch.FloatTensor(1)
+  pose_maps = torch.FloatTensor(1)
   obj_vecs = torch.FloatTensor(1)
 
   # ship to cuda
   if args.cuda > 0:
     im_data = im_data.cuda()
+    dp_data = dp_data.cuda()
     im_info = im_info.cuda()
     num_hois = num_hois.cuda()
     hboxes = hboxes.cuda()
@@ -225,11 +239,13 @@ if __name__ == '__main__':
     bin_classes = bin_classes.cuda()
     hoi_masks = hoi_masks.cuda()
     spa_maps = spa_maps.cuda()
+    pose_maps = pose_maps.cuda()
     obj_vecs = obj_vecs.cuda()
 
   # make variable
   with torch.no_grad():
       im_data = Variable(im_data)
+      dp_data = Variable(dp_data)
       im_info = Variable(im_info)
       num_hois = Variable(num_hois)
       hboxes = Variable(hboxes)
@@ -241,6 +257,7 @@ if __name__ == '__main__':
       bin_classes = Variable(bin_classes)
       hoi_masks = Variable(hoi_masks)
       spa_maps = Variable(spa_maps)
+      pose_maps = Variable(pose_maps)
       obj_vecs = Variable(obj_vecs)
 
   if args.cuda > 0:
@@ -260,6 +277,7 @@ if __name__ == '__main__':
 
   all_results = []
   image_path_template = 'data/vcoco/images/test/COCO_val2014_%s.jpg'
+  human_path_template = 'data/vcoco/humans/test/COCO_val2014_%s.npy'
   for i, im_id in enumerate(det_db):
       print('test [%d/%d]' % (i + 1, num_images))
       im_file = image_path_template % str(im_id).zfill(12)
@@ -268,7 +286,14 @@ if __name__ == '__main__':
           im_in = im_in[:, :, np.newaxis]
           im_in = np.concatenate((im_in, im_in, im_in), axis=2)
       im_in = im_in[:, :, ::-1]     # rgb -> bgr
-      blobs, im_scales = _get_image_blob(im_in)
+      im_h = im_in.shape[0]
+      im_w = im_in.shape[1]
+
+      dp_file = human_path_template % str(im_id).zfill(12)
+      dp_in = np.load(dp_file)
+
+      im_blobs, dp_blobs, im_scales = _get_image_blob(im_in, dp_in)
+      im_results = []
 
       data_height = im_in.shape[0]
       data_width = im_in.shape[1]
@@ -282,15 +307,38 @@ if __name__ == '__main__':
       sboxes_raw = np.array(gt_sboxes)
       sboxes_raw = sboxes_raw[np.newaxis, :, :]
 
-      im_results = []
+
       for human_det in det_db[im_id]:
           if (np.max(human_det[5]) > human_thres) and (human_det[1] == 'Human'):
+              # This is a valid human
+              raw_key_points = human_det[6]
+              if raw_key_points is None or len(raw_key_points) != 51:
+                  key_points = None
+              else:
+                  key_points = np.array(raw_key_points)
+                  key_points = np.reshape(key_points, (17, 3))
+                  # check x,y
+                  key_points[:, :2][key_points[:, :2] < 0] = 0
+                  key_points[:, 0][key_points[:, 0] >= im_w] = im_w - 1
+                  key_points[:, 1][key_points[:, 1] >= im_h] = im_h - 1
+
+              hbox = [human_det[2][0],
+                      human_det[2][1],
+                      human_det[2][2],
+                      human_det[2][3]]
+              hbox = [max(0, hbox[0]), max(0, hbox[1]),
+                      max(0, hbox[2]), max(0, hbox[3])]
+              hbox = [min(im_w - 1, hbox[0]), min(im_h - 1, hbox[1]),
+                      min(im_w - 1, hbox[2]), min(im_h - 1, hbox[3])]
+              hbox = refine_human_box_with_skeleton(hbox, key_points)
+              hbox = np.array(hbox).reshape(1, 4)
 
               hboxes_raw = np.zeros((0, 4))
               oboxes_raw = np.zeros((0, 4))
               iboxes_raw = np.zeros((0, 4))
-              pboxes_raw = np.zeros((0, 6, 4))
+              pboxes_raw = np.zeros((0, 6, 5))
               spa_maps_raw = np.zeros((0, 2, 64, 64))
+              pose_maps_raw = np.zeros((0, 8, 224, 224))
               obj_vecs_raw = np.zeros((0, 300))
               num_cand = 0
 
@@ -303,13 +351,6 @@ if __name__ == '__main__':
               object_bboxes = []
               object_classes = []
               object_scores = []
-
-              # This is a valid human
-              hbox = np.array([human_det[2][0],
-                               human_det[2][1],
-                               human_det[2][2],
-                               human_det[2][3]]).reshape(1, 4)
-              raw_key_points = human_det[6]
 
               for object_det in det_db[im_id]:
                   if (np.max(object_det[5]) > object_thres) and not (np.all(object_det[2] == human_det[2])):
@@ -324,17 +365,22 @@ if __name__ == '__main__':
                                        max(hbox[0, 2], obox[0, 2]),
                                        max(hbox[0, 3], obox[0, 3])]).reshape(1, 4)
 
-                      if raw_key_points != None and len(raw_key_points) == 51:
-                          key_points = np.array(raw_key_points).reshape((17, 3))
-                          pbox = gen_part_boxes(hbox[0], key_points, im_in.shape[:2])
-                      else:
-                          pbox = est_part_boxes(hbox[0])
+                      pbox = gen_part_boxes(hbox[0], key_points, [im_h, im_w])
+                      pbox1 = gen_part_boxes1(hbox[0], key_points)
 
                       pbox = np.array(pbox)
-                      pbox = pbox.reshape((6, 4))[np.newaxis, :, :]
+                      pbox = pbox.reshape((1, 6, 5))
+
+                      pbox1 = np.array(pbox1)
+                      pbox1 = pbox1.reshape((1, 6, 5))
+
                       spa_map_raw = gen_spatial_map(human_det[2], object_det[2])
                       spa_map_raw = spa_map_raw[np.newaxis, : ,: ,:]
                       spa_maps_raw = np.concatenate((spa_maps_raw, spa_map_raw))
+
+                      pose_map_raw = gen_pose_obj_map1(hbox[0].tolist(), obox[0].tolist(), ibox[0].tolist(), pbox1[0])
+                      pose_map_raw = pose_map_raw[np.newaxis, :, :, :]
+                      pose_maps_raw = np.concatenate((pose_maps_raw, pose_map_raw))
 
                       obj_class_id = object_det[4]
                       obj_vec_raw = obj2vec[obj_class_id]
@@ -357,9 +403,10 @@ if __name__ == '__main__':
               hboxes_raw = hboxes_raw[np.newaxis, :, :]
               oboxes_raw = oboxes_raw[np.newaxis, :, :]
               iboxes_raw = iboxes_raw[np.newaxis, :, :]
-              pboxes_raw = pboxes_raw[np.newaxis, :, :]
+              pboxes_raw = pboxes_raw[np.newaxis, :, :, :4]
 
               spa_maps_raw = spa_maps_raw[np.newaxis, :, :, :, :]
+              pose_maps_raw = pose_maps_raw[np.newaxis, :, :, :, :]
               obj_vecs_raw = obj_vecs_raw[np.newaxis, :, :]
 
               hboxes_t = torch.from_numpy(hboxes_raw * im_scales[0])
@@ -367,7 +414,9 @@ if __name__ == '__main__':
               iboxes_t = torch.from_numpy(iboxes_raw * im_scales[0])
               pboxes_t = torch.from_numpy(pboxes_raw * im_scales[0])
               sboxes_t = torch.from_numpy(sboxes_raw * im_scales[0])
+
               spa_maps_t = torch.from_numpy(spa_maps_raw)
+              pose_maps_t = torch.from_numpy(pose_maps_raw)
               obj_vecs_t = torch.from_numpy(obj_vecs_raw)
 
               hboxes.data.resize_(hboxes_t.size()).copy_(hboxes_t)
@@ -375,25 +424,30 @@ if __name__ == '__main__':
               iboxes.data.resize_(iboxes_t.size()).copy_(iboxes_t)
               pboxes.data.resize_(pboxes_t.size()).copy_(pboxes_t)
               sboxes.data.resize_(sboxes_t.size()).copy_(sboxes_t)
+
               spa_maps.data.resize_(spa_maps_t.size()).copy_(spa_maps_t)
+              pose_maps.data.resize_(pose_maps_t.size()).copy_(pose_maps_t)
               obj_vecs.data.resize_(obj_vecs_t.size()).copy_(obj_vecs_t)
 
               assert len(im_scales) == 1, "Only single-image batch implemented"
-              im_blob = blobs
-              im_info_np = np.array([[im_blob.shape[1], im_blob.shape[2], im_scales[0]]], dtype=np.float32)
-
-              im_data_pt = torch.from_numpy(im_blob)
-              im_data_pt = im_data_pt.permute(0, 3, 1, 2)
+              im_info_np = np.array([[im_blobs.shape[1], im_blobs.shape[2], im_scales[0]]], dtype=np.float32)
               im_info_pt = torch.from_numpy(im_info_np)
 
+              im_data_pt = torch.from_numpy(im_blobs)
+              im_data_pt = im_data_pt.permute(0, 3, 1, 2)
+
+              dp_data_pt = torch.from_numpy(dp_blobs)
+              dp_data_pt = dp_data_pt.permute(0, 3, 1, 2)
+
               im_data.data.resize_(im_data_pt.size()).copy_(im_data_pt)
+              dp_data.data.resize_(dp_data_pt.size()).copy_(dp_data_pt)
               im_info.data.resize_(im_info_pt.size()).copy_(im_info_pt)
 
               det_tic = time.time()
 
               with torch.no_grad():
                   vrb_prob, bin_prob, RCNN_loss_cls, RCNN_loss_bin = \
-                      fasterRCNN(im_data, im_info,
+                      fasterRCNN(im_data, dp_data, im_info,
                                  hboxes,
                                  oboxes,
                                  iboxes,
@@ -403,6 +457,7 @@ if __name__ == '__main__':
                                  bin_classes,
                                  hoi_masks,
                                  spa_maps,
+                                 pose_maps,
                                  obj_vecs,
                                  num_hois)
 
