@@ -294,23 +294,27 @@ class resnet(_fasterRCNN):
       resnet.load_state_dict({k:v for k,v in state_dict.items() if k in resnet.state_dict()})
 
     # Build resnet.
-    self.RCNN_base = nn.Sequential(resnet.conv1, resnet.bn1, resnet.relu, resnet.maxpool)
-    self.RCNN_layer1 = resnet.layer1
-    self.RCNN_layer2 = resnet.layer2
-    self.RCNN_layer3 = resnet.layer3
 
-    cond_net = GlobalCond(7)
-    self.cond_base = cond_net.cond_base
-    self.cond_layer1 = cond_net.cond_layer1
-    self.cond_layer2 = cond_net.cond_layer2
-    self.cond_layer3 = cond_net.cond_layer3
+    self.RCNN_base = nn.Sequential(resnet.conv1, resnet.bn1, resnet.relu,
+                                   resnet.maxpool, resnet.layer1, resnet.layer2, resnet.layer3)
 
-    self.sft_base = ResBlock_SFT(64)
-    self.sft_layer1 = ResBlock_SFT(256)
-    self.sft_layer2 = ResBlock_SFT(512)
-    self.sft_layer3 = ResBlock_SFT(1024)
+    # self.RCNN_base = nn.Sequential(resnet.conv1, resnet.bn1, resnet.relu, resnet.maxpool)
+    # self.RCNN_layer1 = resnet.layer1
+    # self.RCNN_layer2 = resnet.layer2
+    # self.RCNN_layer3 = resnet.layer3
 
-    self.cond_net = ROICond()
+    # cond_net = GlobalCond(7)
+    # self.cond_base = cond_net.cond_base
+    # self.cond_layer1 = cond_net.cond_layer1
+    # self.cond_layer2 = cond_net.cond_layer2
+    # self.cond_layer3 = cond_net.cond_layer3
+
+    # self.sft_base = ResBlock_SFT(64)
+    # self.sft_layer1 = ResBlock_SFT(256)
+    # self.sft_layer2 = ResBlock_SFT(512)
+    # self.sft_layer3 = ResBlock_SFT(1024)
+
+    # self.cond_net = ROICond()
 
     import copy
     self.iRCNN_SFT = ResBlock_SFT()
@@ -355,13 +359,13 @@ class resnet(_fasterRCNN):
     for p in self.RCNN_base[0].parameters(): p.requires_grad=False
     for p in self.RCNN_base[1].parameters(): p.requires_grad=False
 
-    # assert (0 <= cfg.RESNET.FIXED_BLOCKS < 4)
-    # if cfg.RESNET.FIXED_BLOCKS >= 3:
-    #   for p in self.RCNN_base[6].parameters(): p.requires_grad=False
-    # if cfg.RESNET.FIXED_BLOCKS >= 2:
-    #   for p in self.RCNN_base[5].parameters(): p.requires_grad=False
-    # if cfg.RESNET.FIXED_BLOCKS >= 1:
-    #   for p in self.RCNN_base[4].parameters(): p.requires_grad=False
+    assert (0 <= cfg.RESNET.FIXED_BLOCKS < 4)
+    if cfg.RESNET.FIXED_BLOCKS >= 3:
+      for p in self.RCNN_base[6].parameters(): p.requires_grad=False
+    if cfg.RESNET.FIXED_BLOCKS >= 2:
+      for p in self.RCNN_base[5].parameters(): p.requires_grad=False
+    if cfg.RESNET.FIXED_BLOCKS >= 1:
+      for p in self.RCNN_base[4].parameters(): p.requires_grad=False
 
     def set_bn_fix(m):
       classname = m.__class__.__name__
@@ -384,8 +388,8 @@ class resnet(_fasterRCNN):
     if mode:
       # Set fixed blocks to be in eval mode
       self.RCNN_base.eval()
-      # self.RCNN_base[5].train()
-      # self.RCNN_base[6].train()
+      self.RCNN_base[5].train()
+      self.RCNN_base[6].train()
 
       def set_bn_eval(m):
         classname = m.__class__.__name__
@@ -404,8 +408,8 @@ class resnet(_fasterRCNN):
 
 
   def _ihead_to_tail(self, pool5, pose_map):
-    pose_cond = self.cond_net(pose_map)
-    pool5 = self.iRCNN_SFT([pool5, pose_cond])
+    # pose_cond = self.cond_net(pose_map)
+    # pool5 = self.iRCNN_SFT([pool5, pose_cond])
     fc7 = self.iRCNN_top(pool5).mean(3).mean(2)
     return fc7
 
