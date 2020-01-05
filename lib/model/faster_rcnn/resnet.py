@@ -373,9 +373,9 @@ class resnet(_fasterRCNN):
         for p in m.parameters(): p.requires_grad=False
 
     self.RCNN_base.apply(set_bn_fix)
-    self.RCNN_layer1.apply(set_bn_fix)
-    self.RCNN_layer2.apply(set_bn_fix)
-    self.RCNN_layer3.apply(set_bn_fix)
+    # self.RCNN_layer1.apply(set_bn_fix)
+    # self.RCNN_layer2.apply(set_bn_fix)
+    # self.RCNN_layer3.apply(set_bn_fix)
     self.iRCNN_top.apply(set_bn_fix)
     self.hRCNN_top.apply(set_bn_fix)
     self.oRCNN_top.apply(set_bn_fix)
@@ -397,9 +397,9 @@ class resnet(_fasterRCNN):
           m.eval()
 
       self.RCNN_base.apply(set_bn_eval)
-      self.RCNN_layer1.apply(set_bn_eval)
-      self.RCNN_layer2.apply(set_bn_eval)
-      self.RCNN_layer3.apply(set_bn_eval)
+      # self.RCNN_layer1.apply(set_bn_eval)
+      # self.RCNN_layer2.apply(set_bn_eval)
+      # self.RCNN_layer3.apply(set_bn_eval)
       self.iRCNN_top.apply(set_bn_eval)
       self.hRCNN_top.apply(set_bn_eval)
       self.oRCNN_top.apply(set_bn_eval)
