@@ -88,6 +88,8 @@ def _get_image_blob(roidb, scale_inds):
     im = imread(roidb[i]['image'])
     dp = np.load(roidb[i]['depth'])
 
+    dp = np.zeros((dp.shape[0], dp.shape[1], 7))
+
     if len(im.shape) == 2:
       im = im[:,:,np.newaxis]
       im = np.concatenate((im,im,im), axis=2)
