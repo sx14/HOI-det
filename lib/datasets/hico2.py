@@ -234,8 +234,8 @@ class hico2(imdb):
         index = index.split('&')[0]
         depth_path = os.path.join(self._data_path, 'depths', self._image_set + '2015',
                                   index + self._depth_ext)
-        assert os.path.exists(depth_path), \
-            'Path does not exist: {}'.format(depth_path)
+        # assert os.path.exists(depth_path), \
+        #     'Path does not exist: {}'.format(depth_path)
         return depth_path
 
     def _load_image_set_info(self):
