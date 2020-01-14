@@ -171,7 +171,7 @@ if __name__ == '__main__':
           HICO = pickle.load(f)
       generate_HICO_detection(HICO, output_dir, 1.0, 0.0)
       os.chdir('eval_hico')
-      os.system('matlab -nodesktop -nosplash -r "Generate_detection ' + '../output/results/' + '/;quit;"')
+      os.system('matlab -nodesktop -nosplash -r "Generate_detection ' + '../output/hico_full' + '/;quit;"')
       exit(0)
 
   print('Loading object detections ...')
@@ -183,7 +183,7 @@ if __name__ == '__main__':
   if not os.path.exists(input_dir):
     raise Exception('There is no input directory for loading network from ' + input_dir)
   load_name = os.path.join(input_dir,
-    'ho_spa_rcnn3_lf_no_nis_vrb_glb_part_scene_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
+    'ho_spa_rcnn3_lf_no_nis_vrb_sft_glb_part_scene_att_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
 
   hoi_classes, obj_classes, vrb_classes, obj2int, hoi2vrb, vrb2hoi = hico2.load_hoi_classes(cfg.DATA_DIR + '/hico')
   obj2ind = dict(zip(obj_classes, range(len(obj_classes))))
@@ -494,7 +494,7 @@ if __name__ == '__main__':
 
   generate_HICO_detection(all_results, output_dir, 1.0, 0.0)
   os.chdir('eval_hico')
-  os.system('matlab -nodesktop -nosplash -r "Generate_detection ' + '../output/results/' + '/;quit;"')
+  os.system('matlab -nodesktop -nosplash -r "Generate_detection ' + '../output/hico_full' + '/;quit;"')
   os.chdir('..')
 
   print('Saving results ...')

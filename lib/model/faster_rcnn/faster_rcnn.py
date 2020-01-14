@@ -161,19 +161,19 @@ class _fasterRCNN(nn.Module):
         ocls_score = self.oRCNN_cls_score(oroi_pooled_feat)
         ocls_prob = F.sigmoid(ocls_score)
 
-        # obj_att = self.obj_attention(obj_vecs[0])
-        # part_att_feats = []
-        # for i in range(obj_att.shape[1]):
-        #     part_att = obj_att[:, i:i+1]
-        #     part_feat = proi_pooled_feat[:, i*2048:(i+1)*2048]
-        #     part_att_feat = part_att * part_feat
-        #     part_att_feats.append(part_att_feat)
-        # att_proi_pooled_feat = torch.cat(part_att_feats, dim=1)
-        # att_proi_pooled_feat = Variable(att_proi_pooled_feat.cuda())
-        # att_proi_pooled_feat = att_proi_pooled_feat + proi_pooled_feat
-        # pcls_score = self.pRCNN_cls_score(att_proi_pooled_feat)
+        obj_att = self.obj_attention(obj_vecs[0])
+        part_att_feats = []
+        for i in range(obj_att.shape[1]):
+            part_att = obj_att[:, i:i+1]
+            part_feat = proi_pooled_feat[:, i*2048:(i+1)*2048]
+            part_att_feat = part_att * part_feat
+            part_att_feats.append(part_att_feat)
+        att_proi_pooled_feat = torch.cat(part_att_feats, dim=1)
+        att_proi_pooled_feat = Variable(att_proi_pooled_feat.cuda())
+        att_proi_pooled_feat = att_proi_pooled_feat + proi_pooled_feat
+        pcls_score = self.pRCNN_cls_score(att_proi_pooled_feat)
 
-        pcls_score = self.pRCNN_cls_score(proi_pooled_feat)
+        # pcls_score = self.pRCNN_cls_score(proi_pooled_feat)
         pcls_prob = F.sigmoid(pcls_score)
 
         ccls_score = self.sRCNN_cls_score(sroi_pooled_feat)

@@ -4,6 +4,7 @@ output/
 logs/
 *.mat
 *.json
+*.jpg
 
 # READ THIS BEFORE YOU REFACTOR ME
 #
