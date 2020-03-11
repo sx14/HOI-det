@@ -151,6 +151,9 @@ def draw_human_skeleton_body_part_conf_map(hbox, obox, skeleton, im_path):
 
     im = cv2.imread(im_path)
     gr = np.zeros(im.shape).astype(np.uint8)
+    wt = np.zeros(im.shape).astype(np.uint8)
+    wt[:, :, :] = 255
+
     gr[:, :] = color_grey
     ubox = [int(min(hbox[0], obox[0])), int(min(hbox[1], obox[1])),
             int(max(hbox[2], obox[2])), int(max(hbox[3], obox[3]))]
@@ -163,9 +166,11 @@ def draw_human_skeleton_body_part_conf_map(hbox, obox, skeleton, im_path):
 
     for kp in kps:
         cv2.circle(gr, kp, kp_thick+2, color_point, -1)
+        cv2.circle(wt, kp, kp_thick + 2, color_point, -1)
 
     for kp_cnts in key_point_connections:
         cv2.line(gr, kps[kp_cnts[0]], kps[kp_cnts[1]], color_bone, bone_thick+2)
+        cv2.line(wt, kps[kp_cnts[0]], kps[kp_cnts[1]], color_bone, bone_thick + 2)
 
     # draw body part boxes
     human_wh = [hbox[3] - hbox[1] + 1, hbox[2] - hbox[0] + 1]
@@ -178,18 +183,24 @@ def draw_human_skeleton_body_part_conf_map(hbox, obox, skeleton, im_path):
             int(min(body_part_box[3], ubox[3]))]
         cv2.rectangle(gr, (body_part_box[0], body_part_box[1]), (body_part_box[2], body_part_box[3]),
                       color=color_part, thickness=part_thick+5)
+        cv2.rectangle(wt, (body_part_box[0], body_part_box[1]), (body_part_box[2], body_part_box[3]),
+                      color=color_part, thickness=part_thick + 5)
 
     gr_union = gr[ubox[1]:ubox[3]+1, ubox[0]:ubox[2]+1, :]
+    wt_union = wt[ubox[1]:ubox[3]+1, ubox[0]:ubox[2]+1, :]
     cv2.imshow('123', gr_union)
     cv2.waitKey(0)
     cv2.imwrite('fig2_1.jpg', gr_union)
+    cv2.imwrite('fig2_5.jpg', wt_union)
 
 
 def draw_human_object_skeleton(hbox, obox, skeleton, im_path):
+    # figure2: human-skeleton        (human)
     # figure2: human-object-skeleton (full image)
     # figure4: human-object-skeleton (union box)
 
     im = cv2.imread(im_path)
+    im1 = im.copy()
     colors = [color_h, color_o]
     for i, box in enumerate([hbox, obox]):
         cv2.rectangle(im, (box[0], box[1]), (box[2], box[3]), colors[i], thickness=ho_thick)
@@ -200,14 +211,20 @@ def draw_human_object_skeleton(hbox, obox, skeleton, im_path):
 
     for kp in kps:
         cv2.circle(im, kp, kp_thick, color_point, -1)
+        cv2.circle(im1, kp, kp_thick, color_point, -1)
 
     for kp_cnts in key_point_connections:
         cv2.line(im, kps[kp_cnts[0]], kps[kp_cnts[1]], color_bone, bone_thick)
+        cv2.line(im1, kps[kp_cnts[0]], kps[kp_cnts[1]], color_bone, bone_thick)
 
     ubox = [int(min(hbox[0], obox[0])), int(min(hbox[1], obox[1])),
             int(max(hbox[2], obox[2])), int(max(hbox[3], obox[3]))]
+    hbox = [int(hbox[0]), int(hbox[1]),
+            int(hbox[2]), int(hbox[3])]
     im_union = im[ubox[1]:ubox[3]+1, ubox[0]:ubox[2]+1, :]
+    im_human = im1[hbox[1]:hbox[3]+1, hbox[0]:hbox[2]+1, :]
 
+    cv2.imwrite('fig2_4.jpg', im_human)
     cv2.imwrite('fig4_0.jpg', im_union)
     cv2.imwrite('fig2_0.jpg', im)
 
@@ -308,7 +325,7 @@ if __name__ == '__main__':
     color_o = (240, 176, 0)
     color_point = (0, 255, 255)
     color_bone = (176, 240, 0)
-    color_part = (0, 255, 255)
+    color_part = (0, 190, 255)
     color_grey = (207, 207, 207)
 
     ho_thick = 10
