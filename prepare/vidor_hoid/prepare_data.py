@@ -226,20 +226,21 @@ def load_category_list(cate_path):
 
 if __name__ == '__main__':
     data_root = '../../data/vidor_hoid_mini'
+    save_root = data_root + '/image_data'
 
     # sample frames
     video_root = data_root + '/Data/VID/train'
-    image_root = data_root + '/Data/DET/train'
+    image_root = save_root + '/Data/VID/train'
     prepare_images(video_root, image_root)
 
     # frame annotations
     vid_anno_root = data_root + '/anno/train'
-    img_anno_root = data_root + '/img_anno/train'
+    img_anno_root = save_root + '/anno/train'
     prepare_anno_jsons(vid_anno_root, img_anno_root)
 
     # supplement skeletons
     pose_root = data_root + '/Pose/VID/train'
-    img_anno_with_pose_root = data_root + '/img_anno_with_pose/train'
+    img_anno_with_pose_root = save_root + '/anno_with_pose/train'
     supplement_skeletons(img_anno_root, pose_root, img_anno_with_pose_root)
 
     # gen anno package
@@ -250,4 +251,4 @@ if __name__ == '__main__':
     pre_cates = ['__no_interaction__'] + pre_cates
     obj2idx = {cate: i for i, cate in enumerate(obj_cates)}
     pre2idx = {cate: i for i, cate in enumerate(pre_cates)}
-    generate_anno_package(img_anno_with_pose_root, pre2idx, obj2idx, data_root)
+    generate_anno_package(img_anno_with_pose_root, pre2idx, obj2idx, save_root)
