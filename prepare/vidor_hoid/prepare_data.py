@@ -26,7 +26,8 @@ def prepare_images(video_root, image_root, sample_interval=20):
                 frame_path_dst = os.path.join(image_root, '%s_%s' % (vid, frame_file))
                 shutil.copyfile(frame_path_src, frame_path_dst)
             sample_cnt += len(frame_samples)
-    print('Sampled %d frames.')
+    time.sleep(1)
+    print('Sampled %d frames.' % sample_cnt)
 
 
 def prepare_anno_jsons(vid_anno_root, img_anno_root, sample_interval=20):
@@ -82,7 +83,8 @@ def prepare_anno_jsons(vid_anno_root, img_anno_root, sample_interval=20):
                 with open(frm_anno_path, 'w') as f:
                     json.dump(frm_anno, f)
                 sample_cnt += 1
-    print('Sampled %d frame annotations.')
+    time.sleep(1)
+    print('Sampled %d frame annotations.' % sample_cnt)
 
 
 def is_human(cate):
@@ -174,6 +176,7 @@ def supplement_skeletons(anno_root, pose_root, anno_with_pose_root):
                 anno_with_pose_path = os.path.join(anno_with_pose_root, anno_file)
                 with open(anno_with_pose_path, 'w') as f:
                     json.dump(anno, f)
+    time.sleep(1)
     print('Success ratio: %.2f' % (skt_cnt * 1.0 / hum_cnt))
 
 
