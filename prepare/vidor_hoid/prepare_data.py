@@ -1,4 +1,5 @@
 import os
+import time
 import glob
 import json
 import shutil
@@ -11,6 +12,8 @@ def prepare_images(video_root, image_root, sample_interval=20):
     if not os.path.exists(image_root):
         os.makedirs(image_root)
 
+    print('Copying frames (interval=%d) ...' % sample_interval)
+    time.sleep(2)
     for pid in tqdm(sorted(os.listdir(video_root))):
         pkg_root = os.path.join(video_root, pid)
         for vid in sorted(os.listdir(pkg_root)):
@@ -27,6 +30,8 @@ def prepare_anno_jsons(vid_anno_root, img_anno_root, sample_interval=20):
     if not os.path.exists(img_anno_root):
         os.makedirs(img_anno_root)
 
+    print('Generating frame annotation files (interval=%d) ...' % sample_interval)
+    time.sleep(2)
     for pid in tqdm(sorted(os.listdir(vid_anno_root))):
         pkg_root = os.path.join(vid_anno_root, pid)
         for vid_file in sorted(os.listdir(pkg_root)):
@@ -116,7 +121,9 @@ def supplement_skeletons(anno_root, pose_root, anno_with_pose_root):
     if not os.path.exists(anno_with_pose_root):
         os.makedirs(anno_with_pose_root)
 
-    for pkg_id in os.listdir(pose_root):
+    print('Merging skeletons to frame annotations ...')
+    time.sleep(2)
+    for pkg_id in tqdm(sorted(os.listdir(pose_root))):
         pkg_root = os.path.join(pose_root, pkg_id)
         for pose_file in os.listdir(pkg_root):
             pose_path = os.path.join(pkg_root, pose_file)
@@ -173,8 +180,10 @@ def generate_anno_package(anno_root, pre2idx, obj2idx, save_root):
                     'predicate': '__no_interaction__'})
         return neg_insts
 
+    print('Generating annotation packages ...')
+    time.sleep(2)
     pkgs = {'pos': [], 'neg': []}
-    for anno_file in sorted(os.listdir(anno_root)):
+    for anno_file in tqdm(sorted(os.listdir(anno_root))):
         img_id = anno_file.split('.')[0]
         anno_path = os.path.join(anno_root, anno_file)
         with open(anno_path) as f:
@@ -225,6 +234,7 @@ def load_category_list(cate_path):
 
 
 if __name__ == '__main__':
+    print('==== VidOR-HOID-mini data preparation ====')
     data_root = '../../data/vidor_hoid_mini'
     save_root = data_root + '/image_data'
 
@@ -252,3 +262,4 @@ if __name__ == '__main__':
     obj2idx = {cate: i for i, cate in enumerate(obj_cates)}
     pre2idx = {cate: i for i, cate in enumerate(pre_cates)}
     generate_anno_package(img_anno_with_pose_root, pre2idx, obj2idx, save_root)
+    print('==== Done ====')
