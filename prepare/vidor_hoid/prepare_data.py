@@ -14,6 +14,7 @@ def prepare_images(video_root, image_root, sample_interval=20):
 
     print('Copying frames (interval=%d) ...' % sample_interval)
     time.sleep(2)
+    sample_cnt = 0
     for pid in tqdm(sorted(os.listdir(video_root))):
         pkg_root = os.path.join(video_root, pid)
         for vid in sorted(os.listdir(pkg_root)):
@@ -24,6 +25,8 @@ def prepare_images(video_root, image_root, sample_interval=20):
                 frame_path_src = os.path.join(frm_root, frame_file)
                 frame_path_dst = os.path.join(image_root, '%s_%s' % (vid, frame_file))
                 shutil.copyfile(frame_path_src, frame_path_dst)
+            sample_cnt += len(frame_samples)
+    print('Sampled %d frames.')
 
 
 def prepare_anno_jsons(vid_anno_root, img_anno_root, sample_interval=20):
@@ -32,6 +35,7 @@ def prepare_anno_jsons(vid_anno_root, img_anno_root, sample_interval=20):
 
     print('Generating frame annotation files (interval=%d) ...' % sample_interval)
     time.sleep(2)
+    sample_cnt = 0
     for pid in tqdm(sorted(os.listdir(vid_anno_root))):
         pkg_root = os.path.join(vid_anno_root, pid)
         for vid_file in sorted(os.listdir(pkg_root)):
@@ -41,7 +45,7 @@ def prepare_anno_jsons(vid_anno_root, img_anno_root, sample_interval=20):
                 vid_len = vid_anno['frame_count']
 
             tid2cate = {}
-            for traj_info in vid_anno['subject/object']:
+            for traj_info in vid_anno['subject/objects']:
                 tid2cate[traj_info['tid']] = traj_info['category']
 
             frm_tid2det = [{} for _ in range(vid_len)]
@@ -61,7 +65,7 @@ def prepare_anno_jsons(vid_anno_root, img_anno_root, sample_interval=20):
                 end_fid = relation['end_fid']
                 sbj_tid = relation['subject_tid']
                 obj_tid = relation['object_tid']
-                for fid in range(stt_fid, end_fid+1):
+                for fid in range(stt_fid, end_fid):
                     frm_relations[fid].append({
                         'sbj_tid': sbj_tid,
                         'obj_tid': obj_tid,
@@ -77,6 +81,8 @@ def prepare_anno_jsons(vid_anno_root, img_anno_root, sample_interval=20):
                 frm_anno_path = os.path.join(img_anno_root, '%s_%06d.json' % (vid, fid))
                 with open(frm_anno_path, 'w') as f:
                     json.dump(frm_anno, f)
+                sample_cnt += 1
+    print('Sampled %d frame annotations.')
 
 
 def is_human(cate):
@@ -123,7 +129,9 @@ def supplement_skeletons(anno_root, pose_root, anno_with_pose_root):
 
     print('Merging skeletons to frame annotations ...')
     time.sleep(2)
-    for pkg_id in tqdm(sorted(os.listdir(pose_root))):
+    hum_cnt = 0
+    skt_cnt = 0
+    for pkg_id in tqdm(os.listdir(pose_root)):
         pkg_root = os.path.join(pose_root, pkg_id)
         for pose_file in os.listdir(pkg_root):
             pose_path = os.path.join(pkg_root, pose_file)
@@ -132,34 +140,41 @@ def supplement_skeletons(anno_root, pose_root, anno_with_pose_root):
             fid2skts = defaultdict(list)
             for skt in all_skts:
                 fid = skt['image_id'].split('.')[0]
-                fid2skts[fid].append(skt[fid])
+                fid2skts[fid].append(skt['keypoints'])
 
             vid = pose_file.split('.')[0]
             anno_files = glob.glob(os.path.join(anno_root, '%s_*.json' % vid))
-            for anno_file in anno_files:
-                anno_path = os.path.join(anno_root, anno_file)
+            for anno_path in sorted(anno_files):
                 with open(anno_path) as f:
                     anno = json.load(f)
+
+                anno_file = anno_path.split('/')[-1]
                 fid = anno_file.split('.')[0].split('_')[-1]
                 frm_skts = fid2skts[fid]
                 frm_dets = anno['detections']
-                for det in frm_dets:
+                for det in frm_dets.values():
                     if not is_human(det['category']):
                         continue
+                    hum_cnt += 1
                     max_iou = 0
                     max_skt_idx = -1
                     for skt_idx, skt in enumerate(frm_skts):
                         skt_box = get_skeleton_box(skt)
                         iou = cal_iou(det['bbox'], skt_box)
                         if iou > max_iou:
+                            skt_cnt += 1
                             max_iou = iou
                             max_skt_idx = skt_idx
 
                     if max_iou > 0.4:
                         det['skeleton'] = frm_skts[max_skt_idx]
+                    else:
+                        det['skeleton'] = None
 
-                with open(anno_path, 'w') as f:
+                anno_with_pose_path = os.path.join(anno_with_pose_root, anno_file)
+                with open(anno_with_pose_path, 'w') as f:
                     json.dump(anno, f)
+    print('Success ratio: %.2f' % (skt_cnt * 1.0 / hum_cnt))
 
 
 def generate_anno_package(anno_root, pre2idx, obj2idx, save_root):
@@ -172,7 +187,7 @@ def generate_anno_package(anno_root, pre2idx, obj2idx, save_root):
             if not is_human(sbj_det['category']):
                 continue
             for obj_tid, obj_det in tid2det.items():
-                if sbj_tid == obj_tid or '%d_%d' % (sbj_tid, obj_tid) in pos_sid_oid:
+                if sbj_tid == obj_tid or '%s_%s' % (sbj_tid, obj_tid) in pos_sid_oid:
                     continue
                 neg_insts.append({
                     'sbj_tid': sbj_tid,
@@ -202,29 +217,29 @@ def generate_anno_package(anno_root, pre2idx, obj2idx, save_root):
                 pre_cate = inst['predicate']
                 pre_idx = pre2idx[pre_cate]
 
-                sbj_tid = inst['sbj_tid']
+                sbj_tid = str(inst['sbj_tid'])
                 sbj_cate = tid2det[sbj_tid]['category']
-                sbj_idx = obj2idx[sbj_cate]
+                sbj_cate_idx = obj2idx[sbj_cate]
                 sbj_box = tid2det[sbj_tid]['bbox']
-                sbj_box.append(sbj_idx)
-                sbj_skt = obj2idx[sbj_tid]['skeleton']
+                sbj_box.append(sbj_cate_idx)
+                sbj_skt = tid2det[sbj_tid]['skeleton']
 
-                obj_tid = inst['obj_tid']
+                obj_tid = str(inst['obj_tid'])
                 obj_cate = tid2det[obj_tid]['category']
-                obj_idx = obj2idx[obj_cate]
+                obj_cate_idx = obj2idx[obj_cate]
                 obj_box = tid2det[obj_tid]['bbox']
-                obj_box.append(obj_idx)
+                obj_box.append(obj_cate_idx)
                 inst_list.append([img_id, [pre_idx], sbj_box, obj_box, sbj_skt])
 
             pkgs[pn] += inst_list
 
     import pickle
     pos_pkg_path = os.path.join(save_root, 'anno_POS_with_pose.pkl')
-    with open(pos_pkg_path) as f:
+    with open(pos_pkg_path, 'w') as f:
         pickle.dump(pkgs['pos'], f)
 
     neg_pkg_path = os.path.join(save_root, 'anno_NEG_with_pose.pkl')
-    with open(neg_pkg_path) as f:
+    with open(neg_pkg_path, 'w') as f:
         pickle.dump(pkgs['neg'], f)
 
 
@@ -254,8 +269,8 @@ if __name__ == '__main__':
     supplement_skeletons(img_anno_root, pose_root, img_anno_with_pose_root)
 
     # gen anno package
-    obj_cate_path = data_root + '/object_categories.txt'
-    pre_cate_path = data_root + '/predicate_categories.txt'
+    obj_cate_path = data_root + '/object_labels.txt'
+    pre_cate_path = data_root + '/predicate_labels.txt'
     obj_cates = load_category_list(obj_cate_path)
     pre_cates = load_category_list(pre_cate_path)
     pre_cates = ['__no_interaction__'] + pre_cates
