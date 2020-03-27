@@ -237,11 +237,11 @@ def generate_anno_package(anno_root, pre2idx, obj2idx, save_root):
             pkgs[pn] += inst_list
 
     import pickle
-    pos_pkg_path = os.path.join(save_root, 'anno_POS_with_pose.pkl')
+    pos_pkg_path = os.path.join(save_root, 'train_POS_with_pose.pkl')
     with open(pos_pkg_path, 'w') as f:
         pickle.dump(pkgs['pos'], f)
 
-    neg_pkg_path = os.path.join(save_root, 'anno_NEG_with_pose.pkl')
+    neg_pkg_path = os.path.join(save_root, 'train_NEG_with_pose.pkl')
     with open(neg_pkg_path, 'w') as f:
         pickle.dump(pkgs['neg'], f)
 

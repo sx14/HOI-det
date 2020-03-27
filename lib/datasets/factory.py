@@ -13,6 +13,7 @@ from __future__ import print_function
 __sets = {}
 from datasets.vcoco import vcoco
 from datasets.hico2 import hico2
+from datasets.vidor_hoid import vidor_hoid
 import numpy as np
 
 # Set up hico_<year>_<split>
@@ -21,12 +22,17 @@ for version in ['full', 'mini']:
     name = 'hico2_{}_{}'.format(version, split)
     __sets[name] = (lambda split=split, version=version: hico2(split, version))
 
-# Set up hico_<year>_<split>
+# Set up vcoco_<year>_<split>
 for version in ['full']:
   for split in ['trainval', 'test']:
     name = 'vcoco_{}_{}'.format(version, split)
     __sets[name] = (lambda split=split, version=version: vcoco(split, version))
 
+# Set up vcoco_<year>_<split>
+for version in ['full', 'mini']:
+  for split in ['train', 'test']:
+    name = 'vidor_hoid_{}_{}'.format(version, split)
+    __sets[name] = (lambda split=split, version=version: vidor_hoid(split, version))
 
 
 def get_imdb(name):

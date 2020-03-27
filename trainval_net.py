@@ -41,7 +41,7 @@ def parse_args():
   parser = argparse.ArgumentParser(description='Train a Fast R-CNN network')
   parser.add_argument('--dataset', dest='dataset',
                       help='training dataset',
-                      default='vcoco_full', type=str)
+                      default='vidor_hoid_mini', type=str)
   parser.add_argument('--net', dest='net',
                       help='vgg16, res101',
                       default='res101', type=str)
@@ -162,11 +162,19 @@ if __name__ == '__main__':
       args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '75']
   elif args.dataset == "hico_full":
       args.imdb_name = "hico2_full_train"
-      args.imdbval_name = "hico_full_test"
+      args.imdbval_name = "hico2_full_test"
       args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '75']
   elif args.dataset == "vcoco_full":
       args.imdb_name = "vcoco_full_trainval"
       args.imdbval_name = "vcoco_full_test"
+      args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '75']
+  elif args.dataset == "vidor_hoid_full":
+      args.imdb_name = "vidor_hoid_full_train"
+      args.imdbval_name = "vidor_hoid_full_test"
+      args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '75']
+  elif args.dataset == "vidor_hoid_mini":
+      args.imdb_name = "vidor_hoid_mini_train"
+      args.imdbval_name = "vidor_hoid_mini_test"
       args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '75']
   else:
       print('Only support HICO-DET and V-COCO dataset now.')
