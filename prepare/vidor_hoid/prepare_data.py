@@ -1,4 +1,5 @@
 import os
+from copy import deepcopy
 import time
 import glob
 import json
@@ -223,14 +224,14 @@ def generate_anno_package(anno_root, pre2idx, obj2idx, save_root):
                 sbj_tid = str(inst['sbj_tid'])
                 sbj_cate = tid2det[sbj_tid]['category']
                 sbj_cate_idx = obj2idx[sbj_cate]
-                sbj_box = tid2det[sbj_tid]['bbox']
+                sbj_box = deepcopy(tid2det[sbj_tid]['bbox'])
                 sbj_box.append(sbj_cate_idx)
                 sbj_skt = tid2det[sbj_tid]['skeleton']
 
                 obj_tid = str(inst['obj_tid'])
                 obj_cate = tid2det[obj_tid]['category']
                 obj_cate_idx = obj2idx[obj_cate]
-                obj_box = tid2det[obj_tid]['bbox']
+                obj_box = deepcopy(tid2det[obj_tid]['bbox'])
                 obj_box.append(obj_cate_idx)
                 inst_list.append([img_id, [pre_idx], sbj_box, obj_box, sbj_skt])
 

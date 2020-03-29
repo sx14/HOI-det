@@ -53,7 +53,7 @@ def est_part_boxes(hbox):
     #         pymax = ymin + (i+1) * height / 3.0
     #         p_boxes += [pxmin, pymin, pxmax, pymax]
     #     p_boxes = p_boxes + p_boxes
-    p_boxes = [hbox] * 6
+    p_boxes = hbox * 6
     return p_boxes
 
 

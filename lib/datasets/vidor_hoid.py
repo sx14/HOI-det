@@ -75,7 +75,7 @@ class vidor_hoid(imdb):
 
     @staticmethod
     def load_obj2vec(data_path):
-        obj2vec_path = os.path.join(data_path, 'object_vectors.pkl')
+        obj2vec_path = os.path.join(data_path, 'object_vectors.mat')
         with open(obj2vec_path) as f:
             obj2vec = pickle.load(f)
         return obj2vec
@@ -101,7 +101,7 @@ class vidor_hoid(imdb):
         self.vrb_class2ind = dict(zip(self.vrb_classes, xrange(len(self.vrb_classes))))
 
         self._class_to_ind = dict(zip(self._classes, xrange(len(self._classes))))
-        self._image_ext = '.jpg'
+        self._image_ext = '.JPEG'
         self._all_image_info = self._load_image_set_info()
         self._obj2vec = None
         self._image_index = None
@@ -112,7 +112,7 @@ class vidor_hoid(imdb):
     @property
     def obj2vec(self):
         if self._obj2vec is None:
-            self.load_obj2vec(self._data_path)
+            self._obj2vec = self.load_obj2vec(self._data_path)
         return self._obj2vec
 
     @property
@@ -153,6 +153,13 @@ class vidor_hoid(imdb):
 
     def _load_image_set_info(self):
         print('Loading image set info ...')
+        cache_file = os.path.join(self.cache_path, self.name + '_gt_img_info.pkl')
+        if os.path.exists(cache_file):
+            with open(cache_file, 'rb') as fid:
+                all_image_info = pickle.load(fid)
+            print('{} image set info loaded from {}'.format(self.name, cache_file))
+            return all_image_info
+
         image_root = os.path.join(self._data_path, 'Data', 'VID', self._image_set)
 
         all_image_info = {}
@@ -163,10 +170,13 @@ class vidor_hoid(imdb):
             im_h, im_w = image.shape[:2]
             all_image_info[image_id] = [im_w, im_h]
 
+        with open(cache_file, 'wb') as fid:
+            pickle.dump(all_image_info, fid, pickle.HIGHEST_PROTOCOL)
+        print('wrote image set info to {}'.format(cache_file))
         return all_image_info
 
     def _get_default_path(self):
-        return os.path.join(cfg.DATA_DIR, 'vidor_hoid_'+self._version)
+        return os.path.join(cfg.DATA_DIR, 'vidor_hoid_'+self._version, 'image_data')
 
     def gt_roidb(self):
         cache_file = os.path.join(self.cache_path, self.name + '_gt_roidb.pkl')
@@ -251,15 +261,15 @@ class vidor_hoid(imdb):
 
             for i in range(aug_hboxes.shape[0]):
                 aug_cls_ids = raw_hoi[1]
-                aug_hbox = aug_hboxes[i]
-                aug_hbox.append(hbox[-1])
-                aug_obox = aug_oboxes[i]
-                aug_obox.append(obox[-1])
+                aug_hbox = aug_hboxes[i].tolist()
+                aug_hbox.append(raw_hoi[3][4])
+                aug_obox = aug_oboxes[i].tolist()
+                aug_obox.append(raw_hoi[3][4])
                 new_hois.append([0,             # stub
                                  aug_cls_ids,
                                  aug_hbox,
                                  aug_obox,
-                                 raw_hoi[5]])
+                                 raw_hoi[4]])
         return new_hois
 
     def _gen_obj2pre_mask(self, pos_insts):
@@ -279,12 +289,12 @@ class vidor_hoid(imdb):
         obj2pre_mask = self._gen_obj2pre_mask(anno_gt_tmp)
 
         print('Processing annotations ...')
-        anno_gt_db = {}
+        anno_gt_db = defaultdict(list)
         for hoi_ins_gt in anno_gt_tmp:
             image_id = hoi_ins_gt[0]
             anno_gt_db[image_id].append(hoi_ins_gt)
 
-        anno_ng_db = {}
+        anno_ng_db = defaultdict(list)
         for hoi_ins_gt in anno_ng_tmp:
             image_id = hoi_ins_gt[0]
             anno_ng_db[image_id].append(hoi_ins_gt)
@@ -336,7 +346,7 @@ class vidor_hoid(imdb):
                     vrb_class_ids = raw_hoi[1]
                     hbox = raw_hoi[2][:4]
                     obox = raw_hoi[3][:4]
-                    obj_class_id = obox[4]
+                    obj_class_id = raw_hoi[3][4]
                     ibox = [min(hbox[0], obox[0]), min(hbox[1], obox[1]),
                             max(hbox[2], obox[2]), max(hbox[3], obox[3])]
                     image_anno['hboxes'].append(hbox)
@@ -368,6 +378,8 @@ class vidor_hoid(imdb):
                 image_anno['pbox_lists'] = np.zeros((0, 6*4))
                 image_anno['obj_classes'] = np.zeros(0)
                 image_anno['bin_classes'] = np.zeros(0, 2)
+                image_anno['hoi_classes'] = np.zeros((0, len(self.vrb_classes)))
+                image_anno['hoi_masks'] = np.zeros((0, len(self.vrb_classes)))
                 image_anno['vrb_classes'] = np.zeros((0, len(self.vrb_classes)))
                 image_anno['vrb_masks'] = np.ones((0, len(self.vrb_classes)))
             else:
@@ -383,10 +395,10 @@ class vidor_hoid(imdb):
                     image_anno['bin_classes'][i, ins_class] = 1
 
                 hoi_classes = image_anno['hoi_classes']
-                image_anno['hoi_classes'] = np.zeros((len(hoi_classes), len(self.vrb_classes)))
+                image_anno['hoi_classes'] = np.zeros((len(image_anno['hboxes']), len(self.vrb_classes)))
 
                 hoi_intervals = image_anno['hoi_masks']
-                image_anno['hoi_masks'] = np.zeros((len(hoi_intervals), len(self.vrb_classes)))
+                image_anno['hoi_masks'] = np.zeros((len(image_anno['hboxes']), len(self.vrb_classes)))
 
                 vrb_classes = image_anno['vrb_classes']
                 image_anno['vrb_classes'] = np.zeros((len(vrb_classes), len(self.vrb_classes)))
