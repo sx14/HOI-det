@@ -281,4 +281,9 @@ if __name__ == '__main__':
     obj2idx = {cate: i for i, cate in enumerate(obj_cates)}
     pre2idx = {cate: i for i, cate in enumerate(pre_cates)}
     generate_anno_package(img_anno_with_pose_root, pre2idx, obj2idx, save_root)
+
+    # copy labels, word vector
+    shutil.copyfile(obj_cate_path, save_root+'/object_labels.txt')
+    shutil.copyfile(pre_cate_path, save_root + '/predicate_labels.txt')
+    shutil.copyfile(data_root + '/object_vectors.mat', save_root + '/object_vectors.mat')
     print('==== Done ====')

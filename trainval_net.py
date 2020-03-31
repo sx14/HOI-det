@@ -412,10 +412,9 @@ if __name__ == '__main__':
         nNeg = torch.sum(bin_classes[:, :, 1]).item()
         nPos = bin_classes.shape[1] - nNeg
 
-
-        print("[session %d][epoch %2d][iter %4d/%4d] loss: %.4f, lr: %.2e" \
-                                % (args.session, epoch, step, iters_per_epoch, loss_temp, lr))
-        print("loss_cls: %.4f, loss_bin: %.4f" % (loss_cls, loss_bin))
+        print("[session %d][epoch %2d][iter %4d/%4d] loss: %.4f, lr: %.2e"
+              % (args.session, epoch, step, iters_per_epoch, loss_temp, lr))
+        print("loss_cls: %.4f, loss_bin: %.4f" % (loss_cls_temp, loss_bin_temp))
         print("\t\t\tfg/bg=(%d/%d), time cost: %f" % (nPos, nNeg, end-start))
 
         if args.use_tfboard:
