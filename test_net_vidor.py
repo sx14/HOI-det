@@ -520,17 +520,16 @@ class Tester:
         sboxes_raw = np.array(gt_sboxes)
         sboxes_raw = sboxes_raw[np.newaxis, :, :]
 
-        hboxes_raw = np.zeros((0, 4))
-        oboxes_raw = np.zeros((0, 4))
-        iboxes_raw = np.zeros((0, 4))
-        pboxes_raw = np.zeros((0, 6, 4))
-        spa_maps_raw = np.zeros((0, 2, 64, 64))
-        obj_vecs_raw = np.zeros((0, 300))
+        hboxes_raw = np.zeros((500, 4))
+        oboxes_raw = np.zeros((500, 4))
+        iboxes_raw = np.zeros((500, 4))
+        pboxes_raw = np.zeros((500, 6, 4))
+        spa_maps_raw = np.zeros((500, 2, 64, 64))
+        obj_vecs_raw = np.zeros((500, 300))
+        pre_masks_raw = np.ones((500, 30))
         num_cand = 0
 
         for rela_seg in rela_segs:
-            assert min(rela_seg['sbj_traj']) == min(rela_seg['obj_traj']) == min(rela_seg['sbj_pose_traj'])
-
             hbox = np.array(rela_seg['sbj_traj'][min(rela_seg['sbj_traj'])]).reshape((1, 4)).astype(np.float)
             obox = np.array(rela_seg['obj_traj'][min(rela_seg['obj_traj'])]).reshape((1, 4)).astype(np.float)
             ibox = np.array([min(hbox[0][0], obox[0][0]), min(hbox[0][1], obox[0][1]),
@@ -545,35 +544,37 @@ class Tester:
             pbox = np.array(pbox)
             pbox = pbox.reshape((6, 4))[np.newaxis, :, :]
             spa_map_raw = gen_spatial_map(hbox[0], obox[0])
-            spa_map_raw = spa_map_raw[np.newaxis, :, :, :]
-            spa_maps_raw = np.concatenate((spa_maps_raw, spa_map_raw))
+            spa_maps_raw[num_cand] = spa_map_raw
 
             obj_class_id = self.dataset.obj_cate2idx[rela_seg['obj_cls']]
             obj_vec_raw = self.dataset.obj_vecs[obj_class_id]
-            obj_vec_raw = obj_vec_raw[np.newaxis, :]
-            obj_vecs_raw = np.concatenate((obj_vecs_raw, obj_vec_raw))
+            obj_vecs_raw[num_cand] = obj_vec_raw
+            pre_masks_raw[num_cand] = pre_masks_raw[num_cand] * self.dataset.obj2pre_mask[obj_class_id]
+            sbj_class_id = self.dataset.obj_cate2idx[rela_seg['sbj_cls']]
+            pre_masks_raw[num_cand] = pre_masks_raw[num_cand] * self.dataset.obj2pre_mask[sbj_class_id]
 
-            hboxes_raw = np.concatenate((hboxes_raw, hbox))
-            oboxes_raw = np.concatenate((oboxes_raw, obox))
-            iboxes_raw = np.concatenate((iboxes_raw, ibox))
-            pboxes_raw = np.concatenate((pboxes_raw, pbox))
+            hboxes_raw[num_cand] = hbox
+            oboxes_raw[num_cand] = obox
+            iboxes_raw[num_cand] = ibox
+            pboxes_raw[num_cand] = pbox
             num_cand += 1
 
-        hboxes_raw = hboxes_raw[np.newaxis, :, :]
-        oboxes_raw = oboxes_raw[np.newaxis, :, :]
-        iboxes_raw = iboxes_raw[np.newaxis, :, :]
-        pboxes_raw = pboxes_raw[np.newaxis, :, :]
+        hboxes_raw1 = hboxes_raw[np.newaxis, :num_cand]
+        oboxes_raw1 = oboxes_raw[np.newaxis, :num_cand]
+        iboxes_raw1 = iboxes_raw[np.newaxis, :num_cand]
+        pboxes_raw1 = pboxes_raw[np.newaxis, :num_cand]
 
-        spa_maps_raw = spa_maps_raw[np.newaxis, :, :, :, :]
-        obj_vecs_raw = obj_vecs_raw[np.newaxis, :, :]
+        spa_maps_raw1 = spa_maps_raw[np.newaxis, :num_cand]
+        obj_vecs_raw1 = obj_vecs_raw[np.newaxis, :num_cand]
 
-        hboxes_t = torch.from_numpy(hboxes_raw * im_scales[0])
-        oboxes_t = torch.from_numpy(oboxes_raw * im_scales[0])
-        iboxes_t = torch.from_numpy(iboxes_raw * im_scales[0])
-        pboxes_t = torch.from_numpy(pboxes_raw * im_scales[0])
+
+        hboxes_t = torch.from_numpy(hboxes_raw1 * im_scales[0])
+        oboxes_t = torch.from_numpy(oboxes_raw1 * im_scales[0])
+        iboxes_t = torch.from_numpy(iboxes_raw1 * im_scales[0])
+        pboxes_t = torch.from_numpy(pboxes_raw1 * im_scales[0])
         sboxes_t = torch.from_numpy(sboxes_raw * im_scales[0])
-        spa_maps_t = torch.from_numpy(spa_maps_raw)
-        obj_vecs_t = torch.from_numpy(obj_vecs_raw)
+        spa_maps_t = torch.from_numpy(spa_maps_raw1)
+        obj_vecs_t = torch.from_numpy(obj_vecs_raw1)
 
         hboxes.data.resize_(hboxes_t.size()).copy_(hboxes_t)
         oboxes.data.resize_(oboxes_t.size()).copy_(oboxes_t)
@@ -599,7 +600,7 @@ class Tester:
 
         if self.use_gpu:
             probs = probs.cpu()
-        probs = probs.data.numpy()[0]
+        probs = probs.data.numpy()[0] * pre_masks_raw[:num_cand]
         all_rela_segs = [[] for _ in range(len(rela_segs))]
 
         # get top 10 predictions
