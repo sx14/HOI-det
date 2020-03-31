@@ -81,7 +81,7 @@ def parse_args():
                         default=6, type=int)
     parser.add_argument('--checkpoint', dest='checkpoint',
                         help='checkpoint to load network',
-                        default=9941, type=int)
+                        default=18131, type=int)
 
     args = parser.parse_args()
     return args
@@ -174,6 +174,7 @@ class VidOR_HOID:
     def __init__(self, ds_name, data_root):
         self.data_root = data_root
         self.obj_cates, self.pre_cates = self.load_cates()
+        self.sbj_cates = {'adult', 'child', 'baby'}
         self.obj_cate2idx = {cate: idx for idx, cate in enumerate(self.obj_cates)}
         self.pre_cate2idx = {cate: idx for idx, cate in enumerate(self.pre_cates)}
         self.obj_vecs = self.load_object_vectors()
@@ -182,8 +183,9 @@ class VidOR_HOID:
         self.dataset_name = ds_name
         self.sbj2pre_mask = None
         self.obj2pre_mask = None
-        self._load_annotations(os.path.join(data_root, 'anno_with_pose', 'train'))
         self.SEG_LEN = 10
+        self._load_annotations(os.path.join(data_root, 'anno_with_pose', 'train'))
+
 
     def _gen_positive_instances(self, org_insts, pkg_id, vid_id):
         insts = []
@@ -304,6 +306,12 @@ class VidOR_HOID:
             return len(self.obj_cates)
         else:
             return -1
+
+    def is_subject(self, cate):
+        if isinstance(cate, int):
+            return self.obj_cates[cate] in self.sbj_cates
+        else:
+            return cate in self.sbj_cates
 
     def _gen_pre_mask(self):
         sbj2pre_mask = np.zeros((self.category_num('object'), self.category_num('predicate')))
@@ -436,14 +444,13 @@ class Tester:
             lan_feat[i] = np.concatenate((sbj_cate_vec, obj_cate_vec))
         return lan_feat
 
-
     def predict_predicate(self, rela_segs, frame_path):
         if len(rela_segs) == 0:
             return rela_segs
 
         im_data = torch.FloatTensor(1)
         im_info = torch.FloatTensor(1)
-        num_hois = torch.LongTensor(len(rela_segs))
+        num_hois = torch.LongTensor(1)
         hboxes = torch.FloatTensor(1)
         oboxes = torch.FloatTensor(1)
         iboxes = torch.FloatTensor(1)
@@ -519,28 +526,29 @@ class Tester:
         pboxes_raw = np.zeros((0, 6, 4))
         spa_maps_raw = np.zeros((0, 2, 64, 64))
         obj_vecs_raw = np.zeros((0, 300))
+        num_cand = 0
 
         for rela_seg in rela_segs:
             assert min(rela_seg['sbj_traj']) == min(rela_seg['obj_traj']) == min(rela_seg['sbj_pose_traj'])
 
-            hbox = np.array(rela_seg['sbj_traj'][min(rela_seg['sbj_traj'])]).reshape((1, 4))
-            obox = np.array(rela_seg['obj_traj'][min(rela_seg['obj_traj'])]).reshape((1, 4))
-            ibox = np.array([min(hbox[0], obox[0]), min(hbox[1], obox[1]),
-                             max(hbox[2], obox[2]), max(hbox[3], obox[3])]).reshape((1, 4))
+            hbox = np.array(rela_seg['sbj_traj'][min(rela_seg['sbj_traj'])]).reshape((1, 4)).astype(np.float)
+            obox = np.array(rela_seg['obj_traj'][min(rela_seg['obj_traj'])]).reshape((1, 4)).astype(np.float)
+            ibox = np.array([min(hbox[0][0], obox[0][0]), min(hbox[0][1], obox[0][1]),
+                             max(hbox[0][2], obox[0][2]), max(hbox[0][3], obox[0][3])]).reshape((1, 4))
             raw_kps = rela_seg['sbj_pose_traj'][min(rela_seg['sbj_pose_traj'])]
             if raw_kps != None and len(raw_kps) == 51:
                 key_points = np.array(raw_kps).reshape((17, 3))
-                pbox = gen_part_boxes(hbox[0], key_points, im_in.shape[:2])
+                pbox = gen_part_boxes(hbox[0].tolist(), key_points, im_in.shape[:2])
             else:
-                pbox = est_part_boxes(hbox[0])
+                pbox = est_part_boxes(hbox[0].tolist())
 
             pbox = np.array(pbox)
             pbox = pbox.reshape((6, 4))[np.newaxis, :, :]
-            spa_map_raw = gen_spatial_map(hbox[0].tolist(), obox[0].tolist())
+            spa_map_raw = gen_spatial_map(hbox[0], obox[0])
             spa_map_raw = spa_map_raw[np.newaxis, :, :, :]
             spa_maps_raw = np.concatenate((spa_maps_raw, spa_map_raw))
 
-            obj_class_id = rela_seg['obj_cls']
+            obj_class_id = self.dataset.obj_cate2idx[rela_seg['obj_cls']]
             obj_vec_raw = self.dataset.obj_vecs[obj_class_id]
             obj_vec_raw = obj_vec_raw[np.newaxis, :]
             obj_vecs_raw = np.concatenate((obj_vecs_raw, obj_vec_raw))
@@ -549,6 +557,7 @@ class Tester:
             oboxes_raw = np.concatenate((oboxes_raw, obox))
             iboxes_raw = np.concatenate((iboxes_raw, ibox))
             pboxes_raw = np.concatenate((pboxes_raw, pbox))
+            num_cand += 1
 
         hboxes_raw = hboxes_raw[np.newaxis, :, :]
         oboxes_raw = oboxes_raw[np.newaxis, :, :]
@@ -590,7 +599,7 @@ class Tester:
 
         if self.use_gpu:
             probs = probs.cpu()
-        probs = probs.data.numpy()
+        probs = probs.data.numpy()[0]
         all_rela_segs = [[] for _ in range(len(rela_segs))]
 
         # get top 10 predictions
@@ -715,7 +724,7 @@ class Tester:
         all_rela_cand_segs = defaultdict(list)
         for seg_id in sorted(all_cand_segs.keys()):
             frame_path = os.path.join(vid_frm_root, '%06d.JPEG' % (seg_id * self.seg_len))
-            cand_segs = all_rela_cand_segs[seg_id]                      # list(seg)
+            cand_segs = all_cand_segs[seg_id]                      # list(seg)
             cand_segs = self.predict_predicate(cand_segs, frame_path)   # list(list(seg))
             for segs in cand_segs:
                 seg = segs[0]
@@ -771,9 +780,9 @@ if __name__ == '__main__':
     use_gt_obj = True
     print('Loading trajectory detections ...')
     if not use_gt_obj:
-        test_traj_det_path = '../data/%s/%s' % (dataset_name, 'object_trajectories_val_det_with_pose.json')
+        test_traj_det_path = 'data/%s/%s' % (dataset_name, 'object_trajectories_val_det_with_pose.json')
     else:
-        test_traj_det_path = '../data/%s/%s' % (dataset_name, 'object_trajectories_val_gt2det_with_pose.json')
+        test_traj_det_path = 'data/%s/%s' % (dataset_name, 'object_trajectories_val_gt2det_with_pose.json')
     with open(test_traj_det_path) as f:
         test_trajs = json.load(f)['results']
     dataset = VidOR_HOID(dataset_name, dataset_root)

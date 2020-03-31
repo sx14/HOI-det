@@ -9,7 +9,7 @@ from collections import defaultdict
 from tqdm import tqdm
 
 
-def prepare_images(video_root, image_root, sample_interval=20):
+def prepare_images(video_root, image_root, sample_interval=60):
     if not os.path.exists(image_root):
         os.makedirs(image_root)
 
@@ -31,7 +31,7 @@ def prepare_images(video_root, image_root, sample_interval=20):
     print('Sampled %d frames.' % sample_cnt)
 
 
-def prepare_anno_jsons(vid_anno_root, img_anno_root, sample_interval=20):
+def prepare_anno_jsons(vid_anno_root, img_anno_root, sample_interval=60):
     if not os.path.exists(img_anno_root):
         os.makedirs(img_anno_root)
 
