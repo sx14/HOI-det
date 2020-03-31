@@ -71,10 +71,10 @@ class _fasterRCNN(nn.Module):
             nn.LeakyReLU(),
             nn.Linear(512, self.n_classes))
 
-        # self.obj_attention = nn.Sequential(
-        #     nn.Linear(300, 512),
-        #     nn.LeakyReLU(),
-        #     nn.Linear(512, 6))
+        self.obj_attention = nn.Sequential(
+            nn.Linear(300, 512),
+            nn.LeakyReLU(),
+            nn.Linear(512, 6))
 
     def forward(self, im_data, de_data, im_info,
                 hboxes, oboxes, iboxes,

@@ -82,7 +82,7 @@ def parse_args():
                       default=1, type=int)
   parser.add_argument('--checkepoch', dest='checkepoch',
                       help='checkepoch to load network',
-                      default=3, type=int)
+                      default=6, type=int)
   parser.add_argument('--checkpoint', dest='checkpoint',
                       help='checkpoint to load network',
                       default=10051, type=int)
@@ -333,13 +333,13 @@ if __name__ == '__main__':
               hbox = refine_human_box_with_skeleton(hbox, key_points)
               hbox = np.array(hbox).reshape(1, 4)
 
-              hboxes_raw = np.zeros((0, 4))
-              oboxes_raw = np.zeros((0, 4))
-              iboxes_raw = np.zeros((0, 4))
-              pboxes_raw = np.zeros((0, 6, 5))
-              spa_maps_raw = np.zeros((0, 2, 64, 64))
-              pose_maps_raw = np.zeros((0, 8, 224, 224))
-              obj_vecs_raw = np.zeros((0, 300))
+              hboxes_raw = np.zeros((500, 4))
+              oboxes_raw = np.zeros((500, 4))
+              iboxes_raw = np.zeros((500, 4))
+              pboxes_raw = np.zeros((500, 6, 5))
+              spa_maps_raw = np.zeros((500, 2, 64, 64))
+              pose_maps_raw = np.zeros((500, 8, 224, 224))
+              obj_vecs_raw = np.zeros((500, 300))
               num_cand = 0
 
               # save image information
@@ -375,22 +375,29 @@ if __name__ == '__main__':
                       pbox1 = pbox1.reshape((1, 6, 5))
 
                       spa_map_raw = gen_spatial_map(human_det[2], object_det[2])
-                      spa_map_raw = spa_map_raw[np.newaxis, : ,: ,:]
-                      spa_maps_raw = np.concatenate((spa_maps_raw, spa_map_raw))
+                      # spa_map_raw = spa_map_raw[np.newaxis, : ,: ,:]
+                      # spa_maps_raw = np.concatenate((spa_maps_raw, spa_map_raw))
+                      spa_maps_raw[num_cand] = spa_map_raw
 
                       pose_map_raw = gen_pose_obj_map1(hbox[0].tolist(), obox[0].tolist(), ibox[0].tolist(), pbox1[0])
-                      pose_map_raw = pose_map_raw[np.newaxis, :, :, :]
-                      pose_maps_raw = np.concatenate((pose_maps_raw, pose_map_raw))
+                      # pose_map_raw = pose_map_raw[np.newaxis, :, :, :]
+                      # pose_maps_raw = np.concatenate((pose_maps_raw, pose_map_raw))
+                      pose_maps_raw[num_cand] = pose_map_raw
 
                       obj_class_id = object_det[4]
                       obj_vec_raw = obj2vec[obj_class_id]
-                      obj_vec_raw = obj_vec_raw[np.newaxis, :]
-                      obj_vecs_raw = np.concatenate((obj_vecs_raw, obj_vec_raw))
+                      # obj_vec_raw = obj_vec_raw[np.newaxis, :]
+                      # obj_vecs_raw = np.concatenate((obj_vecs_raw, obj_vec_raw))
+                      obj_vecs_raw[num_cand] = obj_vec_raw
 
-                      hboxes_raw = np.concatenate((hboxes_raw, hbox))
-                      oboxes_raw = np.concatenate((oboxes_raw, obox))
-                      iboxes_raw = np.concatenate((iboxes_raw, ibox))
-                      pboxes_raw = np.concatenate((pboxes_raw, pbox))
+                      # hboxes_raw = np.concatenate((hboxes_raw, hbox))
+                      # oboxes_raw = np.concatenate((oboxes_raw, obox))
+                      # iboxes_raw = np.concatenate((iboxes_raw, ibox))
+                      # pboxes_raw = np.concatenate((pboxes_raw, pbox))
+                      hboxes_raw[num_cand] = hbox
+                      oboxes_raw[num_cand] = obox
+                      iboxes_raw[num_cand] = ibox
+                      pboxes_raw[num_cand] = pbox
 
                       object_bboxes.append(object_det[2])
                       object_classes.append(obj_class_map[object_det[4]])
@@ -400,14 +407,14 @@ if __name__ == '__main__':
               if num_cand == 0:
                   continue
 
-              hboxes_raw = hboxes_raw[np.newaxis, :, :]
-              oboxes_raw = oboxes_raw[np.newaxis, :, :]
-              iboxes_raw = iboxes_raw[np.newaxis, :, :]
-              pboxes_raw = pboxes_raw[np.newaxis, :, :, :4]
+              hboxes_raw = hboxes_raw[np.newaxis, :num_cand, :]
+              oboxes_raw = oboxes_raw[np.newaxis, :num_cand, :]
+              iboxes_raw = iboxes_raw[np.newaxis, :num_cand, :]
+              pboxes_raw = pboxes_raw[np.newaxis, :num_cand, :, :4]
 
-              spa_maps_raw = spa_maps_raw[np.newaxis, :, :, :, :]
-              pose_maps_raw = pose_maps_raw[np.newaxis, :, :, :, :]
-              obj_vecs_raw = obj_vecs_raw[np.newaxis, :, :]
+              spa_maps_raw = spa_maps_raw[np.newaxis, :num_cand, :, :, :]
+              pose_maps_raw = pose_maps_raw[np.newaxis, :num_cand, :, :, :]
+              obj_vecs_raw = obj_vecs_raw[np.newaxis, :num_cand, :]
 
               hboxes_t = torch.from_numpy(hboxes_raw * im_scales[0])
               oboxes_t = torch.from_numpy(oboxes_raw * im_scales[0])
