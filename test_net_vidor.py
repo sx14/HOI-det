@@ -184,8 +184,7 @@ class VidOR_HOID:
         self.sbj2pre_mask = None
         self.obj2pre_mask = None
         self.SEG_LEN = 10
-        self._load_annotations(os.path.join(data_root, 'anno_with_pose', 'train'))
-
+        self._load_annotations(os.path.join(data_root, 'anno_with_pose', 'training'))
 
     def _gen_positive_instances(self, org_insts, pkg_id, vid_id):
         insts = []
@@ -420,7 +419,7 @@ class Tester:
                 seg = {'seg_id': seg_id,
                        'sbj_traj': seg_sbj_traj,
                        'obj_traj': seg_obj_traj,
-                       'sbj_pose_traj': sbj_pose_traj,
+                       'sbj_pose_traj': seg_sbj_pose_traj,
                        'sbj_cls': sbj_cls,
                        'obj_cls': obj_cls,
                        'sbj_scr': sbj_scr,
@@ -533,7 +532,7 @@ class Tester:
             hbox = np.array(rela_seg['sbj_traj'][min(rela_seg['sbj_traj'])]).reshape((1, 4)).astype(np.float)
             obox = np.array(rela_seg['obj_traj'][min(rela_seg['obj_traj'])]).reshape((1, 4)).astype(np.float)
             ibox = np.array([min(hbox[0][0], obox[0][0]), min(hbox[0][1], obox[0][1]),
-                             max(hbox[0][2], obox[0][2]), max(hbox[0][3], obox[0][3])]).reshape((1, 4))
+                             max(hbox[0][2], obox[0][2]), max(hbox[0][3], obox[0][3])]).reshape((1, 4)).astype(np.float)
             raw_kps = rela_seg['sbj_pose_traj'][min(rela_seg['sbj_pose_traj'])]
             if raw_kps != None and len(raw_kps) == 51:
                 key_points = np.array(raw_kps).reshape((17, 3))
@@ -563,6 +562,7 @@ class Tester:
         oboxes_raw1 = oboxes_raw[np.newaxis, :num_cand]
         iboxes_raw1 = iboxes_raw[np.newaxis, :num_cand]
         pboxes_raw1 = pboxes_raw[np.newaxis, :num_cand]
+        pre_masks_raw1 = pre_masks_raw[np.newaxis, :num_cand]
 
         spa_maps_raw1 = spa_maps_raw[np.newaxis, :num_cand]
         obj_vecs_raw1 = obj_vecs_raw[np.newaxis, :num_cand]
@@ -600,7 +600,7 @@ class Tester:
 
         if self.use_gpu:
             probs = probs.cpu()
-        probs = probs.data.numpy()[0] * pre_masks_raw[:num_cand]
+        probs = probs.data.numpy()[0] * pre_masks_raw1[0]
         all_rela_segs = [[] for _ in range(len(rela_segs))]
 
         # get top 10 predictions
