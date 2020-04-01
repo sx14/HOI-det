@@ -173,7 +173,7 @@ if __name__ == '__main__':
   if not os.path.exists(input_dir):
     raise Exception('There is no input directory for loading network from ' + input_dir)
   load_name = os.path.join(input_dir,
-    'base_cb_sb_gc_ic_bpa_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
+    'base_cb_sb_gc_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
 
   obj_classes, vrb_classes, obj2ind, vrb2ind = vcoco.load_hoi_classes(cfg.DATA_DIR + '/vcoco')
   obj_class_map = vcoco.load_object_class_map(cfg.DATA_DIR + '/vcoco')

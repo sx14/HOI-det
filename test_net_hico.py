@@ -183,7 +183,7 @@ if __name__ == '__main__':
   if not os.path.exists(input_dir):
     raise Exception('There is no input directory for loading network from ' + input_dir)
   load_name = os.path.join(input_dir,
-    'base_cb_sb_gc_ic_bpa_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
+    'base_cb_sb_gc_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
 
   hoi_classes, obj_classes, vrb_classes, obj2int, hoi2vrb, vrb2hoi = hico2.load_hoi_classes(cfg.DATA_DIR + '/hico')
   obj2ind = dict(zip(obj_classes, range(len(obj_classes))))
