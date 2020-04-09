@@ -183,7 +183,7 @@ if __name__ == '__main__':
   if not os.path.exists(input_dir):
     raise Exception('There is no input directory for loading network from ' + input_dir)
   load_name = os.path.join(input_dir,
-    'base_cb_sb_lc_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
+    'base_cb_sb_lc_gc_bpa_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
 
   hoi_classes, obj_classes, vrb_classes, obj2int, hoi2vrb, vrb2hoi = hico2.load_hoi_classes(cfg.DATA_DIR + '/hico')
   obj2ind = dict(zip(obj_classes, range(len(obj_classes))))
@@ -335,10 +335,8 @@ if __name__ == '__main__':
                   key_points[:, 0][key_points[:, 0] >= im_w] = im_w - 1
                   key_points[:, 1][key_points[:, 1] >= im_h] = im_h - 1
 
-              hbox = [human_det[2][0],
-                      human_det[2][1],
-                      human_det[2][2],
-                      human_det[2][3]]
+              hbox = [human_det[2][0], human_det[2][1],
+                      human_det[2][2], human_det[2][3]]
               hbox = [max(0, hbox[0]), max(0, hbox[1]),
                       max(0, hbox[2]), max(0, hbox[3])]
               hbox = [min(im_w - 1, hbox[0]), min(im_h - 1, hbox[1]),
@@ -347,13 +345,13 @@ if __name__ == '__main__':
               hbox = np.array(hbox).reshape(1, 4)
 
               # prepare inputs for current image
-              hboxes_raw = np.zeros((1000, 4))
-              oboxes_raw = np.zeros((1000, 4))
-              iboxes_raw = np.zeros((1000, 4))
-              pboxes_raw = np.zeros((1000, 6, 5))
-              spa_maps_raw = np.zeros((1000, 2, 64, 64))
-              pose_maps_raw = np.zeros((1000, 8, 224, 224))
-              obj_vecs_raw = np.zeros((1000, 300))
+              hboxes_raw = np.zeros((600, 4))
+              oboxes_raw = np.zeros((600, 4))
+              iboxes_raw = np.zeros((600, 4))
+              pboxes_raw = np.zeros((600, 6, 5))
+              spa_maps_raw = np.zeros((600, 2, 64, 64))
+              pose_maps_raw = np.zeros((600, 8, 224, 224))
+              obj_vecs_raw = np.zeros((600, 300))
               obj_classes = []
               hscores = []
               oscores = []
@@ -383,25 +381,18 @@ if __name__ == '__main__':
 
                       spa_map_raw = gen_spatial_map(human_det[2], object_det[2])
                       spa_map_raw = spa_map_raw[np.newaxis, : ,: ,:]
-                      # spa_maps_raw = np.concatenate((spa_maps_raw, spa_map_raw))
                       spa_maps_raw[num_cand] = spa_map_raw
 
                       pose_map_raw = gen_pose_obj_map1(hbox[0].tolist(), obox[0].tolist(), ibox[0].tolist(), pbox1[0])
                       pose_map_raw = pose_map_raw[np.newaxis, :, :, :]
-                      # pose_maps_raw = np.concatenate((pose_maps_raw, pose_map_raw))
                       pose_maps_raw[num_cand] = pose_map_raw
 
                       # original object id(1 base) --hoi--> our object id(0 base)
                       obj_class_id = obj2ind[hoi_classes[org_obj2hoi[object_det[4]]].object_name()]
                       obj_vec_raw = obj2vec[obj_class_id]
                       obj_vec_raw = obj_vec_raw[np.newaxis, :]
-                      # obj_vecs_raw = np.concatenate((obj_vecs_raw, obj_vec_raw))
                       obj_vecs_raw[num_cand] = obj_vec_raw
 
-                      # hboxes_raw = np.concatenate((hboxes_raw, hbox))
-                      # oboxes_raw = np.concatenate((oboxes_raw, obox))
-                      # iboxes_raw = np.concatenate((iboxes_raw, ibox))
-                      # pboxes_raw = np.concatenate((pboxes_raw, pbox))
                       hboxes_raw[num_cand] = hbox
                       oboxes_raw[num_cand] = obox
                       iboxes_raw[num_cand] = ibox

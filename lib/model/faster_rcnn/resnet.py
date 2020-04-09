@@ -299,16 +299,16 @@ class resnet(_fasterRCNN):
     self.RCNN_layer2 = resnet.layer2
     self.RCNN_layer3 = resnet.layer3
 
-    # cond_net = GlobalCond(7)
-    # self.cond_base = cond_net.cond_base
-    # self.cond_layer1 = cond_net.cond_layer1
-    # self.cond_layer2 = cond_net.cond_layer2
-    # self.cond_layer3 = cond_net.cond_layer3
+    cond_net = GlobalCond(7)
+    self.cond_base = cond_net.cond_base
+    self.cond_layer1 = cond_net.cond_layer1
+    self.cond_layer2 = cond_net.cond_layer2
+    self.cond_layer3 = cond_net.cond_layer3
 
-    # self.sft_base = ResBlock_SFT(64)
-    # self.sft_layer1 = ResBlock_SFT(256)
-    # self.sft_layer2 = ResBlock_SFT(512)
-    # self.sft_layer3 = ResBlock_SFT(1024)
+    self.sft_base = ResBlock_SFT(64)
+    self.sft_layer1 = ResBlock_SFT(256)
+    self.sft_layer2 = ResBlock_SFT(512)
+    self.sft_layer3 = ResBlock_SFT(1024)
 
     import copy
     self.cond_net = ROICond()
@@ -400,7 +400,6 @@ class resnet(_fasterRCNN):
       self.oRCNN_top.apply(set_bn_eval)
       self.pRCNN_top.apply(set_bn_eval)
       self.sRCNN_top.apply(set_bn_eval)
-
 
   def _ihead_to_tail(self, pool5, pose_map):
     pose_cond = self.cond_net(pose_map)

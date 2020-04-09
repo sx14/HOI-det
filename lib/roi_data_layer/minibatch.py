@@ -86,8 +86,8 @@ def _get_image_blob(roidb, scale_inds):
 
   for i in range(num_images):
     im = imread(roidb[i]['image'])
-    # dp = np.load(roidb[i]['depth'])
-    dp = im[:, :, 2]
+    dp = np.load(roidb[i]['depth'])
+    # dp = np.zeros((im.shape[0], im.shape[1], 7))
 
     if len(im.shape) == 2:
       im = im[:,:,np.newaxis]
