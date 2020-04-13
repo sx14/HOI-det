@@ -134,7 +134,7 @@ def load_model(vrb_classes):
     np.random.seed(cfg.RNG_SEED)
 
     input_dir = args.load_dir + "/" + args.net + "/" + args.dataset
-    load_name = os.path.join(input_dir, 'base1_bpa_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
+    load_name = os.path.join(input_dir, 'ho-rcnn_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
 
     # initilize the network here.
     if args.net == 'vgg16':
