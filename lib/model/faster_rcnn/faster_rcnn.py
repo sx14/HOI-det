@@ -73,10 +73,10 @@ class _fasterRCNN(nn.Module):
             nn.LeakyReLU(),
             nn.Linear(512, self.n_classes))
 
-        self.obj_attention = nn.Sequential(
-            nn.Linear(300, 512),
-            nn.LeakyReLU(),
-            nn.Linear(512, 6))
+        # self.obj_attention = nn.Sequential(
+        #     nn.Linear(300, 512),
+        #     nn.LeakyReLU(),
+        #     nn.Linear(512, 6))
 
     def forward(self, im_data, im_info,
                 hboxes, oboxes, iboxes,
@@ -114,8 +114,8 @@ class _fasterRCNN(nn.Module):
         prois[:, :, 1:] = pboxes.view(pboxes.shape[0], -1, pboxes.shape[3])
         srois[:, :, 1:] = sboxes
 
-        iroi_pooled_feat = self.RCNN_roi_align(base_feat, irois.view(-1, 5))
-        iroi_pooled_feat = self._ihead_to_tail(iroi_pooled_feat)
+        # iroi_pooled_feat = self.RCNN_roi_align(base_feat, irois.view(-1, 5))
+        # iroi_pooled_feat = self._ihead_to_tail(iroi_pooled_feat)
 
         hroi_pooled_feat = self.RCNN_roi_align(base_feat, hrois.view(-1, 5))
         hroi_pooled_feat = self._hhead_to_tail(hroi_pooled_feat)
@@ -123,66 +123,71 @@ class _fasterRCNN(nn.Module):
         oroi_pooled_feat = self.RCNN_roi_align(base_feat, orois.view(-1, 5))
         oroi_pooled_feat = self._ohead_to_tail(oroi_pooled_feat)
 
-        proi_pooled_feat = self.RCNN_roi_align(base_feat, prois.view(-1, 5))
-        proi_pooled_feat = self._phead_to_tail(proi_pooled_feat)
+        # proi_pooled_feat = self.RCNN_roi_align(base_feat, prois.view(-1, 5))
+        # proi_pooled_feat = self._phead_to_tail(proi_pooled_feat)
 
-        sroi_pooled_feat = self.RCNN_roi_align(base_feat, srois.view(-1, 5))
-        sroi_pooled_feat = self._shead_to_tail(sroi_pooled_feat)
+        # sroi_pooled_feat = self.RCNN_roi_align(base_feat, srois.view(-1, 5))
+        # sroi_pooled_feat = self._shead_to_tail(sroi_pooled_feat)
 
         spa_feat = self.spaCNN(spa_maps[0])
         scls_score = self.spa_cls_score(spa_feat)
-        scls_prob = F.sigmoid(scls_score)
+        # scls_prob = F.sigmoid(scls_score)
 
-        vcls_score = self.obj_cls_score(obj_vecs[0])
-        vcls_prob = F.sigmoid(vcls_score)
+        # vcls_score = self.obj_cls_score(obj_vecs[0])
+        # vcls_prob = F.sigmoid(vcls_score)
 
         # compute object classification probability
-        icls_score = self.iRCNN_cls_score(iroi_pooled_feat)
-        icls_prob = F.sigmoid(icls_score)
+        # icls_score = self.iRCNN_cls_score(iroi_pooled_feat)
+        # icls_prob = F.sigmoid(icls_score)
 
         hcls_score = self.hRCNN_cls_score(hroi_pooled_feat)
-        hcls_prob = F.sigmoid(hcls_score)
+        # hcls_prob = F.sigmoid(hcls_score)
 
         ocls_score = self.oRCNN_cls_score(oroi_pooled_feat)
-        ocls_prob = F.sigmoid(ocls_score)
+        # ocls_prob = F.sigmoid(ocls_score)
 
-        obj_att = self.obj_attention(obj_vecs[0])
-        part_att_feats = []
-        for i in range(obj_att.shape[1]):
-            part_att = obj_att[:, i:i+1]
-            part_feat = proi_pooled_feat[:, i*2048:(i+1)*2048]
-            part_att_feat = part_att * part_feat
-            part_att_feats.append(part_att_feat)
-        att_proi_pooled_feat = torch.cat(part_att_feats, dim=1)
-        att_proi_pooled_feat = Variable(att_proi_pooled_feat.cuda())
-        att_proi_pooled_feat = att_proi_pooled_feat + proi_pooled_feat
+        # obj_att = self.obj_attention(obj_vecs[0])
+        # part_att_feats = []
+        # for i in range(obj_att.shape[1]):
+        #     part_att = obj_att[:, i:i+1]
+        #     part_feat = proi_pooled_feat[:, i*2048:(i+1)*2048]
+        #     part_att_feat = part_att * part_feat
+        #     part_att_feats.append(part_att_feat)
+        # att_proi_pooled_feat = torch.cat(part_att_feats, dim=1)
+        # att_proi_pooled_feat = Variable(att_proi_pooled_feat.cuda())
+        # att_proi_pooled_feat = att_proi_pooled_feat + proi_pooled_feat
+        #
+        # pcls_score = self.pRCNN_cls_score(att_proi_pooled_feat)
+        # pcls_prob = F.sigmoid(pcls_score)
 
-        pcls_score = self.pRCNN_cls_score(att_proi_pooled_feat)
-        pcls_prob = F.sigmoid(pcls_score)
+        # ccls_score = self.sRCNN_cls_score(sroi_pooled_feat)
+        # ccls_prob = F.sigmoid(ccls_score)
+        # ccls_prob = ccls_prob.repeat((icls_prob.shape[0], 1))
 
-        ccls_score = self.sRCNN_cls_score(sroi_pooled_feat)
-        ccls_prob = F.sigmoid(ccls_score)
-        ccls_prob = ccls_prob.repeat((icls_prob.shape[0], 1))
+        # cls_prob = (icls_prob + hcls_prob + ocls_prob + pcls_prob + ccls_prob) * scls_prob * vcls_prob
+        # cls_prob = (icls_prob + hcls_prob + ocls_prob + pcls_prob + ccls_prob) * scls_prob * vcls_prob
 
-        cls_prob = (icls_prob + hcls_prob + ocls_prob + pcls_prob + ccls_prob) * scls_prob * vcls_prob
+        score = hcls_score + ocls_score + scls_score
+        prob = F.sigmoid(score)
 
         RCNN_loss_cls = 0
         RCNN_loss_bin = 0
 
         if self.training:
             # classification loss
-            pos_map = bin_classes[0, :, 0].long()
-            hoi_masks = hoi_masks.view(-1, hoi_masks.shape[2])
-            scls_loss = F.binary_cross_entropy(scls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
-            icls_loss = F.binary_cross_entropy(icls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
-            hcls_loss = F.binary_cross_entropy(hcls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
-            ocls_loss = F.binary_cross_entropy(ocls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
-            vcls_loss = F.binary_cross_entropy(vcls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
-            pcls_loss = F.binary_cross_entropy(pcls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
-            ccls_loss = F.binary_cross_entropy(ccls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
-            RCNN_loss_cls = scls_loss + icls_loss + hcls_loss + ocls_loss + vcls_loss + pcls_loss + ccls_loss
+            # pos_map = bin_classes[0, :, 0].long()
+            # hoi_masks = hoi_masks.view(-1, hoi_masks.shape[2])
+            # scls_loss = F.binary_cross_entropy(scls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
+            # icls_loss = F.binary_cross_entropy(icls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
+            # hcls_loss = F.binary_cross_entropy(hcls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
+            # ocls_loss = F.binary_cross_entropy(ocls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
+            # vcls_loss = F.binary_cross_entropy(vcls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
+            # pcls_loss = F.binary_cross_entropy(pcls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
+            # ccls_loss = F.binary_cross_entropy(ccls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
+            # RCNN_loss_cls = scls_loss + icls_loss + hcls_loss + ocls_loss + vcls_loss + pcls_loss + ccls_loss
+            RCNN_loss_cls = F.binary_cross_entropy(prob, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
 
-        cls_prob = cls_prob.view(batch_size, irois.size(1), -1)
+        cls_prob = prob.view(batch_size, irois.size(1), -1)
         bin_prob = Variable(torch.zeros(batch_size, irois.size(1), 2)).cuda()
 
         return cls_prob, bin_prob, RCNN_loss_cls, RCNN_loss_bin
