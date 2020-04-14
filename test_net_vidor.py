@@ -315,6 +315,8 @@ class VidOR_HOID:
     def _gen_pre_mask(self):
         sbj2pre_mask = np.zeros((self.category_num('object'), self.category_num('predicate')))
         obj2pre_mask = np.zeros((self.category_num('object'), self.category_num('predicate')))
+        sbj2pre_mask[:, 0] = 1
+        obj2pre_mask[:, 0] = 1
 
         for inst in self.all_insts:
             vid = inst['vid_id']
@@ -550,7 +552,7 @@ class Tester:
             obj_vecs_raw[num_cand] = obj_vec_raw
             pre_masks_raw[num_cand] = pre_masks_raw[num_cand] * self.dataset.obj2pre_mask[obj_class_id]
             sbj_class_id = self.dataset.obj_cate2idx[rela_seg['sbj_cls']]
-            pre_masks_raw[num_cand] = pre_masks_raw[num_cand] * self.dataset.obj2pre_mask[sbj_class_id]
+            # pre_masks_raw[num_cand] = pre_masks_raw[num_cand] * self.dataset.sbj2pre_mask[sbj_class_id]
 
             hboxes_raw[num_cand] = hbox
             oboxes_raw[num_cand] = obox
