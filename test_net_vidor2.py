@@ -379,7 +379,7 @@ class Tester:
         sbj_cls = sbj['category']
         sbj_scr = sbj['score']
         sbj_tid = sbj['tid']
-        sbj_pose_traj = sbj['pose']
+        # sbj_pose_traj = sbj['pose']
 
         obj_traj = obj['trajectory']
         obj_fids = sorted([int(fid) for fid in obj_traj.keys()])
@@ -414,12 +414,12 @@ class Tester:
             for fid in range(seg_stt_fid, seg_end_fid + 1):
                 seg_sbj_traj['%06d' % fid] = sbj_traj['%06d' % fid]
                 seg_obj_traj['%06d' % fid] = obj_traj['%06d' % fid]
-                seg_sbj_pose_traj['%06d' % fid] = sbj_pose_traj['%06d' % fid]
+                # seg_sbj_pose_traj['%06d' % fid] = sbj_pose_traj['%06d' % fid]
 
             seg = {'seg_id': seg_id,
                    'sbj_traj': seg_sbj_traj,
                    'obj_traj': seg_obj_traj,
-                   'sbj_pose_traj': seg_sbj_pose_traj,
+                   'sbj_pose_traj': None,
                    'sbj_cls': sbj_cls,
                    'obj_cls': obj_cls,
                    'sbj_scr': sbj_scr,
@@ -535,7 +535,8 @@ class Tester:
             obox = np.array(rela_seg['obj_traj'][min(rela_seg['obj_traj'])]).reshape((1, 4)).astype(np.float)
             ibox = np.array([min(hbox[0][0], obox[0][0]), min(hbox[0][1], obox[0][1]),
                              max(hbox[0][2], obox[0][2]), max(hbox[0][3], obox[0][3])]).reshape((1, 4)).astype(np.float)
-            raw_kps = rela_seg['sbj_pose_traj'][min(rela_seg['sbj_pose_traj'])]
+            # raw_kps = rela_seg['sbj_pose_traj'][min(rela_seg['sbj_pose_traj'])]
+            raw_kps = None
             if raw_kps != None and len(raw_kps) == 51:
                 key_points = np.array(raw_kps).reshape((17, 3))
                 pbox = gen_part_boxes(hbox[0].tolist(), key_points, im_in.shape[:2])
@@ -603,7 +604,7 @@ class Tester:
             probs = probs.cpu()
         # probs = probs.data.numpy()[0] * pre_masks_raw1[0]
         probs = probs.data.numpy()[0]
-        all_rela_segs = [[] for _ in range(len(rela_segs))]
+        all_rela_segs = []
 
         # get top 10 predictions
         for i in range(probs.shape[0]):
@@ -617,7 +618,7 @@ class Tester:
                 pred_pre = self.dataset.pre_cates[pred_pre_idx]
                 rela_seg_copy['pre_cls'] = pred_pre
                 rela_seg_copy['pre_scr'] = pred_pre_scr
-                all_rela_segs[i].append(rela_seg_copy)
+                all_rela_segs.append(rela_seg_copy)
 
         return all_rela_segs
 
@@ -635,20 +636,32 @@ class Tester:
             area1 = (xmax1 - xmin1) * (ymax1 - ymin1)
             area2 = (xmax2 - xmin2) * (ymax2 - ymin2)
             areai = max((xmaxi - xmini), 0) * max((ymaxi - ymini), 0)
-            return areai / (area1 + area2 - areai)
+            return areai * 1.0 / (area1 + area2 - areai)
 
         if len(rela_cand_segments) == 0:
             return []
 
-        first_segments = rela_cand_segments[0]
-        for i in range(len(first_segments)):
-            first_segments[i]['instance_id'] = i
-            first_segments[i]['connected'] = True
+        last_seg_id = -2
+        next_instance_id = 0
+        seg_ids = sorted(rela_cand_segments.keys())
+        for seg_idx in range(len(seg_ids)-1):
+            curr_seg_id = seg_ids[seg_idx]
+            next_seg_id = seg_ids[seg_idx+1]
 
-        next_instance_id = len(first_segments)
-        for i in range(len(rela_cand_segments) - 1):
-            curr_segments = rela_cand_segments[i]
-            next_segments = rela_cand_segments[i + 1]
+            curr_segments = rela_cand_segments[curr_seg_id]
+            next_segments = rela_cand_segments[next_seg_id]
+
+            if curr_seg_id - last_seg_id > 1:
+                # init curr
+                for i in range(len(curr_segments)):
+                    curr_segments[i]['instance_id'] = next_instance_id
+                    curr_segments[i]['connected'] = True
+                    next_instance_id += 1
+
+            last_seg_id = curr_seg_id
+
+            if next_seg_id - curr_seg_id > 1:
+                continue
 
             for curr_seg in curr_segments:
                 best_next_id = -1
@@ -665,23 +678,26 @@ class Tester:
                         curr_sbj_box = curr_seg['sbj_traj'][min(curr_seg['sbj_traj'].keys())]
                         curr_obj_box = curr_seg['obj_traj'][min(curr_seg['obj_traj'].keys())]
                         next_sbj_box = next_seg['sbj_traj'][min(next_seg['sbj_traj'].keys())]
-                        next_obj_box = curr_seg['obj_traj'][min(next_seg['obj_traj'].keys())]
+                        next_obj_box = next_seg['obj_traj'][min(next_seg['obj_traj'].keys())]
                         iou = min(cal_iou(curr_sbj_box, next_sbj_box), cal_iou(curr_obj_box, next_obj_box))
                         if iou > best_next_iou:
                             best_next_iou = iou
                             best_next_id = next_id
 
-                if best_next_iou > 0.5:
+                if best_next_iou > 0.6:
                     next_seg = next_segments[best_next_id]
                     next_seg['instance_id'] = curr_seg['instance_id']
+                    next_seg['connected'] = True
 
             for next_seg in next_segments:
                 if not next_seg['connected']:
                     next_seg['instance_id'] = next_instance_id
                     next_seg['connected'] = True
+                    next_instance_id += 1
 
         rela_instances = {}
-        for rela_segments in rela_cand_segments:
+        for seg_id in seg_ids:
+            rela_segments = rela_cand_segments[seg_id]
             for rela_seg in rela_segments:
                 instance_id = rela_seg['instance_id']
                 if instance_id not in rela_instances:
@@ -697,7 +713,7 @@ class Tester:
             rela_instance = rela_instances[instance_id]
             rela_instance['pre_scr'] = rela_instance['pre_scr'] / rela_instance['instance_len']
 
-        return rela_instances.values()
+            return [rela_inst for rela_inst in rela_instances.values() if rela_inst['instance_len'] >= 30]
 
     # @staticmethod
     # def greedy_association(rela_cand_segments):
@@ -813,20 +829,17 @@ class Tester:
                 for cand_seg in rela_cand_segs:
                     all_cand_segs[cand_seg['seg_id']].append(cand_seg)
 
-
         # predicate classification
-        all_rela_cand_segs = defaultdict(list)
         for seg_id in sorted(all_cand_segs.keys()):
             frame_path = os.path.join(vid_frm_root, '%06d.JPEG' % (seg_id * self.seg_len))
             cand_segs = all_cand_segs[seg_id]                      # list(seg)
             cand_segs = self.predict_predicate(cand_segs, frame_path)   # list(list(seg))
-            all_rela_cand_segs[seg_id] = cand_segs
+            all_cand_segs[seg_id] = cand_segs
 
         # association
         vid_relas = []
-        for rela_cand_segs in all_rela_cand_segs.values():
-            rela_instances = self.greedy_association(rela_cand_segs)
-            vid_relas += rela_instances
+        rela_instances = self.greedy_association(all_cand_segs)
+        vid_relas += rela_instances
 
         return vid_relas
 
@@ -867,10 +880,10 @@ if __name__ == '__main__':
     dataset_root = os.path.join('data', dataset_name)
 
     # load DET/GT trajectories
-    use_gt_obj = True
+    use_gt_obj = False
     print('Loading trajectory detections ...')
     if not use_gt_obj:
-        test_traj_det_path = 'data/%s/%s' % (dataset_name, 'object_trajectories_val_det_with_pose.json')
+        test_traj_det_path = 'data/%s/%s' % (dataset_name, 'object_trajectories_val_seqnms2det_with_pose.json')
     else:
         test_traj_det_path = 'data/%s/%s' % (dataset_name, 'object_trajectories_val_gt2det_with_pose.json')
     with open(test_traj_det_path) as f:
