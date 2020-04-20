@@ -602,8 +602,7 @@ class Tester:
 
         if self.use_gpu:
             probs = probs.cpu()
-        # probs = probs.data.numpy()[0] * pre_masks_raw1[0]
-        probs = probs.data.numpy()[0]
+        probs = probs.data.numpy()[0] * pre_masks_raw1[0]
         all_rela_segs = []
 
         # get top 10 predictions
