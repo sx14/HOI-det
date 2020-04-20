@@ -352,11 +352,11 @@ class VidOR_HOID:
 
 class Tester:
 
-    def __init__(self, dataset, model, all_trajs, seg_len,
+    def __init__(self, dataset, model, all_dets, seg_len,
                  max_per_video, output_root, use_gpu=True):
         self.dataset = dataset
         self.model = model
-        self.all_trajs = all_trajs
+        self.all_dets = all_dets
         self.seg_len = seg_len
         self.max_per_video = max_per_video
         self.output_root = output_root
@@ -368,71 +368,48 @@ class Tester:
         if use_gpu:
             model.cuda()
 
-    def generate_relation_segments(self, sbj, obj):
-        video_h = sbj['height']
-        video_w = sbj['width']
-
-        sbj_traj = sbj['trajectory']
-        sbj_fids = sorted([int(fid) for fid in sbj_traj.keys()])
-        sbj_stt_fid = sbj_fids[0]
-        sbj_end_fid = sbj_fids[-1]
-        sbj_cls = sbj['category']
-        sbj_scr = sbj['score']
-        sbj_tid = sbj['tid']
-        # sbj_pose_traj = sbj['pose']
-
-        obj_traj = obj['trajectory']
-        obj_fids = sorted([int(fid) for fid in obj_traj.keys()])
-        obj_stt_fid = obj_fids[0]
-        obj_end_fid = obj_fids[-1]
-        obj_cls = obj['category']
-        obj_scr = obj['score']
-        obj_tid = obj['tid']
+    def generate_relation_segments(self, sbjs, objs, seg_id, frame):
 
         rela_segments = []
-        if sbj_end_fid < obj_stt_fid or sbj_stt_fid > obj_end_fid:
-            # no temporal intersection
-            return rela_segments
 
-        # intersection
-        i_stt_fid = max(sbj_stt_fid, obj_stt_fid)
-        i_end_fid = min(sbj_end_fid, obj_end_fid)
+        for sbj in sbjs:
+            for obj in objs:
+                if sbj['id'] == obj['id']:
+                    continue
 
-        added_seg_ids = set()
-        for seg_fid in range(i_stt_fid, i_end_fid + 1):
-            seg_id = int(seg_fid / self.seg_len)
-            if seg_id in added_seg_ids:
-                continue
-            seg_stt_fid = max(seg_id * self.seg_len, i_stt_fid)
-            seg_end_fid = min(seg_id * self.seg_len + self.seg_len - 1, i_end_fid)
-            seg_dur = seg_end_fid - seg_stt_fid + 1
+                sbj_xmin = sbj['xmin']
+                sbj_ymin = sbj['ymin']
+                sbj_xmax = sbj['xmax']
+                sbj_ymax = sbj['ymax']
+                sbj_scr = sbj['score']
+                sbj_cls = sbj['category']
 
-            seg_sbj_traj = {}
-            seg_obj_traj = {}
-            seg_sbj_pose_traj = {}
+                obj_xmin = obj['xmin']
+                obj_ymin = obj['ymin']
+                obj_xmax = obj['xmax']
+                obj_ymax = obj['ymax']
+                obj_scr = obj['score']
+                obj_cls = obj['category']
 
-            for fid in range(seg_stt_fid, seg_end_fid + 1):
-                seg_sbj_traj['%06d' % fid] = sbj_traj['%06d' % fid]
-                seg_obj_traj['%06d' % fid] = obj_traj['%06d' % fid]
-                # seg_sbj_pose_traj['%06d' % fid] = sbj_pose_traj['%06d' % fid]
+                seg_sbj_traj = {}
+                seg_obj_traj = {}
+                seg_sbj_traj['%06d' % (seg_id * self.seg_len)] = [sbj_xmin, sbj_ymin, sbj_xmax, sbj_ymax]
+                seg_obj_traj['%06d' % (seg_id * self.seg_len)] = [obj_xmin, obj_ymin, obj_xmax, obj_ymax]
 
-            seg = {'seg_id': seg_id,
-                   'sbj_traj': seg_sbj_traj,
-                   'obj_traj': seg_obj_traj,
-                   'sbj_pose_traj': None,
-                   'sbj_cls': sbj_cls,
-                   'obj_cls': obj_cls,
-                   'sbj_scr': sbj_scr,
-                   'obj_scr': obj_scr,
-                   'sbj_tid': sbj_tid,
-                   'obj_tid': obj_tid,
-                   'vid_h': video_h,
-                   'vid_w': video_w,
-                   'instance_id': -1,
-                   'instance_len': 1,
-                   'connected': False}
-            rela_segments.append(seg)
-            added_seg_ids.add(seg_id)
+                seg = {'seg_id': seg_id,
+                       'sbj_traj': seg_sbj_traj,
+                       'obj_traj': seg_obj_traj,
+                       'sbj_pose_traj': None,
+                       'sbj_cls': sbj_cls,
+                       'obj_cls': obj_cls,
+                       'sbj_scr': sbj_scr,
+                       'obj_scr': obj_scr,
+                       'vid_h': frame.shape[0],
+                       'vid_w': frame.shape[1],
+                       'instance_id': -1,
+                       'instance_len': 1,
+                       'connected': False}
+                rela_segments.append(seg)
         return rela_segments
 
     def ext_language_feat(self, rela_segs):
@@ -603,6 +580,7 @@ class Tester:
         if self.use_gpu:
             probs = probs.cpu()
         probs = probs.data.numpy()[0] * pre_masks_raw1[0]
+        # probs = probs.data.numpy()[0]
         all_rela_segs = []
 
         # get top 10 predictions
@@ -714,56 +692,6 @@ class Tester:
 
         return [rela_inst for rela_inst in rela_instances.values() if rela_inst['instance_len'] >= 5]
 
-    # @staticmethod
-    # def greedy_association(rela_cand_segments):
-    #     if len(rela_cand_segments) == 0:
-    #         return []
-    #
-    #     rela_instances = []
-    #     for i in range(len(rela_cand_segments)):
-    #         curr_segments = rela_cand_segments[i]
-    #
-    #         for j in range(len(curr_segments)):
-    #             # current
-    #             curr_segment = curr_segments[j]
-    #             curr_scores = [curr_segment['pre_scr']]
-    #             if curr_segment['connected']:
-    #                 continue
-    #             else:
-    #                 curr_segment['connected'] = True
-    #
-    #             for p in range(i + 1, len(rela_cand_segments)):
-    #                 # try to connect next segment
-    #                 next_segments = rela_cand_segments[p]
-    #                 success = False
-    #                 for q in range(len(next_segments)):
-    #                     next_segment = next_segments[q]
-    #
-    #                     if next_segment['connected']:
-    #                         continue
-    #
-    #                     if curr_segment['pre_cls'] == next_segment['pre_cls']:
-    #                         # merge trajectories
-    #                         curr_sbj = curr_segment['sbj_traj']
-    #                         curr_seg_sbj = next_segment['sbj_traj']
-    #                         curr_sbj.update(curr_seg_sbj)
-    #                         curr_obj = curr_segment['obj_traj']
-    #                         curr_seg_obj = next_segment['obj_traj']
-    #                         curr_obj.update(curr_seg_obj)
-    #
-    #                         # record segment predicate scores
-    #                         curr_scores.append(next_segment['pre_scr'])
-    #                         next_segment['connected'] = True
-    #                         success = True
-    #                         break
-    #
-    #                 if not success:
-    #                     break
-    #
-    #             curr_segment['pre_scr'] = sum(curr_scores) / len(curr_scores)
-    #             rela_instances.append(curr_segment)
-    #     return rela_instances
-
     @staticmethod
     def filter(rela_cands, max_per_video):
         rela_cands = [rela_cand for rela_cand in rela_cands if rela_cand['pre_cls'] != '__no_interaction__']
@@ -807,31 +735,30 @@ class Tester:
                 fid2dets[fid].append(det)
         return fid2dets
 
-    def run_video(self, vid_trajs, vid_frm_root):
+    def run_video(self, vid_dets, vid_frm_root):
 
-        def get_sbjs_and_objs(ds, trajs):
-            sbjs = [traj for traj in trajs if ds.is_subject(traj['category'])]
-            objs = trajs
+        def get_sbjs_and_objs(ds, dets):
+            for i in range(len(dets)):
+                dets[i]['id'] = i
+            sbjs = [det for det in dets if ds.is_subject(det['category'])]
+            objs = dets
             return sbjs, objs
 
-        # add tid
-        for tid, traj in enumerate(vid_trajs):
-            vid_trajs[tid]['tid'] = tid
-
         # collect relation segments
+        frame0_path = os.path.join(vid_frm_root, '000000.JPEG')
+        frame0 = cv2.imread(frame0_path)
         all_cand_segs = defaultdict(list)
-        sbjs, objs = get_sbjs_and_objs(self.dataset, vid_trajs)
-        for sbj in sbjs:
-            for obj in objs:
-                if sbj['tid'] == obj['tid']: continue
-                rela_cand_segs = self.generate_relation_segments(sbj, obj)
-                for cand_seg in rela_cand_segs:
-                    all_cand_segs[cand_seg['seg_id']].append(cand_seg)
+        for fid_str in sorted(vid_dets.keys()):
+            frm_dets = vid_dets[fid_str]
+            sbjs, objs = get_sbjs_and_objs(self.dataset, frm_dets)
+            seg_id = int(int(fid_str) / self.seg_len)
+            rela_cand_segs = self.generate_relation_segments(sbjs, objs, seg_id, frame0)
+            all_cand_segs[seg_id] = rela_cand_segs
 
         # predicate classification
         for seg_id in sorted(all_cand_segs.keys()):
             frame_path = os.path.join(vid_frm_root, '%06d.JPEG' % (seg_id * self.seg_len))
-            cand_segs = all_cand_segs[seg_id]                      # list(seg)
+            cand_segs = all_cand_segs[seg_id]                           # list(seg)
             cand_segs = self.predict_predicate(cand_segs, frame_path)   # list(list(seg))
             all_cand_segs[seg_id] = cand_segs
 
@@ -855,8 +782,8 @@ class Tester:
         return tid2feat
 
     def run(self):
-        vid_num = len(self.all_trajs)
-        for i, pid_vid in enumerate(sorted(self.all_trajs.keys())):
+        vid_num = len(self.all_dets)
+        for i, pid_vid in enumerate(sorted(self.all_dets.keys())):
             pid, vid = pid_vid.split('/')
             print('[%d/%d] %s' % (i+1, vid_num, vid))
 
@@ -866,7 +793,7 @@ class Tester:
                     json.load(f)
                 continue
             vid_frm_root = os.path.join(self.dataset.frame_root, pid, vid)
-            vid_relas = self.run_video(self.all_trajs[pid_vid], vid_frm_root)
+            vid_relas = self.run_video(self.all_dets[pid_vid], vid_frm_root)
             vid_relas = self.filter(vid_relas, self.max_per_video)
             vid_relas = self.format(vid_relas)
 
@@ -879,14 +806,11 @@ if __name__ == '__main__':
     dataset_root = os.path.join('data', dataset_name)
 
     # load DET/GT trajectories
-    use_gt_obj = False
-    print('Loading trajectory detections ...')
-    if not use_gt_obj:
-        test_traj_det_path = 'data/%s/%s' % (dataset_name, 'object_trajectories_val_seqnms2det_with_pose.json')
-    else:
-        test_traj_det_path = 'data/%s/%s' % (dataset_name, 'object_trajectories_val_gt2det_with_pose.json')
-    with open(test_traj_det_path) as f:
-        test_trajs = json.load(f)['results']
+    print('Loading object detections ...')
+    test_det_path = 'data/%s/%s' % (dataset_name, 'object_detections_val.json')
+
+    with open(test_det_path) as f:
+        test_dets = json.load(f)
     dataset = VidOR_HOID(dataset_name, dataset_root)
 
     # load model
@@ -896,5 +820,5 @@ if __name__ == '__main__':
     # init tester
     print('---- Testing start ----')
     output_root = os.path.join('output', dataset_name)
-    tester = Tester(dataset, model, test_trajs, 1, 2000, output_root)
+    tester = Tester(dataset, model, test_dets, 1, 2000, output_root)
     tester.run()
