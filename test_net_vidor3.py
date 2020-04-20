@@ -690,7 +690,7 @@ class Tester:
             rela_instance = rela_instances[instance_id]
             rela_instance['pre_scr'] = rela_instance['pre_scr'] / rela_instance['instance_len']
 
-            return [rela_inst for rela_inst in rela_instances.values() if rela_inst['instance_len'] >= 30]
+        return [rela_inst for rela_inst in rela_instances.values() if rela_inst['instance_len'] >= 30]
 
     @staticmethod
     def filter(rela_cands, max_per_video):
