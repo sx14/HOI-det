@@ -84,21 +84,26 @@ class vidor_hoid(imdb):
     def load_hoi_classes(data_path):
         obj_cate_path = os.path.join(data_path, 'object_labels.txt')
         pre_cate_path = os.path.join(data_path, 'predicate_labels.txt')
+        hoi_cate_path = os.path.join(data_path, 'interaction_labels.txt')
         with open(obj_cate_path) as f:
             obj_cates = [line.strip() for line in f.readlines()]
         with open(pre_cate_path) as f:
             pre_cates = ['__no_interaction__'] + [line.strip() for line in f.readlines()]
-        return obj_cates, pre_cates
+        with open(hoi_cate_path) as f:
+            # N obj_cate base (with "__no_interaction__obj")
+            hoi_cates = ['__no_interaction__+'+obj_cate for obj_cate in obj_cates] + [line.strip() for line in f.readlines()]
+        return obj_cates, pre_cates, hoi_cates
 
     def __init__(self, image_set, version):
         imdb.__init__(self, 'vidor_hoid_' + version + '_' + image_set)
         self._version = version
         self._image_set = image_set
         self._data_path = self._get_default_path()
-        self.obj_classes, self.vrb_classes = self.load_hoi_classes(self._data_path)
-        self._classes = self.vrb_classes
+        self.obj_classes, self.vrb_classes, self.hoi_classes = self.load_hoi_classes(self._data_path)
+        self._classes = self.hoi_classes
         self.obj_class2ind = dict(zip(self.obj_classes, xrange(len(self.obj_classes))))
         self.vrb_class2ind = dict(zip(self.vrb_classes, xrange(len(self.vrb_classes))))
+        self.hoi_class2ind = dict(zip(self.hoi_classes, xrange(len(self.hoi_classes))))
 
         self._class_to_ind = dict(zip(self._classes, xrange(len(self._classes))))
         self._image_ext = '.JPEG'
@@ -354,6 +359,9 @@ class vidor_hoid(imdb):
                     image_anno['iboxes'].append(ibox)
                     image_anno['vrb_classes'].append(vrb_class_ids)
                     image_anno['obj_classes'].append(obj_class_id)
+                    hoi_class_ids = [self.hoi_class2ind[self.vrb_classes[vrb_class_id]+'+'+self.obj_classes[obj_class_id]]
+                                     for vrb_class_id in vrb_class_ids]
+                    image_anno['hoi_classes'].append(hoi_class_ids)
                     image_anno['vrb_masks'].append(obj2pre_mask[obj_class_id].tolist())
 
                     raw_key_points = raw_hoi[4]
@@ -378,8 +386,8 @@ class vidor_hoid(imdb):
                 image_anno['pbox_lists'] = np.zeros((0, 6*4))
                 image_anno['obj_classes'] = np.zeros(0)
                 image_anno['bin_classes'] = np.zeros(0, 2)
-                image_anno['hoi_classes'] = np.zeros((0, len(self.vrb_classes)))
-                image_anno['hoi_masks'] = np.zeros((0, len(self.vrb_classes)))
+                image_anno['hoi_classes'] = np.zeros((0, len(self.hoi_classes)))
+                image_anno['hoi_masks'] = np.zeros((0, len(self.hoi_classes)))
                 image_anno['vrb_classes'] = np.zeros((0, len(self.vrb_classes)))
                 image_anno['vrb_masks'] = np.ones((0, len(self.vrb_classes)))
             else:
@@ -395,7 +403,10 @@ class vidor_hoid(imdb):
                     image_anno['bin_classes'][i, ins_class] = 1
 
                 hoi_classes = image_anno['hoi_classes']
-                image_anno['hoi_classes'] = np.zeros((len(image_anno['hboxes']), len(self.vrb_classes)))
+                image_anno['hoi_classes'] = np.zeros((len(hoi_classes), len(self.hoi_classes)))
+                for i, ins_hois in enumerate(hoi_classes):
+                    for hoi_id in ins_hois:
+                        image_anno['hoi_classes'][i, hoi_id] = 1
 
                 hoi_intervals = image_anno['hoi_masks']
                 image_anno['hoi_masks'] = np.zeros((len(image_anno['hboxes']), len(self.vrb_classes)))

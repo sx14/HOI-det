@@ -434,7 +434,7 @@ class Tester:
         iboxes = torch.FloatTensor(1)
         pboxes = torch.FloatTensor(1)
         sboxes = torch.FloatTensor(1)
-        vrb_classes = torch.FloatTensor(1)
+        hoi_classes = torch.FloatTensor(1)
         bin_classes = torch.FloatTensor(1)
         hoi_masks = torch.FloatTensor(1)
         spa_maps = torch.FloatTensor(1)
@@ -450,7 +450,7 @@ class Tester:
             iboxes = iboxes.cuda()
             pboxes = pboxes.cuda()
             sboxes = sboxes.cuda()
-            vrb_classes = vrb_classes.cuda()
+            hoi_classes = hoi_classes.cuda()
             bin_classes = bin_classes.cuda()
             hoi_masks = hoi_masks.cuda()
             spa_maps = spa_maps.cuda()
@@ -465,7 +465,7 @@ class Tester:
             iboxes = Variable(iboxes)
             pboxes = Variable(pboxes)
             sboxes = Variable(sboxes)
-            vrb_classes = Variable(vrb_classes)
+            hoi_classes = Variable(hoi_classes)
             bin_classes = Variable(bin_classes)
             hoi_masks = Variable(hoi_masks)
             spa_maps = Variable(spa_maps)
@@ -570,7 +570,7 @@ class Tester:
                                    iboxes,
                                    pboxes,
                                    sboxes,
-                                   vrb_classes,
+                                   hoi_classes,
                                    bin_classes,
                                    hoi_masks,
                                    spa_maps,
@@ -579,22 +579,20 @@ class Tester:
 
         if self.use_gpu:
             probs = probs.cpu()
-        # probs = probs.data.numpy()[0] * pre_masks_raw1[0]
         probs = probs.data.numpy()[0]
         all_rela_segs = []
 
-        # get top 10 predictions
         for i in range(probs.shape[0]):
-            rela_probs = probs[i]
-            rela_cls_top10 = np.argsort(rela_probs)[::-1][:10]
             rela_seg = rela_segs[i]
-            for t in range(10):
+            obj_cls = rela_seg['obj_cls']
+            obj_hoi_inds = [hoi_ind for hoi_ind, hoi in enumerate(dataset.hoi_classes) if obj_cls in hoi]
+            rela_probs = probs[i]
+            for hoi_idx in obj_hoi_inds:
                 rela_seg_copy = copy.deepcopy(rela_seg)
-                pred_pre_idx = rela_cls_top10[t]
-                pred_pre_scr = rela_probs[pred_pre_idx]
-                pred_pre = self.dataset.pre_cates[pred_pre_idx]
-                rela_seg_copy['pre_cls'] = pred_pre
-                rela_seg_copy['pre_scr'] = pred_pre_scr
+                pred_hoi_scr = rela_probs[hoi_idx]
+                pred_hoi = self.dataset.hoi_classes[hoi_idx]
+                rela_seg_copy['pre_cls'] = pred_hoi
+                rela_seg_copy['hoi_scr'] = pred_hoi_scr
                 all_rela_segs.append(rela_seg_copy)
 
         return all_rela_segs
@@ -696,7 +694,7 @@ class Tester:
     def filter(rela_cands, max_per_video):
         rela_cands = [rela_cand for rela_cand in rela_cands if rela_cand['pre_cls'] != '__no_interaction__']
         for rela_cand in rela_cands:
-            rela_cand['score'] = rela_cand['sbj_scr'] * rela_cand['obj_scr'] * rela_cand['pre_scr']
+            rela_cand['score'] = rela_cand['hoi_scr']
         sorted_cands = sorted(rela_cands, key=lambda rela: rela['score'], reverse=True)
         return sorted_cands[:max_per_video]
 

@@ -68,10 +68,10 @@ class _fasterRCNN(nn.Module):
             nn.Dropout(p=0.5),
             nn.Linear(1024, self.n_classes))
 
-        self.obj_cls_score = nn.Sequential(
-            nn.Linear(300, 512),
-            nn.LeakyReLU(),
-            nn.Linear(512, self.n_classes))
+        # self.obj_cls_score = nn.Sequential(
+        #     nn.Linear(300, 512),
+        #     nn.LeakyReLU(),
+        #     nn.Linear(512, self.n_classes))
 
         # self.obj_attention = nn.Sequential(
         #     nn.Linear(300, 512),
