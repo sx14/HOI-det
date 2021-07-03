@@ -85,32 +85,37 @@ def _get_image_blob(roidb, scale_inds):
   processed_dps = []
 
   for i in range(num_images):
+    # print(roidb[i]['image'])
     im = imread(roidb[i]['image'])
-    dp = np.load(roidb[i]['depth'])
+    # dp = np.load(roidb[i]['depth'])
     # dp = np.zeros((im.shape[0], im.shape[1], 7))
 
     if len(im.shape) == 2:
       im = im[:,:,np.newaxis]
       im = np.concatenate((im,im,im), axis=2)
+
+    if im.shape[2] > 3:
+      im = im[:, :, :3]
+
     # flip the channel, since the original one using cv2
     # rgb -> bgr
     im = im[:,:,::-1]
 
     if roidb[i]['flipped']:
       im = im[:, ::-1, :]
-      dp = dp[:, ::-1, :]
+      # dp = dp[:, ::-1, :]
     target_size = cfg.TRAIN.SCALES[scale_inds[i]]
     im, im_scale = prep_im_for_blob(im, cfg.PIXEL_MEANS, target_size,
                     cfg.TRAIN.MAX_SIZE)
-    dp, de_scale = prep_im_for_blob(dp, cfg.DEPTH_MEANS, target_size,
-                    cfg.TRAIN.MAX_SIZE)
+    # dp, de_scale = prep_im_for_blob(dp, cfg.DEPTH_MEANS, target_size,
+    #                 cfg.TRAIN.MAX_SIZE)
 
     im_scales.append(im_scale)
     processed_ims.append(im)
-    processed_dps.append(dp)
+    # processed_dps.append(dp)
 
   # Create a blob to hold the input images
   im_blob = im_list_to_blob(processed_ims, 3)
-  dp_blob = im_list_to_blob(processed_dps, 7)
-
+  # dp_blob = im_list_to_blob(processed_dps, 7)
+  dp_blob = None
   return im_blob, dp_blob, im_scales

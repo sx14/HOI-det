@@ -33,6 +33,8 @@ from model.utils.net_utils import weights_normal_init, save_net, load_net, \
 from model.faster_rcnn.vgg16 import vgg16
 from model.faster_rcnn.resnet import resnet
 
+os.environ['PATH']="/usr/local/cuda-9.0/bin:$PATH"
+os.environ['LD_LIBRARY_PATH'] = '/usr/local/cuda-9.0/lib64'
 
 def parse_args():
   """
@@ -41,7 +43,7 @@ def parse_args():
   parser = argparse.ArgumentParser(description='Train a Fast R-CNN network')
   parser.add_argument('--dataset', dest='dataset',
                       help='training dataset',
-                      default='vcoco_full', type=str)
+                      default='hoia_full', type=str)
   parser.add_argument('--net', dest='net',
                       help='vgg16, res101',
                       default='res101', type=str)
@@ -87,7 +89,7 @@ def parse_args():
                       default="sgd", type=str)
   parser.add_argument('--lr', dest='lr',
                       help='starting learning rate',
-                      default=0.00001, type=float)
+                      default=0.001, type=float)
   parser.add_argument('--lr_decay_step', dest='lr_decay_step',
                       help='step to do learning rate decay, unit is epoch',
                       default=1, type=int)  # hico-1, vcoco-3
@@ -160,6 +162,14 @@ if __name__ == '__main__':
   if args.dataset == "hico_mini":
       args.imdb_name = "hico2_mini_train"
       args.imdbval_name = "hico2_mini_test"
+      args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '75']
+  elif args.dataset == "pic_full":
+      args.imdb_name = "pic_full_train"
+      args.imdbval_name = "pic_full_val"
+      args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '75']
+  elif args.dataset == "hoia_full":
+      args.imdb_name = "hoia_full_train"
+      args.imdbval_name = "hoia_full_test"
       args.set_cfgs = ['ANCHOR_SCALES', '[8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '75']
   elif args.dataset == "hico_full":
       args.imdb_name = "hico2_full_train"
@@ -309,8 +319,10 @@ if __name__ == '__main__':
     fasterRCNN.cuda()
 
   if args.resume:
+    # load_name = os.path.join(output_dir,
+    #   'base_cb_sb_lc_gc_bpa_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
     load_name = os.path.join(output_dir,
-      'base_cb_sb_lc_gc_bpa_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
+      'base_cb_sb_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
     print("loading checkpoint %s" % (load_name))
     checkpoint = torch.load(load_name)
     args.session = checkpoint['session']
@@ -354,7 +366,7 @@ if __name__ == '__main__':
       ld_start = time.time()
       data = next(data_iter)
       im_data.data.resize_(data[0].size()).copy_(data[0])
-      dp_data.data.resize_(data[1].size()).copy_(data[1])
+      # dp_data.data.resize_(data[1].size()).copy_(data[1])
       im_info.data.resize_(data[2].size()).copy_(data[2])
       hboxes.data.resize_(data[3].size()).copy_(data[3])
       oboxes.data.resize_(data[4].size()).copy_(data[4])
@@ -373,9 +385,9 @@ if __name__ == '__main__':
       ld_end = time.time()
       ld_time += (ld_end-ld_start)
 
-      if num_hois.data.item() < 2:
-          continue
-
+      # if num_hois.data.item() < 2:
+      #     continue
+      # print(vrb_classes.cpu().data.numpy())
       fasterRCNN.zero_grad()
       cls_prob, bin_prob, RCNN_loss_cls, RCNN_loss_bin = \
           fasterRCNN(im_data, dp_data, im_info,
@@ -386,6 +398,7 @@ if __name__ == '__main__':
                      obj_vecs, num_hois)
 
       loss = RCNN_loss_cls.mean()
+
 
       if args.mGPUs:
           loss_cls = RCNN_loss_cls.mean().item()
@@ -434,7 +447,7 @@ if __name__ == '__main__':
         start = time.time()
         ld_time = 0
 
-    save_name = os.path.join(output_dir, 'base_cb_sb_lc_gc_bpa_{}_{}_{}.pth'.format(args.session, epoch, step))
+    save_name = os.path.join(output_dir, 'base_cb_sb_{}_{}_{}.pth'.format(args.session, epoch, step))
     save_checkpoint({
       'session': args.session,
       'epoch': epoch + 1,

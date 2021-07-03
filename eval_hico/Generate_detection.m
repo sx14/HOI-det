@@ -1,6 +1,6 @@
 function[] = Generate_detection(sourceDir)
 
-List = load('data/hico_20160224_det/anno.mat', 'list_test');
+List = load('../data/hico/hico_20160224_det/anno.mat', 'list_test');
 List = List.list_test;
 for i = 1 : 9658
     list(i) = str2double(List{i}(end-9 : end-4));

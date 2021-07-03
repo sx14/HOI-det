@@ -95,38 +95,39 @@ class _fasterRCNN(nn.Module):
 
         # feed image data to base model to obtain base feature map
         base_feat = self.RCNN_base(im_data)
-        base_cond = self.cond_base(de_data)
-        base_feat = self.sft_base([base_feat, base_cond])
+        # base_cond = self.cond_base(de_data)
+        # base_feat = self.sft_base([base_feat, base_cond])
 
         layer1_feat = self.RCNN_layer1(base_feat)
-        layer1_cond = self.cond_layer1(base_cond)
-        layer1_feat = self.sft_layer1([layer1_feat, layer1_cond])
+        # layer1_cond = self.cond_layer1(base_cond)
+        # layer1_feat = self.sft_layer1([layer1_feat, layer1_cond])
 
         layer2_feat = self.RCNN_layer2(layer1_feat)
-        layer2_cond = self.cond_layer2(layer1_cond)
-        layer2_feat = self.sft_layer2([layer2_feat, layer2_cond])
+        # layer2_cond = self.cond_layer2(layer1_cond)
+        # layer2_feat = self.sft_layer2([layer2_feat, layer2_cond])
 
         layer3_feat = self.RCNN_layer3(layer2_feat)
-        layer3_cond = self.cond_layer3(layer2_cond)
-        base_feat = self.sft_layer3([layer3_feat, layer3_cond])
+        # layer3_cond = self.cond_layer3(layer2_cond)
+        # base_feat = self.sft_layer3([layer3_feat, layer3_cond])
+        base_feat = layer3_feat
 
         hrois = Variable(torch.zeros(hboxes.shape[0], hboxes.shape[1], hboxes.shape[2] + 1))
         orois = Variable(torch.zeros(oboxes.shape[0], oboxes.shape[1], oboxes.shape[2] + 1))
         irois = Variable(torch.zeros(iboxes.shape[0], iboxes.shape[1], iboxes.shape[2] + 1))
-        prois = Variable(torch.zeros(pboxes.shape[0], pboxes.shape[1] * pboxes.shape[2], pboxes.shape[3] + 1))
+        # prois = Variable(torch.zeros(pboxes.shape[0], pboxes.shape[1] * pboxes.shape[2], pboxes.shape[3] + 1))
         srois = Variable(torch.zeros(sboxes.shape[0], sboxes.shape[1], sboxes.shape[2] + 1))
 
         if im_data.is_cuda:
             hrois = hrois.cuda()
             orois = orois.cuda()
             irois = irois.cuda()
-            prois = prois.cuda()
+            # prois = prois.cuda()
             srois = srois.cuda()
 
         hrois[:, :, 1:] = hboxes
         orois[:, :, 1:] = oboxes
         irois[:, :, 1:] = iboxes
-        prois[:, :, 1:] = pboxes.view(pboxes.shape[0], -1, pboxes.shape[3])
+        # prois[:, :, 1:] = pboxes.view(pboxes.shape[0], -1, pboxes.shape[3])
         srois[:, :, 1:] = sboxes
 
         iroi_pooled_feat = self.RCNN_roi_align(base_feat, irois.view(-1, 5))
@@ -138,8 +139,8 @@ class _fasterRCNN(nn.Module):
         oroi_pooled_feat = self.RCNN_roi_align(base_feat, orois.view(-1, 5))
         oroi_pooled_feat = self._ohead_to_tail(oroi_pooled_feat)
 
-        proi_pooled_feat = self.RCNN_roi_align(base_feat, prois.view(-1, 5))
-        proi_pooled_feat = self._phead_to_tail(proi_pooled_feat)
+        # proi_pooled_feat = self.RCNN_roi_align(base_feat, prois.view(-1, 5))
+        # proi_pooled_feat = self._phead_to_tail(proi_pooled_feat)
 
         sroi_pooled_feat = self.RCNN_roi_align(base_feat, srois.view(-1, 5))
         sroi_pooled_feat = self._shead_to_tail(sroi_pooled_feat)
@@ -161,24 +162,26 @@ class _fasterRCNN(nn.Module):
         ocls_score = self.oRCNN_cls_score(oroi_pooled_feat)
         ocls_prob = F.sigmoid(ocls_score)
 
-        obj_att = self.obj_attention(obj_vecs[0])
-        part_att_feats = []
-        for i in range(obj_att.shape[1]):
-            part_att = obj_att[:, i:i+1]
-            part_feat = proi_pooled_feat[:, i*2048:(i+1)*2048]
-            part_att_feat = part_att * part_feat
-            part_att_feats.append(part_att_feat)
-        att_proi_pooled_feat = torch.cat(part_att_feats, dim=1)
-        att_proi_pooled_feat = Variable(att_proi_pooled_feat.cuda())
-        att_proi_pooled_feat = att_proi_pooled_feat + proi_pooled_feat
-        pcls_score = self.pRCNN_cls_score(att_proi_pooled_feat)
-        pcls_prob = F.sigmoid(pcls_score)
+        # obj_att = self.obj_attention(obj_vecs[0])
+        # part_att_feats = []
+        # for i in range(obj_att.shape[1]):
+        #     part_att = obj_att[:, i:i+1]
+        #     part_feat = proi_pooled_feat[:, i*2048:(i+1)*2048]
+        #     part_att_feat = part_att * part_feat
+        #     part_att_feats.append(part_att_feat)
+        # att_proi_pooled_feat = torch.cat(part_att_feats, dim=1)
+        # att_proi_pooled_feat = Variable(att_proi_pooled_feat.cuda())
+        # att_proi_pooled_feat = att_proi_pooled_feat + proi_pooled_feat
+        # pcls_score = self.pRCNN_cls_score(att_proi_pooled_feat)
+        # pcls_prob = F.sigmoid(pcls_score)
 
         ccls_score = self.sRCNN_cls_score(sroi_pooled_feat)
         ccls_prob = F.sigmoid(ccls_score)
         ccls_prob = ccls_prob.repeat((icls_prob.shape[0], 1))
 
-        cls_prob = (icls_prob + hcls_prob + ocls_prob + pcls_prob + ccls_prob) * scls_prob * vcls_prob
+        # cls_prob = (icls_prob + hcls_prob + ocls_prob + pcls_prob + ccls_prob) * scls_prob * vcls_prob
+        ## good cls_prob = (icls_prob + hcls_prob + ocls_prob + ccls_prob) * scls_prob * vcls_prob
+        cls_prob = (icls_prob + hcls_prob + ocls_prob + ccls_prob + scls_prob + vcls_prob) / 6.0
 
         RCNN_loss_cls = 0
         RCNN_loss_bin = 0
@@ -186,15 +189,16 @@ class _fasterRCNN(nn.Module):
         if self.training:
             # classification loss
             hoi_masks = hoi_masks.view(-1, hoi_masks.shape[2])
-            scls_loss = F.binary_cross_entropy(scls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
-            icls_loss = F.binary_cross_entropy(icls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
-            hcls_loss = F.binary_cross_entropy(hcls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
-            ocls_loss = F.binary_cross_entropy(ocls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
-            pcls_loss = F.binary_cross_entropy(pcls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
-            ccls_loss = F.binary_cross_entropy(ccls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
-            vcls_loss = F.binary_cross_entropy(vcls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
+            scls_loss = F.binary_cross_entropy(scls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=True)
+            icls_loss = F.binary_cross_entropy(icls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=True)
+            hcls_loss = F.binary_cross_entropy(hcls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=True)
+            ocls_loss = F.binary_cross_entropy(ocls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=True)
+            # pcls_loss = F.binary_cross_entropy(pcls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=False)
+            ccls_loss = F.binary_cross_entropy(ccls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=True)
+            vcls_loss = F.binary_cross_entropy(vcls_prob * hoi_masks, hoi_classes.view(-1, hoi_classes.shape[2]), size_average=True)
 
-            RCNN_loss_cls = scls_loss + icls_loss + hcls_loss + ocls_loss + pcls_loss + ccls_loss + vcls_loss
+            # RCNN_loss_cls = scls_loss + icls_loss + hcls_loss + ocls_loss + pcls_loss + ccls_loss + vcls_loss
+            RCNN_loss_cls = scls_loss + icls_loss + hcls_loss + ocls_loss + ccls_loss + vcls_loss
 
         cls_prob = cls_prob.view(batch_size, irois.size(1), -1)
         bin_prob = Variable(torch.zeros(batch_size, irois.size(1), 2)).cuda()

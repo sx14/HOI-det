@@ -1,0 +1,533 @@
+# --------------------------------------------------------
+# Tensorflow Faster R-CNN
+# Licensed under The MIT License [see LICENSE for details]
+# Written by Jiasen Lu, Jianwei Yang, based on code from Ross Girshick
+# --------------------------------------------------------
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
+import _init_paths
+import os
+import json
+import pickle
+import numpy as np
+import argparse
+import pprint
+import time
+import cv2
+import torch
+from collections import defaultdict
+from torch.autograd import Variable
+import torch.optim as optim
+
+import torchvision.transforms as transforms
+from scipy.misc import imread
+from roi_data_layer.roibatchLoader import gen_spatial_map
+from roi_data_layer.pose_map import gen_pose_obj_map1
+from model.utils.config import cfg, cfg_from_file, cfg_from_list, get_output_dir
+from model.nms.nms_wrapper import nms
+from model.rpn.bbox_transform import bbox_transform_inv
+from model.utils.blob import im_list_to_blob
+from model.faster_rcnn.vgg16 import vgg16
+from model.faster_rcnn.resnet import resnet
+from generate_VCOCO_detection import generate_VCOCO_detection_and_eval
+from datasets.vcoco import refine_human_box_with_skeleton
+from datasets.pose_map import gen_part_boxes, gen_part_boxes1
+from datasets.vcoco import vcoco
+from datasets.hoia import hoia
+import pdb
+
+os.environ['PATH']="/usr/local/cuda-9.0/bin:$PATH"
+os.environ['LD_LIBRARY_PATH'] = '/usr/local/cuda-9.0/lib64'
+
+try:
+    xrange          # Python 2
+except NameError:
+    xrange = range  # Python 3
+
+
+def coco_obj_res_to_dets(image_names, all_dets):
+    image_name_to_objs = defaultdict(list)
+    for det in all_dets:
+        bbox = det['bbox']
+        x1, y1, w, h = bbox
+        bbox = [x1, y1, x1+w, y1+h]
+        det['bbox'] = bbox
+        det['category_id'] = str(det['category_id'])
+        image_id = det['image_id']
+        image_name = image_names[image_id]
+        det['id'] = len(image_name_to_objs[image_name])
+        image_name_to_objs[image_name].append(det)
+    return image_name_to_objs
+
+
+def parse_args():
+  """
+  Parse input arguments
+  """
+  parser = argparse.ArgumentParser(description='Train a Fast R-CNN network')
+  parser.add_argument('--dataset', dest='dataset',
+                      help='training dataset',
+                      default='hoia_full', type=str)
+  parser.add_argument('--cfg', dest='cfg_file',
+                      help='optional config file',
+                      default='cfgs/vgg16.yml', type=str)
+  parser.add_argument('--net', dest='net',
+                      help='vgg16, res50, res101, res152',
+                      default='res101', type=str)
+  parser.add_argument('--set', dest='set_cfgs',
+                      help='set config keys', default=None,
+                      nargs=argparse.REMAINDER)
+  parser.add_argument('--load_dir', dest='load_dir',
+                      help='directory to load models',
+                      default="weights")
+  parser.add_argument('--output_dir', dest='output_dir',
+                      help='directory to load images for demo',
+                      default="output")
+  parser.add_argument('--cuda', dest='cuda',
+                      help='whether use CUDA',
+                      default=True,
+                      action='store_true')
+  parser.add_argument('--mGPUs', dest='mGPUs',
+                      help='whether use multiple GPUs',
+                      action='store_true')
+  parser.add_argument('--cag', dest='class_agnostic',
+                      help='whether perform class_agnostic bbox regression',
+                      action='store_true')
+  parser.add_argument('--parallel_type', dest='parallel_type',
+                      help='which part of model to parallel, 0: all, 1: model before roi pooling',
+                      default=0, type=int)
+  parser.add_argument('--checksession', dest='checksession',
+                      help='checksession to load model',
+                      default=1, type=int)
+  parser.add_argument('--checkepoch', dest='checkepoch',
+                      help='checkepoch to load network',
+                      default=6, type=int)
+  parser.add_argument('--checkpoint', dest='checkpoint',
+                      help='checkpoint to load network',
+                      default=29740, type=int)
+
+
+  args = parser.parse_args()
+  return args
+
+
+def _get_image_blob(im, dp):
+  """Converts an image into a network input.
+  Arguments:
+    im (ndarray): a color image in BGR order
+  Returns:
+    blob (ndarray): a data blob holding an image pyramid
+    im_scale_factors (list): list of image scales (relative to im) used
+      in the image pyramid
+  """
+  im_orig = im.astype(np.float32, copy=True)
+  im_orig -= cfg.PIXEL_MEANS
+
+  # dp_orig = dp.astype(np.float32, copy=True)
+  # dp_orig -= cfg.DEPTH_MEANS
+
+  im_shape = im_orig.shape
+  im_size_min = np.min(im_shape[0:2])
+  im_size_max = np.max(im_shape[0:2])
+
+  im_scales = []
+  processed_ims = []
+  # processed_dps = []
+
+  for target_size in cfg.TEST.SCALES:
+    im_scale = float(target_size) / float(im_size_min)
+    # Prevent the biggest axis from being more than MAX_SIZE
+    if np.round(im_scale * im_size_max) > cfg.TEST.MAX_SIZE:
+      im_scale = float(cfg.TEST.MAX_SIZE) / float(im_size_max)
+    im = cv2.resize(im_orig, None, None, fx=im_scale, fy=im_scale,
+            interpolation=cv2.INTER_LINEAR)
+    # dp = cv2.resize(dp_orig, None, None, fx=im_scale, fy=im_scale,
+    #         interpolation=cv2.INTER_LINEAR)
+
+    im_scales.append(im_scale)
+    processed_ims.append(im)
+    # processed_dps.append(dp)
+
+  # Create a blob to hold the input images
+  im_blob = im_list_to_blob(processed_ims, 3)
+  # dp_blob = im_list_to_blob(processed_dps, 7)
+
+  return im_blob, dp, im_scales
+
+
+if __name__ == '__main__':
+
+  args = parse_args()
+
+  print('Called with args:')
+  print(args)
+
+  if args.cfg_file is not None:
+    cfg_from_file(args.cfg_file)
+  if args.set_cfgs is not None:
+    cfg_from_list(args.set_cfgs)
+
+  cfg.USE_GPU_NMS = args.cuda
+
+  print('Using config:')
+  pprint.pprint(cfg)
+  np.random.seed(cfg.RNG_SEED)
+
+  output_dir = os.path.join(args.output_dir, args.dataset)
+  output_path = os.path.join(output_dir, 'all_hoi_detections_2021_rcnn_avg_fuse_tta.json')
+
+  print('Loading object detections ...')
+  # det_path = 'data/hoia/mlcnet_data/yolo_2021test_new_with_image_id.json'
+  det_path = '/home/magus/data/C0008-challenge/sunx-workspace/ResNeSt/output_resnest200_test2021/inference_TTA/coco_instances_results_with_image_id.json'
+  # det_path = '/home/magus/data/C0008-challenge/object_detection_results/2021test_yolo_with_cascade.json'
+  # det_path = '/home/magus/data/C0008-challenge/pose_results/yolo_2021test_new_with_pose_with_image_id.json'
+  with open(det_path) as f:
+      det_db = json.load(f)
+
+  human_thres = 0.4
+  object_thres = 0.4
+
+  input_dir = args.load_dir + "/" + args.net + "/" + args.dataset
+  if not os.path.exists(input_dir):
+    raise Exception('There is no input directory for loading network from ' + input_dir)
+  load_name = os.path.join(input_dir,
+    'base_cb_sb_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
+
+  obj_classes, pre_classes, obj2ind, vrb2ind, obj_to_pre_mask = hoia.load_hoi_classes(cfg.DATA_DIR + '/hoia')
+  obj2vec = hoia.load_obj2vec(cfg.DATA_DIR + '/hoia')
+
+  # initilize the network here.
+  if args.net == 'vgg16':
+    fasterRCNN = vgg16(pre_classes, pretrained=False, class_agnostic=args.class_agnostic)
+  elif args.net == 'res101':
+    fasterRCNN = resnet(pre_classes, 101, pretrained=False, class_agnostic=args.class_agnostic)
+  elif args.net == 'res50':
+    fasterRCNN = resnet(pre_classes, 50, pretrained=False, class_agnostic=args.class_agnostic)
+  elif args.net == 'res152':
+    fasterRCNN = resnet(pre_classes, 152, pretrained=False, class_agnostic=args.class_agnostic)
+  else:
+    print("Network is not defined")
+    pdb.set_trace()
+
+  fasterRCNN.create_architecture()
+
+  print("Loading checkpoint %s ..." % (load_name))
+  if args.cuda > 0:
+    checkpoint = torch.load(load_name)
+  else:
+    checkpoint = torch.load(load_name, map_location=(lambda storage, loc: storage))
+  fasterRCNN.load_state_dict(checkpoint['model'])
+  if 'pooling_mode' in checkpoint.keys():
+    cfg.POOLING_MODE = checkpoint['pooling_mode']
+  print('Load model successfully!')
+
+
+  # initilize the tensor holder here.
+  im_data = torch.FloatTensor(1)
+  dp_data = torch.FloatTensor(1)
+  im_info = torch.FloatTensor(1)
+  num_hois = torch.LongTensor(1)
+  hboxes = torch.FloatTensor(1)
+  oboxes = torch.FloatTensor(1)
+  iboxes = torch.FloatTensor(1)
+  pboxes = torch.FloatTensor(1)
+  sboxes = torch.FloatTensor(1)
+  vrb_classes = torch.FloatTensor(1)
+  bin_classes = torch.FloatTensor(1)
+  hoi_masks = torch.FloatTensor(1)
+  spa_maps = torch.FloatTensor(1)
+  pose_maps = torch.FloatTensor(1)
+  obj_vecs = torch.FloatTensor(1)
+
+  # ship to cuda
+  if args.cuda > 0:
+    im_data = im_data.cuda()
+    dp_data = dp_data.cuda()
+    im_info = im_info.cuda()
+    num_hois = num_hois.cuda()
+    hboxes = hboxes.cuda()
+    oboxes = oboxes.cuda()
+    iboxes = iboxes.cuda()
+    pboxes = pboxes.cuda()
+    sboxes = sboxes.cuda()
+    # hoi_classes = hoi_classes.cuda()
+    vrb_classes = vrb_classes.cuda()
+    bin_classes = bin_classes.cuda()
+    hoi_masks = hoi_masks.cuda()
+    spa_maps = spa_maps.cuda()
+    pose_maps = pose_maps.cuda()
+    obj_vecs = obj_vecs.cuda()
+
+  # make variable
+  with torch.no_grad():
+      im_data = Variable(im_data)
+      dp_data = Variable(dp_data)
+      im_info = Variable(im_info)
+      num_hois = Variable(num_hois)
+      hboxes = Variable(hboxes)
+      oboxes = Variable(oboxes)
+      iboxes = Variable(iboxes)
+      pboxes = Variable(pboxes)
+      sboxes = Variable(sboxes)
+      vrb_classes = Variable(vrb_classes)
+      bin_classes = Variable(bin_classes)
+      hoi_masks = Variable(hoi_masks)
+      spa_maps = Variable(spa_maps)
+      pose_maps = Variable(pose_maps)
+      obj_vecs = Variable(obj_vecs)
+
+  if args.cuda > 0:
+    cfg.CUDA = True
+
+  if args.cuda > 0:
+    fasterRCNN.cuda()
+
+  fasterRCNN.eval()
+
+  start = time.time()
+
+
+  num_images = len(det_db)
+  print('Loaded Photo: {} images.'.format(num_images))
+
+  # all_results = []
+  all_hoi_res = []
+  image_path_template = 'data/hoia/test2021/%s'
+  # human_path_template = 'data/vcoco/humans/test/COCO_val2014_%s.npy'
+  for i, im_id in enumerate(det_db):
+      print('test [%d/%d]' % (i + 1, num_images))
+      img_hoi_res = {
+          'file_name': im_id,
+          'predictions': det_db[im_id],
+          'hoi_prediction': []
+      }
+      all_hoi_res.append(img_hoi_res)
+
+      im_file = image_path_template % im_id
+      im_in = cv2.imread(im_file)
+      if len(im_in.shape) == 2:
+          im_in = im_in[:, :, np.newaxis]
+          im_in = np.concatenate((im_in, im_in, im_in), axis=2)
+      # im_in = im_in[:, :, ::-1]     # rgb -> bgr
+      im_h = im_in.shape[0]
+      im_w = im_in.shape[1]
+
+      # dp_file = human_path_template % str(im_id).zfill(12)
+      # dp_in = np.load(dp_file)
+
+      im_blobs, dp_blobs, im_scales = _get_image_blob(im_in, None)
+      im_results = []
+
+      data_height = im_in.shape[0]
+      data_width = im_in.shape[1]
+      gt_sboxes = [
+          [0, 0, data_width, data_height],
+          [0, 0, data_width / 2, data_height / 2],
+          [data_width / 2, 0, data_width, data_height / 2],
+          [0, data_height / 2, data_width / 2, data_height],
+          [data_width / 2, data_height / 2, data_width, data_height]
+      ]
+      sboxes_raw = np.array(gt_sboxes)
+      sboxes_raw = sboxes_raw[np.newaxis, :, :]
+
+
+      for human_det in det_db[im_id]:
+          if (human_det['score'] > human_thres) and (human_det['category_id'] == '1'):
+              # This is a valid human
+              # raw_key_points = human_det[6]
+              # if raw_key_points is None or len(raw_key_points) != 51:
+              #     key_points = None
+              # else:
+              #     key_points = np.array(raw_key_points)
+              #     key_points = np.reshape(key_points, (17, 3))
+              #     # check x,y
+              #     key_points[:, :2][key_points[:, :2] < 0] = 0
+              #     key_points[:, 0][key_points[:, 0] >= im_w] = im_w - 1
+              #     key_points[:, 1][key_points[:, 1] >= im_h] = im_h - 1
+
+              # hbox = [human_det[2][0],
+              #         human_det[2][1],
+              #         human_det[2][2],
+              #         human_det[2][3]]
+              hbox = human_det['bbox']
+              hbox = [max(0, hbox[0]), max(0, hbox[1]),
+                      max(0, hbox[2]), max(0, hbox[3])]
+              hbox = [min(im_w - 1, hbox[0]), min(im_h - 1, hbox[1]),
+                      min(im_w - 1, hbox[2]), min(im_h - 1, hbox[3])]
+              # hbox = refine_human_box_with_skeleton(hbox, key_points)
+              hbox = np.array(hbox).reshape(1, 4)
+
+              hboxes_raw = np.zeros((500, 4))
+              oboxes_raw = np.zeros((500, 4))
+              iboxes_raw = np.zeros((500, 4))
+              pboxes_raw = np.zeros((500, 6, 5))
+              spa_maps_raw = np.zeros((500, 2, 64, 64))
+              pose_maps_raw = np.zeros((500, 8, 224, 224))
+              obj_vecs_raw = np.zeros((500, 300))
+              num_cand = 0
+
+              # save image information
+              # det = {}
+              # det['image_id'] = im_id
+              # det['human_box'] = human_det['bbox']
+              # det['human_score'] = human_det['score']
+
+              object_bboxes = []
+              object_classes = []
+              object_scores = []
+              object_ids = []
+              object_pre_masks = []
+
+              for object_det in det_db[im_id]:
+                  if (object_det['score'] > object_thres) and object_det['category_id'] != '1':
+                      # This is a valid object
+                      obox = object_det['bbox']
+                      obox = np.array(obox).reshape(1, 4)
+                      # obox = np.array([object_det[2][0],
+                      #                  object_det[2][1],
+                      #                  object_det[2][2],
+                      #                  object_det[2][3]]).reshape(1, 4)
+
+                      ibox = np.array([min(hbox[0, 0], obox[0, 0]),
+                                       min(hbox[0, 1], obox[0, 1]),
+                                       max(hbox[0, 2], obox[0, 2]),
+                                       max(hbox[0, 3], obox[0, 3])]).reshape(1, 4)
+
+                      # pbox = gen_part_boxes(hbox[0], key_points, [im_h, im_w])
+                      # pbox1 = gen_part_boxes1(hbox[0], key_points)
+                      #
+                      # pbox = np.array(pbox)
+                      # pbox = pbox.reshape((1, 6, 5))
+                      #
+                      # pbox1 = np.array(pbox1)
+                      # pbox1 = pbox1.reshape((1, 6, 5))
+
+                      spa_map_raw = gen_spatial_map(human_det['bbox'], object_det['bbox'])
+                      spa_maps_raw[num_cand] = spa_map_raw
+
+                      # pose_map_raw = gen_pose_obj_map1(hbox[0].tolist(), obox[0].tolist(), ibox[0].tolist(), pbox1[0])
+                      # pose_maps_raw[num_cand] = pose_map_raw
+
+                      obj_class_id = int(object_det['category_id'])
+                      obj_vec_raw = obj2vec[obj_class_id]
+                      obj_vecs_raw[num_cand] = obj_vec_raw
+                      obj_pre_mask = obj_to_pre_mask[obj_class_id]
+                      object_pre_masks.append(obj_pre_mask)
+
+                      hboxes_raw[num_cand] = hbox
+                      oboxes_raw[num_cand] = obox
+                      iboxes_raw[num_cand] = ibox
+                      # pboxes_raw[num_cand] = pbox
+
+                      object_bboxes.append(object_det['bbox'])
+                      object_classes.append(int(object_det['category_id']))
+                      object_scores.append(object_det['score'])
+                      object_ids.append(object_det['id'])
+                      num_cand += 1
+
+              if num_cand == 0:
+                  continue
+
+              hboxes_raw = hboxes_raw[np.newaxis, :num_cand, :]
+              oboxes_raw = oboxes_raw[np.newaxis, :num_cand, :]
+              iboxes_raw = iboxes_raw[np.newaxis, :num_cand, :]
+              # pboxes_raw = pboxes_raw[np.newaxis, :num_cand, :, :4]
+
+              spa_maps_raw = spa_maps_raw[np.newaxis, :num_cand, :, :, :]
+              # pose_maps_raw = pose_maps_raw[np.newaxis, :num_cand, :, :, :]
+              obj_vecs_raw = obj_vecs_raw[np.newaxis, :num_cand, :]
+
+              hboxes_t = torch.from_numpy(hboxes_raw * im_scales[0])
+              oboxes_t = torch.from_numpy(oboxes_raw * im_scales[0])
+              iboxes_t = torch.from_numpy(iboxes_raw * im_scales[0])
+              # pboxes_t = torch.from_numpy(pboxes_raw * im_scales[0])
+              sboxes_t = torch.from_numpy(sboxes_raw * im_scales[0])
+
+              spa_maps_t = torch.from_numpy(spa_maps_raw)
+              # pose_maps_t = torch.from_numpy(pose_maps_raw)
+              obj_vecs_t = torch.from_numpy(obj_vecs_raw)
+
+              hboxes.data.resize_(hboxes_t.size()).copy_(hboxes_t)
+              oboxes.data.resize_(oboxes_t.size()).copy_(oboxes_t)
+              iboxes.data.resize_(iboxes_t.size()).copy_(iboxes_t)
+              # pboxes.data.resize_(pboxes_t.size()).copy_(pboxes_t)
+              sboxes.data.resize_(sboxes_t.size()).copy_(sboxes_t)
+
+              spa_maps.data.resize_(spa_maps_t.size()).copy_(spa_maps_t)
+              # pose_maps.data.resize_(pose_maps_t.size()).copy_(pose_maps_t)
+              obj_vecs.data.resize_(obj_vecs_t.size()).copy_(obj_vecs_t)
+
+              assert len(im_scales) == 1, "Only single-image batch implemented"
+              im_info_np = np.array([[im_blobs.shape[1], im_blobs.shape[2], im_scales[0]]], dtype=np.float32)
+              im_info_pt = torch.from_numpy(im_info_np)
+
+              im_data_pt = torch.from_numpy(im_blobs)
+              im_data_pt = im_data_pt.permute(0, 3, 1, 2)
+
+              # dp_data_pt = torch.from_numpy(dp_blobs)
+              # dp_data_pt = dp_data_pt.permute(0, 3, 1, 2)
+
+              im_data.data.resize_(im_data_pt.size()).copy_(im_data_pt)
+              # dp_data.data.resize_(dp_data_pt.size()).copy_(dp_data_pt)
+              im_info.data.resize_(im_info_pt.size()).copy_(im_info_pt)
+
+              det_tic = time.time()
+
+              with torch.no_grad():
+                  vrb_prob, bin_prob, RCNN_loss_cls, RCNN_loss_bin = \
+                      fasterRCNN(im_data, dp_data, im_info,
+                                 hboxes,
+                                 oboxes,
+                                 iboxes,
+                                 pboxes,
+                                 sboxes,
+                                 vrb_classes,
+                                 bin_classes,
+                                 hoi_masks,
+                                 spa_maps,
+                                 pose_maps,
+                                 obj_vecs,
+                                 num_hois)
+
+              vrb_prob = vrb_prob.data.cpu().numpy()
+              vrb_prob = vrb_prob[0]
+
+              object_pre_masks = np.array(object_pre_masks)
+              vrb_prob = vrb_prob * object_pre_masks
+
+              # det['object_box'] = object_bboxes
+              # det['object_class'] = object_classes
+              # det['object_score'] = object_scores
+              # det['action_score'] = vrb_prob
+
+              for i in range(len(object_bboxes)):
+                  for j in range(1, len(pre_classes)):
+                      hoi = {
+                          'subject_id': human_det['id'],
+                          'object_id': object_ids[i],
+                          'category_id': j,
+                          'score': human_det['score'] * object_scores[i] * vrb_prob[i, j]
+                      }
+                      img_hoi_res['hoi_prediction'].append(hoi)
+
+
+              # all_results.append(det)
+
+  if not os.path.exists(output_dir):
+      os.makedirs(output_dir)
+
+  print('Saving results ...')
+  # with open(output_path, 'wb') as f:
+  #     pickle.dump(all_results, f)
+  with open(output_path, 'w') as f:
+      json.dump(all_hoi_res, f)
+
+  # generate_VCOCO_detection_and_eval(cfg.DATA_DIR + '/vcoco', output_dir, all_results)
+
+
+
+
+
+

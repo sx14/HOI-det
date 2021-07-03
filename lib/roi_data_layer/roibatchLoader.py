@@ -62,14 +62,19 @@ class roibatchLoader(data.Dataset):
         index_ratio = int(self.ratio_index[index])
     else:
         index_ratio = index
-
+    # for i in range(len(self.ratio_index)):
+    #     item = self._roidb[int(self.ratio_index[i])]
+    #     if 'trainval_017802' not in item['image']:
+    #         continue
+    #     else:
+    #         index_ratio = int(self.ratio_index[i])
     # get the anchor index for current sample index
     # here we set the anchor index to the last one
     # sample in this group
     minibatch_db = [self._roidb[index_ratio]]
     blobs = get_minibatch(minibatch_db, self._num_classes)
     im_data = torch.from_numpy(blobs['image'])
-    dp_data = torch.from_numpy(blobs['depth'])
+    # dp_data = torch.from_numpy(blobs['depth'])
     im_info = torch.from_numpy(blobs['im_info'])
     # we need to random shuffle the bounding box.
     data_height, data_width = im_data.size(1), im_data.size(2)
@@ -111,9 +116,9 @@ class roibatchLoader(data.Dataset):
     gt_spa_maps = torch.from_numpy(raw_spa_maps).float()
 
     raw_pose_maps = np.zeros((num_hoi, 8, 224, 224))
-    gt_pboxes1 = blobs['pbox_lists1']
-    for i in range(num_hoi):
-        raw_pose_maps[i] = gen_pose_obj_map1(blobs['hboxes'][i], blobs['oboxes'][i], blobs['iboxes'][i], gt_pboxes1[i])
+    # gt_pboxes1 = blobs['pbox_lists1']
+    # for i in range(num_hoi):
+    #     raw_pose_maps[i] = gen_pose_obj_map1(blobs['hboxes'][i], blobs['oboxes'][i], blobs['iboxes'][i], gt_pboxes1[i])
     gt_pose_maps = torch.from_numpy(raw_pose_maps).float()
 
     raw_obj_vecs = self._obj2vec[blobs['obj_classes']]
@@ -164,7 +169,7 @@ class roibatchLoader(data.Dataset):
                         y_s = np.random.choice(range(min_y, min_y+y_s_add))
             # crop the image
             im_data = im_data[:, y_s:(y_s + trim_size), :, :]
-            dp_data = dp_data[:, y_s:(y_s + trim_size), :, :]
+            # dp_data = dp_data[:, y_s:(y_s + trim_size), :, :]
 
             # shift y coordiante of gt_boxes
             gt_boxes[:, 1] = gt_boxes[:, 1] - float(y_s)
@@ -210,7 +215,7 @@ class roibatchLoader(data.Dataset):
                         x_s = np.random.choice(range(min_x, min_x+x_s_add))
             # crop the image
             im_data = im_data[:, :, x_s:(x_s + trim_size), :]
-            dp_data = dp_data[:, :, x_s:(x_s + trim_size), :]
+            # dp_data = dp_data[:, :, x_s:(x_s + trim_size), :]
 
             # shift x coordiante of gt_boxes
             gt_boxes[:, 0] = gt_boxes[:, 0] - float(x_s)
@@ -233,10 +238,10 @@ class roibatchLoader(data.Dataset):
 
         padding_im_data[:data_height, :, :] = im_data[0]
 
-        padding_dp_data = torch.FloatTensor(int(np.ceil(data_width / ratio)), \
-                                            data_width, dp_data.shape[-1]).zero_()
+        # padding_dp_data = torch.FloatTensor(int(np.ceil(data_width / ratio)), \
+        #                                     data_width, dp_data.shape[-1]).zero_()
 
-        padding_dp_data[:data_height, :, :] = dp_data[0]
+        # padding_dp_data[:data_height, :, :] = dp_data[0]
         # update im_info
         im_info[0, 0] = padding_im_data.size(0)
         # print("height %d %d \n" %(index, anchor_idx))
@@ -247,16 +252,16 @@ class roibatchLoader(data.Dataset):
                                          int(np.ceil(data_height * ratio)), im_data.shape[-1]).zero_()
         padding_im_data[:, :data_width, :] = im_data[0]
 
-        padding_dp_data = torch.FloatTensor(data_height, \
-                                            int(np.ceil(data_height * ratio)), dp_data.shape[-1]).zero_()
-        padding_dp_data[:, :data_width, :] = dp_data[0]
+        # padding_dp_data = torch.FloatTensor(data_height, \
+        #                                     int(np.ceil(data_height * ratio)), dp_data.shape[-1]).zero_()
+        # padding_dp_data[:, :data_width, :] = dp_data[0]
 
         im_info[0, 1] = padding_im_data.size(1)
     else:
         trim_size = min(data_height, data_width)
         padding_im_data = torch.FloatTensor(trim_size, trim_size, 3).zero_()
         padding_im_data = im_data[0][:trim_size, :trim_size, :]
-        padding_dp_data = dp_data[0][:trim_size, :trim_size, :]
+        # padding_dp_data = dp_data[0][:trim_size, :trim_size, :]
         # gt_boxes.clamp_(0, trim_size)
         gt_boxes[:, :4].clamp_(0, trim_size)
         gt_pboxes[:, :, :4].clamp_(0, trim_size)
@@ -336,9 +341,10 @@ class roibatchLoader(data.Dataset):
 
         # permute trim_data to adapt to downstream processing
     padding_im_data = padding_im_data.permute(2, 0, 1).contiguous()
-    padding_dp_data = padding_dp_data.permute(2, 0, 1).contiguous()
+    # padding_dp_data = padding_dp_data.permute(2, 0, 1).contiguous()
     im_info = im_info.view(3)
 
+    padding_dp_data = torch.zeros((3,3,3))
     return padding_im_data, padding_dp_data, im_info, \
            hboxes_padding, oboxes_padding, iboxes_padding, \
            pboxes_padding, sboxes_padding, \

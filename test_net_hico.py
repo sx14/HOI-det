@@ -43,6 +43,9 @@ from datasets.hico2 import refine_human_box_with_skeleton
 from datasets.pose_map import est_part_boxes, gen_part_boxes, gen_part_boxes1
 import pdb
 
+os.environ['PATH']="/usr/local/cuda-8.0/bin:$PATH"
+os.environ[' LD_LIBRARY_PATH'] = '/usr/local/cuda8.0/lib64'
+
 try:
     xrange          # Python 2
 except NameError:
@@ -112,8 +115,8 @@ def _get_image_blob(im, dp):
   im_orig = im.astype(np.float32, copy=True)
   im_orig -= cfg.PIXEL_MEANS
 
-  dp_orig = dp.astype(np.float32, copy=True)
-  dp_orig -= cfg.DEPTH_MEANS
+  # dp_orig = dp.astype(np.float32, copy=True)
+  # dp_orig -= cfg.DEPTH_MEANS
 
   im_shape = im_orig.shape
   im_size_min = np.min(im_shape[0:2])
@@ -121,7 +124,7 @@ def _get_image_blob(im, dp):
 
   im_scales = []
   processed_ims = []
-  processed_dps = []
+  # processed_dps = []
 
   for target_size in cfg.TEST.SCALES:
     im_scale = float(target_size) / float(im_size_min)
@@ -130,17 +133,17 @@ def _get_image_blob(im, dp):
       im_scale = float(cfg.TEST.MAX_SIZE) / float(im_size_max)
     im = cv2.resize(im_orig, None, None, fx=im_scale, fy=im_scale,
             interpolation=cv2.INTER_LINEAR)
-    dp = cv2.resize(dp_orig, None, None, fx=im_scale, fy=im_scale,
-            interpolation=cv2.INTER_LINEAR)
+    # dp = cv2.resize(dp_orig, None, None, fx=im_scale, fy=im_scale,
+    #         interpolation=cv2.INTER_LINEAR)
 
     im_scales.append(im_scale)
     processed_ims.append(im)
-    processed_dps.append(dp)
+    # processed_dps.append(dp)
 
   # Create a blob to hold the input images
   im_blob = im_list_to_blob(processed_ims, 3)
-  dp_blob = im_list_to_blob(processed_dps, 7)
-
+  # dp_blob = im_list_to_blob(processed_dps, 7)
+  dp_blob = np.zeros((1,1,1,1))
   return im_blob, dp_blob, im_scales
 
 
@@ -176,14 +179,14 @@ if __name__ == '__main__':
 
   print('Loading object detections ...')
   det_path = 'data/hico/Test_Faster_RCNN_R-50-PFN_2x_HICO_DET_with_pose.pkl'
-  with open(det_path) as f:
-      det_db = pickle.load(f)
+  with open(det_path, 'rb') as f:
+      det_db = pickle.load(f, encoding='latin1')
 
   input_dir = args.load_dir + "/" + args.net + "/" + args.dataset
   if not os.path.exists(input_dir):
     raise Exception('There is no input directory for loading network from ' + input_dir)
   load_name = os.path.join(input_dir,
-    'base_cb_sb_lc_gc_bpa_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
+    'base_cb_sb_{}_{}_{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
 
   hoi_classes, obj_classes, vrb_classes, obj2int, hoi2vrb, vrb2hoi = hico2.load_hoi_classes(cfg.DATA_DIR + '/hico')
   obj2ind = dict(zip(obj_classes, range(len(obj_classes))))
@@ -303,8 +306,9 @@ if __name__ == '__main__':
       im_h = im_in.shape[0]
       im_w = im_in.shape[1]
 
-      dp_file = human_path_template % str(im_id).zfill(8)
-      dp_in = np.load(dp_file)
+      # dp_file = human_path_template % str(im_id).zfill(8)
+      # dp_in = np.load(dp_file)
+      dp_in = None
 
       im_blobs, dp_blobs, im_scales = _get_image_blob(im_in, dp_in)
       im_results = []
@@ -489,6 +493,10 @@ if __name__ == '__main__':
 
   if not os.path.exists(output_dir):
       os.makedirs(output_dir)
+
+  print('Saving results ...')
+  with open(output_path, 'wb') as f:
+      pickle.dump(all_results, f)
 
   generate_HICO_detection(all_results, output_dir, 1.0, 0.0)
   os.chdir('eval_hico')

@@ -1,0 +1,31 @@
+# data
+shuffle: True
+dataset_root: ../data/hoia
+weights_dir: ../hoi_proposal/weights
+
+train_data: ../data/hoia/proposal/feature_label_train.pkl
+val_data: ../data/hoia/proposal/feature_label_test.pkl
+test_data: ../output/hoia_full/feature_label_test2019.pkl
+#test_data: ../output/hoia_full/feature_label_test2021.pkl
+test_result_path: ../output/hoia_full/test2019_results.pkl
+#test_result_path: ../output/hoia_full/test2021_results.pkl
+test_weight_path: weights/model_proposal_40.pkl
+
+feat_dim: 143
+num_pre_cates: 11 # predicates
+num_pro_cates: 2  # interactiveness
+
+
+# hyper-parameters
+train_epoch_num: 40
+train_momentum: 0.9
+train_weight_decay: 0.0001
+train_lr: 0.01
+train_lr_adjust_rate: 0.1    # lr = lr * 0.1
+train_lr_adjust_freq: 10      # epoch
+train_save_weight_freq: 1    # epoch
+train_batch_size: 32
+train_print_freq: 100        # batch
+use_log: True                # use tensorboardX
+use_gpu: True
+

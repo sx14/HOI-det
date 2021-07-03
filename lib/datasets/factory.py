@@ -13,6 +13,8 @@ from __future__ import print_function
 __sets = {}
 from datasets.vcoco import vcoco
 from datasets.hico2 import hico2
+from datasets.pic import pic
+from datasets.hoia import hoia
 import numpy as np
 
 # Set up hico_<year>_<split>
@@ -27,6 +29,17 @@ for version in ['full']:
     name = 'vcoco_{}_{}'.format(version, split)
     __sets[name] = (lambda split=split, version=version: vcoco(split, version))
 
+# Set up pic_<year>_<split>
+for version in ['full']:
+  for split in ['train', 'val']:
+    name = 'pic_{}_{}'.format(version, split)
+    __sets[name] = (lambda split=split, version=version: pic(split, version))
+
+# Set up pic_<year>_<split>
+for version in ['full']:
+  for split in ['train', 'test']:
+    name = 'hoia_{}_{}'.format(version, split)
+    __sets[name] = (lambda split=split, version=version: hoia(split, version))
 
 
 def get_imdb(name):

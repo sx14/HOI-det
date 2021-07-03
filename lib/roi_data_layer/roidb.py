@@ -38,7 +38,7 @@ def prepare_roidb(imdb):
   for i in range(len(imdb.image_index)):
     roidb[i]['img_id'] = imdb.image_id_at(i)
     roidb[i]['image'] = imdb.image_path_at(i)
-    roidb[i]['depth'] = imdb.depth_path_at(i)
+    # roidb[i]['depth'] = imdb.depth_path_at(i)
     if 'width' not in roidb[i]:
       size = PIL.Image.open(imdb.image_path_at(i)).size
       roidb[i]['width'] = size[0]

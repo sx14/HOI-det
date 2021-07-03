@@ -402,8 +402,8 @@ class resnet(_fasterRCNN):
       self.sRCNN_top.apply(set_bn_eval)
 
   def _ihead_to_tail(self, pool5, pose_map):
-    pose_cond = self.cond_net(pose_map)
-    pool5 = self.iRCNN_SFT([pool5, pose_cond])
+    # pose_cond = self.cond_net(pose_map)
+    # pool5 = self.iRCNN_SFT([pool5, pose_cond])
     fc7 = self.iRCNN_top(pool5).mean(3).mean(2)
     return fc7
 

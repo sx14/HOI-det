@@ -108,8 +108,8 @@ class hico2(imdb):
     @staticmethod
     def load_obj2vec(data_path):
         obj2vec_path = os.path.join(data_path, 'obj2vec.pkl')
-        with open(obj2vec_path) as f:
-            obj2vec = pickle.load(f)
+        with open(obj2vec_path, 'rb') as f:
+            obj2vec = pickle.load(f, encoding='latin1')
         return obj2vec
 
     @staticmethod
@@ -123,8 +123,8 @@ class hico2(imdb):
         hoi2vrb = {}
         vrb2hoi = {}
 
-        with open(os.path.join(data_path, 'hoi_categories.pkl')) as f:
-            mat_hoi_classes = pickle.load(f)
+        with open(os.path.join(data_path, 'hoi_categories.pkl'), 'rb') as f:
+            mat_hoi_classes = pickle.load(f, encoding='latin1')
 
         obj_id = 0
         vrb_id = 0
@@ -178,8 +178,8 @@ class hico2(imdb):
     def obj2vec(self):
         if self._obj2vec is None:
             obj2vec_path = os.path.join(self._data_path, 'obj2vec.pkl')
-            with open(obj2vec_path) as f:
-                obj2vec = pickle.load(f)
+            with open(obj2vec_path, 'rb') as f:
+                obj2vec = pickle.load(f, encoding='latin1')
                 self._obj2vec = obj2vec
         return self._obj2vec
 
@@ -354,8 +354,8 @@ class hico2(imdb):
         all_annos = {}
 
         print('Loading annotations ...')
-        anno_ng_db = pickle.load(open(os.path.join(self._data_path, '%s_NG_HICO_with_pose.pkl' % self._image_set)))
-        anno_gt_tmp = pickle.load(open(os.path.join(self._data_path, '%s_GT_HICO_with_pose.pkl' % self._image_set)))
+        anno_ng_db = pickle.load(open(os.path.join(self._data_path, '%s_NG_HICO_with_pose.pkl' % self._image_set), 'rb'), encoding='latin1')
+        anno_gt_tmp = pickle.load(open(os.path.join(self._data_path, '%s_GT_HICO_with_pose.pkl' % self._image_set), 'rb'), encoding='latin1')
 
         print('Processing annotations ...')
         anno_gt_db = {}

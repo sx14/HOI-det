@@ -35,6 +35,9 @@ from datasets.pose_map import gen_part_boxes, gen_part_boxes1
 from datasets.vcoco import vcoco
 import pdb
 
+os.environ['PATH']="/usr/local/cuda-9.0/bin:$PATH"
+os.environ['LD_LIBRARY_PATH'] = '/usr/local/cuda-9.0/lib64'
+
 try:
     xrange          # Python 2
 except NameError:
